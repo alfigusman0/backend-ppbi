@@ -1,2 +1,2 @@
-# backend-ppbi
-Backend - PPBI
+# damba-uinsgd
+Damba - UIN Sunan Gunung Djati Bandung
