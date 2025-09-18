@@ -6,7 +6,7 @@ let s3Client = null;
 
 if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
     s3Client = new S3Client({
-        region: process.env.AWS_REGION || "us-east-1", // Fallback region jika tidak diset
+        region: process.env.AWS_REGION || "ap-southeast-3", // Fallback region jika tidak diset
         endpoint: process.env.AWS_ENDPOINT || undefined, // Gunakan jika menggunakan MinIO
         credentials: {
             accessKeyId: process.env.AWS_ACCESS_KEY_ID,
