@@ -9,7 +9,7 @@ const validation = require('../middleware/auth');
 router.post('/login', validation, Controller.login);
 router.post('/register', validation, Controller.register);
 router.get('/logout', isAuth, Controller.logout);
-router.get('/cek', isAuth, Controller.checkToken);
+router.get('/check', isAuth, Controller.checkToken);
 router.get('/google', Controller.google);
 router.get('/google/callback', Controller.callback);
 router.post('/token', isAuth, Controller.refreshToken);

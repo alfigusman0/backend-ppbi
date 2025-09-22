@@ -93,14 +93,14 @@ Controller.callback = async (req, res) => {
 
         /* SQL Query */
         let sqlQuery = {
-            sql: "SELECT * FROM `view_grup_users` WHERE email = ?",
+            sql: "SELECT * FROM `tbl_users` WHERE email = ?",
             param: [data.email]
         }
         let getUser = await helper.runSQL(sqlQuery);
         if (!getUser.length) {
             /* SQL Query Insert Data JWT */
             let sqlInsert = {
-                sql: "INSERT INTO `view_grup_users`( `nama`, `email`, `password`, `nmr_tlpn`, `mandiri`) VALUES (?, ?, ?, ?, ?)",
+                sql: "INSERT INTO `tbl_users`( `nama`, `email`, `password`, `nmr_tlpn`, `mandiri`) VALUES (?, ?, ?, ?, ?)",
                 param: [data.name, data.email, null, null, 'BELUM MEMILIH']
             }
             await helper.runSQL(sqlInsert);
@@ -163,18 +163,18 @@ Controller.login = async (req, res, next) => {
     let message = '';
     let json = {};
     try {
-        let email = req.body.email;
+        let username = req.body.username;
         let password = req.body.password;
         let expire_at = moment().add(process.env.JWT_EXPIRED_IN, 'days').format("YYYY-MM-DD HH:mm:ss");
 
         /* SQL Query */
         let sqlQuery = {
-            sql: "SELECT * FROM `view_grup_users` WHERE email = ? or username = ?",
-            param: [email, email]
+            sql: "SELECT * FROM `tbl_users` WHERE username = ?",
+            param: [username]
         }
         let getUser = await helper.runSQL(sqlQuery);
         if (!getUser.length) {
-            message = 'email not found.';
+            message = 'username not found.';
             return response.sc400(message, json, res);
         }
 
@@ -191,19 +191,12 @@ Controller.login = async (req, res, next) => {
         if (encrypt.Check(password, getUser[0].password)) {
             const userJwt = {
                 userTime: await helper.id(),
-                app: process.env.APP_NAME,
+                app: process.env.APPLICATION_NAME,
                 id_user: getUser[0].id_user,
-                nama: getUser[0].nama,
-                email: getUser[0].email,
                 username: getUser[0].username,
-                nmr_tlpn: getUser[0].nmr_tlpn,
-                mandiri: getUser[0].mandiri,
-                ids_level: getUser[0].ids_level,
                 level: getUser[0].level,
-                tingkat: getUser[0].tingkat,
-                ids_grup: getUser[0].ids_grup,
-                grup: getUser[0].grup,
-                keterangan: getUser[0].keterangan,
+                cabang: getUser[0].cabang,
+                import: getUser[0].import,
                 login_as: "TIDAK",
                 id_admin: null,
             };
@@ -250,19 +243,18 @@ Controller.login = async (req, res, next) => {
 Controller.register = async (req, res, next) => {
     try {
         const {
-            nama,
-            nmr_tlpn,
-            email,
+            username,
             password,
+            cabang,
         } = req.body;
 
-        /* Checking email */
+        /* Checking username */
         let getUser = await helper.runSQL({
-            sql: "SELECT * FROM `view_grup_users` WHERE email = ?",
-            param: [email]
+            sql: "SELECT * FROM `tbl_users` WHERE username = ?",
+            param: [username]
         });
         if (getUser.length) {
-            return response.sc400('Email already exist.', {}, res);
+            return response.sc400('Username already exist.', {}, res);
         }
 
         /* Hash Password */
@@ -270,8 +262,8 @@ Controller.register = async (req, res, next) => {
 
         /* Save to Database */
         await helper.runSQL({
-            sql: "INSERT INTO `tbl_users`(`ids_grup`, `nama`, `email`, `username`, `password`, `nmr_tlpn`, `mandiri`) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            param: [7, nama, email, email, hashedPassword, nmr_tlpn, "BELUM MEMILIH"]
+            sql: "INSERT INTO `tbl_users`(`username`, `password`, `level`, `cabang`, `import`) VALUES (?, ?, ?, ?, ?)",
+            param: [username, hashedPassword, "ANGGOTA", cabang, 'TIDAK']
         });
 
         return response.sc200('Data added successfully.', {}, res);
