@@ -111,7 +111,7 @@ Controller.read = async (req, res) => {
             aksi,
             permission,
         } = req.query;
-        const order_by = req.query.order_by || 'date_created ASC';
+        const order_by = req.query.order_by || 'created_at ASC';
         const key = redisPrefix + "read:" + md5(req.originalUrl);
 
         // Check Redis cache

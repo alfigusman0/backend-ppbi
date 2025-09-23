@@ -61,25 +61,11 @@ Controller.create = async (req, res) => {
 
         const {
             ids_grup,
-            nama,
-            email,
             username,
-            nmr_tlpn,
-            mandiri,
         } = req.body;
         const hashedPassword = await encrypt.Hash(req.body.password);
 
         /* Check existing data */
-        if (!isEmpty(email)) {
-            let checkData = await helper.runSQL({
-                sql: 'SELECT email FROM `tbl_users` WHERE email = ? LIMIT 1',
-                param: [email],
-            });
-            if (checkData.length) {
-                return response.sc400('Data already exists.', {}, res);
-            }
-        }
-
         if (!isEmpty(username)) {
             let checkData = await helper.runSQL({
                 sql: 'SELECT username FROM `tbl_users` WHERE username = ? LIMIT 1',
@@ -92,8 +78,8 @@ Controller.create = async (req, res) => {
 
         /* SQL Insert Data */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_users` (`ids_grup`, `nama`, `email`, `username`, `password`, `nmr_tlpn`, `mandiri`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [ids_grup, nama, email, username, hashedPassword, nmr_tlpn, mandiri, req.authIdUser]
+            sql: "INSERT INTO `tbl_users` (`ids_grup`, `username`, `password`, `created_by`) VALUES (?, ?, ?, ?)",
+            param: [ids_grup, username, hashedPassword, req.authIdUser]
         });
 
         json = {
@@ -121,20 +107,17 @@ Controller.read = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const id_user = (req.authIdsLevel === '5') ? req.authIdUser : req.query.id_user;
-        const tingkat = (req.authIdsLevel === '5') ? req.authTingkat : req.query.tingkat;
-        const order_by = req.query.order_by || 'date_created DESC';
+        const id_user = (req.authTingkat > 2) ? req.authIdUser : req.query.id_user;
+        const tingkat = (req.authIdsLevel > 2) ? req.authTingkat : req.query.tingkat;
+        const order_by = req.query.order_by || 'created_at DESC';
         const key = redisPrefix + "read:" + md5(req.authToken + req.originalUrl);
         const {
-            nama,
-            email,
             username,
-            nmr_tlpn,
-            mandiri,
             ids_level,
             level,
             ids_grup,
             grup,
+            keterangan,
         } = req.query;
 
         // Check Redis cache
@@ -192,16 +175,13 @@ Controller.read = async (req, res) => {
         };
 
         addCondition('id_user', id_user);
-        addCondition('nama', nama, 'LIKE');
-        addCondition('email', email);
         addCondition('username', username);
-        addCondition('nmr_tlpn', nmr_tlpn, 'LIKE');
-        addCondition('mandiri', mandiri);
-        addCondition('ids_level', ids_level);
+        addCondition('ids_level', ids_level, 'IN');
         addCondition('level', level, 'LIKE');
         addCondition('tingkat', tingkat, '>=');
-        addCondition('ids_grup', ids_grup);
+        addCondition('ids_grup', ids_grup, 'IN');
         addCondition('grup', grup, 'LIKE');
+        addCondition('keterangan', keterangan, 'LIKE');
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
         params.push(page * resPerPage, resPerPage);
@@ -254,12 +234,8 @@ Controller.update = async (req, res) => {
         const id = (req.authIdsLevel === '5') ? req.authIdUser : req.params.id;
         const {
             ids_grup,
-            nama,
-            email,
             username,
             password,
-            nmr_tlpn,
-            mandiri,
         } = req.body;
 
         /* Check existing data */
@@ -271,6 +247,14 @@ Controller.update = async (req, res) => {
             return response.sc404('Data not found.', {}, res);
         }
 
+        const checkUsername = await helper.runSQL({
+            sql: 'SELECT id_user FROM `tbl_users` WHERE username = ? AND id_user != ? LIMIT 1',
+            param: [username, id],
+        });
+        if (checkUsername.length) {
+            return response.sc400('Username already exist.', {}, res);
+        }
+
         if (checkData[0].tingkat < req.authTingkat) {
             return response.sc400('You are not allowed to update this data.', {}, res);
         }
@@ -280,7 +264,6 @@ Controller.update = async (req, res) => {
         if (!isEmpty(password)) {
             hashedPassword = await encrypt.Hash(password);
         }
-
 
         // Build SQL update query
         const updates = [];
@@ -294,8 +277,6 @@ Controller.update = async (req, res) => {
         };
 
         addUpdate('ids_grup', ids_grup);
-        addUpdate('nama', nama);
-        addUpdate('email', email);
         addUpdate('username', username);
         addUpdate('password', hashedPassword);
         addUpdate('nmr_tlpn', nmr_tlpn);
@@ -374,19 +355,16 @@ Controller.single = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const id_user = (req.authIdsLevel === '5') ? req.authIdUser : req.query.id_user;
-        const tingkat = (req.authIdsLevel === '5') ? req.authTingkat : req.query.tingkat;
+        const id_user = (req.authIdsLevel > 2) ? req.authIdUser : req.query.id_user;
+        const tingkat = (req.authIdsLevel > 2) ? req.authTingkat : req.query.tingkat;
         const key = redisPrefix + "single:" + md5(req.authToken + req.originalUrl);
         const {
-            nama,
-            email,
             username,
-            nmr_tlpn,
-            mandiri,
             ids_level,
             level,
             ids_grup,
             grup,
+            keterangan,
         } = req.query;
 
         // Check Redis cache
@@ -415,16 +393,13 @@ Controller.single = async (req, res) => {
         };
 
         addCondition('id_user', id_user);
-        addCondition('nama', nama);
-        addCondition('email', email);
         addCondition('username', username);
-        addCondition('nmr_tlpn', nmr_tlpn);
-        addCondition('mandiri', mandiri);
-        addCondition('ids_level', ids_level);
-        addCondition('level', level);
+        addCondition('ids_level', ids_level, 'IN');
+        addCondition('level', level, 'LIKE');
         addCondition('tingkat', tingkat, '>=');
-        addCondition('ids_grup', ids_grup);
-        addCondition('grup', grup);
+        addCondition('ids_grup', ids_grup, 'IN');
+        addCondition('grup', grup, 'LIKE');
+        addCondition('keterangan', keterangan, 'LIKE');
 
         // Limit to 1 row
         sqlSingle += ' LIMIT 1';

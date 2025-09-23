@@ -64,8 +64,9 @@ if (process.env.NODE_ENV === 'production') {
 
 const authRoutes = require('./routes/auth');
 const cronejobRoutes = require('./routes/cronejob');
-/* const awsRoutes = require('./routes/aws');
-const usersRoutes = require('./routes/users'); */
+const usersRoutes = require('./routes/users');
+
+/* const awsRoutes = require('./routes/aws');*/
 /* Daftar */
 /* const fileDRoutes = require('./routes/daftar/file');
 const kelulusanDRoutes = require('./routes/daftar/kelulusan');
@@ -98,27 +99,22 @@ const settingPRoutes = require('./routes/pradaftar/setting'); */
 const sCabangRoutes = require('./routes/settings/cabang');
 const sGrupRoutes = require('./routes/settings/grup');
 const sHakAksesRoutes = require('./routes/settings/hak_akses');
+const sJenisBonsaiRoutes = require('./routes/settings/jenis_bonsai');
+const sKabKotaRoutes = require('./routes/settings/kab_kota');
+const sKecamatanRoutes = require('./routes/settings/kecamatan');
+const sKelasRoutes = require('./routes/settings/kelas');
+const sKelurahanRoutes = require('./routes/settings/kelurahan');
 const sLevelRoutes = require('./routes/settings/level');
 const sModulRoutes = require('./routes/settings/modul');
-/*
-const settingBobotNilaiUktRoutes = require('./routes/settings/bobot_nilai_ukt');
-const settingBobotRangeUktRoutes = require('./routes/settings/bobot_range_ukt');
-const settingDayaTampungRoutes = require('./routes/settings/daya_tampung');
-const settingJadwalRoutes = require('./routes/settings/jadwal');
-const settingJalurMasukRoutes = require('./routes/settings/jalur_masuk');
-const settingJurusanRoutes = require('./routes/settings/jurusan');
-const settingProgramRoutes = require('./routes/settings/program');
-const settingSanggahRoutes = require('./routes/settings/sanggah');
-const settingSliderRoutes = require('./routes/settings/slider');
-const settingSubDayaTampungRoutes = require('./routes/settings/sub_daya_tampung');
-const settingTipeFileRoutes = require('./routes/settings/tipe_file');
-const settingTipeUjianRoutes = require('./routes/settings/tipe_ujian'); */
+const sProfileCabangRoutes = require('./routes/settings/profile_cabang');
+const sProvinsiRoutes = require('./routes/settings/provinsi');
 
 // use routes
 router.use('/auth', authRoutes);
 router.use('/cronejob', cronejobRoutes);
-/* router.use('/aws', awsRoutes);
-router.use('/users', usersRoutes); */
+router.use('/users', usersRoutes);
+/* router.use('/aws', awsRoutes);*/
+
 /* Daftar */
 /* router.use('/daftar/file', fileDRoutes);
 router.use('/daftar/kelulusan', kelulusanDRoutes);

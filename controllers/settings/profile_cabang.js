@@ -31,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "settings:cabang:";
+const redisPrefix = process.env.REDIS_PREFIX + "settings:profile_cabang:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 3, `%${action}%`]
+        param: [req.authIdsLevel, 13, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -57,22 +57,30 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            cabang,
-            ids_kabkota,
-            alamat,
+            sanggah,
             status,
         } = req.body;
 
+        // Check existing data
+        const checkData = await helper.runSQL({
+            sql: 'SELECT sanggah FROM `tbs_sanggah` WHERE sanggah = ? LIMIT 1',
+            param: [sanggah],
+        });
+        if (checkData.length) {
+            return response.sc400('Data already exists.', {}, res);
+        }
+
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_cabang`(`cabang`, `ids_kabkota`, `alamat`, `status`,`created_by`) VALUES (?, ?, ?, ?, ?)",
-            param: [cabang, ids_kabkota, alamat, status, req.authIdUser]
+            sql: "INSERT INTO `tbs_sanggah`(`sanggah`, `status`, `created_by`) VALUES (?, ?, ?)",
+            param: [sanggah, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            ids_cabang: result.insertId
+            ids_sanggah: result.insertId
         };
 
+        // Hapus cache Redis
         try {
             await helper.deleteKeysByPattern(redisPrefix + '*');
         } catch (redisError) {
@@ -94,17 +102,11 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_cabang,
-            cabang,
-            ids_provinsi,
-            provinsi,
-            pulau,
-            ids_kabkota,
-            kabkota,
-            alamat,
+            ids_sanggah,
+            sanggah,
             status,
         } = req.query;
-        const order_by = req.query.order_by || 'created_at DESC';
+        const order_by = req.query.order_by || 'created_at ASC';
         const key = redisPrefix + "read:" + md5(req.originalUrl);
 
         // Check Redis cache
@@ -126,8 +128,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `views_cabang`";
-        let sqlReadTotalData = "SELECT COUNT(ids_cabang) as total FROM `views_cabang`";
+        let sqlRead = "SELECT * FROM `tbs_sanggah`";
+        let sqlReadTotalData = "SELECT COUNT(ids_sanggah) as total FROM `tbs_sanggah`";
         const params = [];
         const totalParams = [];
 
@@ -161,14 +163,8 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_cabang', ids_cabang);
-        addCondition('cabang', cabang, 'LIKE');
-        addCondition('ids_provinsi', ids_provinsi);
-        addCondition('provinsi', provinsi, 'LIKE');
-        addCondition('pulau', pulau, 'LIKE');
-        addCondition('ids_kabkota', ids_kabkota);
-        addCondition('kabkota', kabkota, 'LIKE');
-        addCondition('alamat', alamat, 'LIKE');
+        addCondition('ids_sanggah', ids_sanggah);
+        addCondition('sanggah', sanggah, 'LIKE');
         addCondition('status', status);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -221,15 +217,13 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            cabang,
-            ids_kabkota,
-            alamat,
+            sanggah,
             status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_cabang FROM `tbs_cabang` WHERE ids_cabang = ? LIMIT 1',
+            sql: 'SELECT ids_sanggah FROM `tbs_sanggah` WHERE ids_sanggah = ? LIMIT 1',
             param: [id],
         });
 
@@ -248,9 +242,7 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('cabang', cabang);
-        addUpdate('ids_kabkota', ids_kabkota);
-        addUpdate('alamat', alamat);
+        addUpdate('sanggah', sanggah);
         addUpdate('status', status);
 
         // Check Data Update
@@ -260,13 +252,13 @@ Controller.update = async (req, res) => {
 
         /* addUpdate('updated_by', req.authIdUser); */
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_cabang\` SET ${updates.join(', ')} WHERE \`ids_cabang\` = ?`,
+            sql: `UPDATE \`tbs_sanggah\` SET ${updates.join(', ')} WHERE \`ids_sanggah\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            ids_cabang: id
+            ids_sanggah: id
         };
 
         // Hapus cache Redis
@@ -294,7 +286,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_cabang FROM `tbs_cabang` WHERE ids_cabang = ? LIMIT 1',
+            sql: 'SELECT ids_sanggah FROM `tbs_sanggah` WHERE ids_sanggah = ? LIMIT 1',
             param: [id],
         });
 
@@ -304,7 +296,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_cabang` WHERE ids_cabang = ?',
+            sql: 'DELETE FROM `tbs_sanggah` WHERE ids_sanggah = ?',
             param: [id],
         };
 
@@ -332,14 +324,8 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_cabang,
-            cabang,
-            ids_provinsi,
-            provinsi,
-            pulau,
-            ids_kabkota,
-            kabkota,
-            alamat,
+            ids_sanggah,
+            sanggah,
             status,
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
@@ -358,7 +344,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `views_cabang`";
+        let sqlSingle = "SELECT * FROM `tbs_sanggah`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -388,14 +374,8 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_cabang', ids_cabang);
-        addCondition('cabang', cabang, 'LIKE');
-        addCondition('ids_provinsi', ids_provinsi);
-        addCondition('provinsi', provinsi, 'LIKE');
-        addCondition('pulau', pulau, 'LIKE');
-        addCondition('ids_kabkota', ids_kabkota);
-        addCondition('kabkota', kabkota, 'LIKE');
-        addCondition('alamat', alamat, 'LIKE');
+        addCondition('ids_sanggah', ids_sanggah);
+        addCondition('sanggah', sanggah, 'LIKE');
         addCondition('status', status);
 
         // Limit to 1 row

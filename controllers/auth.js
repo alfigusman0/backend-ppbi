@@ -169,7 +169,7 @@ Controller.login = async (req, res, next) => {
 
         /* SQL Query */
         let sqlQuery = {
-            sql: "SELECT * FROM `view_users_grup` WHERE username = ?",
+            sql: "SELECT * FROM `view_grup_users` WHERE username = ?",
             param: [username]
         }
         let getUser = await helper.runSQL(sqlQuery);

@@ -37,7 +37,7 @@ const redisPrefix = process.env.REDIS_PREFIX + "settings:level:";
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 12, `%${action}%`]
+        param: [req.authIdsLevel, 11, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -114,7 +114,7 @@ Controller.read = async (req, res) => {
             tingkat,
             status,
         } = req.query;
-        const order_by = req.query.order_by || 'date_created ASC';
+        const order_by = req.query.order_by || 'created_at ASC';
         const key = redisPrefix + "read:" + md5(req.originalUrl);
 
         // Check Redis cache
