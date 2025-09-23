@@ -95,7 +95,8 @@ const sanggahPRoutes = require('./routes/pradaftar/sanggah');
 const sekolahPRoutes = require('./routes/pradaftar/sekolah');
 const settingPRoutes = require('./routes/pradaftar/setting'); */
 /* Settings */
-/* const settingBobotJurusanRoutes = require('./routes/settings/bobot_jurusan');
+const sCabangRoutes = require('./routes/settings/cabang');
+/*
 const settingBobotNilaiUktRoutes = require('./routes/settings/bobot_nilai_ukt');
 const settingBobotRangeUktRoutes = require('./routes/settings/bobot_range_ukt');
 const settingDayaTampungRoutes = require('./routes/settings/daya_tampung');
@@ -147,8 +148,8 @@ router.use('/pradaftar/sanggah', sanggahPRoutes);
 router.use('/pradaftar/sekolah', sekolahPRoutes);
 router.use('/pradaftar/setting', settingPRoutes); */
 /* Settings */
-/* router.use('/settings/bobot-jurusan', settingBobotJurusanRoutes);
-router.use('/settings/bobot-nilai-ukt', settingBobotNilaiUktRoutes);
+router.use('/settings/cabang', sCabangRoutes);
+/* router.use('/settings/bobot-nilai-ukt', settingBobotNilaiUktRoutes);
 router.use('/settings/bobot-range-ukt', settingBobotRangeUktRoutes);
 router.use('/settings/daya-tampung', settingDayaTampungRoutes);
 router.use('/settings/grup', settingGrupRoutes);

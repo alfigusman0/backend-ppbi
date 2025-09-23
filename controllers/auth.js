@@ -133,7 +133,7 @@ Controller.callback = async (req, res) => {
         if (process.env.SESSIONS === 'DATABASE') {
             /* SQL Query Insert Data JWT */
             let sqlInsert = {
-                sql: "INSERT INTO `ci_jwt`( `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?)",
+                sql: "INSERT INTO `tbl_jwt`( `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?)",
                 param: [JSON.stringify(req.headers), req.ip, token, expire_at, 'TIDAK', 'LOGIN']
             }
             await helper.runSQL(sqlInsert);
@@ -169,7 +169,7 @@ Controller.login = async (req, res, next) => {
 
         /* SQL Query */
         let sqlQuery = {
-            sql: "SELECT * FROM `tbl_users` WHERE username = ?",
+            sql: "SELECT * FROM `view_users_grup` WHERE username = ?",
             param: [username]
         }
         let getUser = await helper.runSQL(sqlQuery);
@@ -194,9 +194,13 @@ Controller.login = async (req, res, next) => {
                 app: process.env.APPLICATION_NAME,
                 id_user: getUser[0].id_user,
                 username: getUser[0].username,
+                ids_level: getUser[0].ids_level,
                 level: getUser[0].level,
-                cabang: getUser[0].cabang,
+                tingkat: getUser[0].tingkat,
+                ids_grup: getUser[0].ids_grup,
+                grup: getUser[0].grup,
                 import: getUser[0].import,
+                keterangan: getUser[0].keterangan,
                 login_as: "TIDAK",
                 id_admin: null,
             };
@@ -207,8 +211,8 @@ Controller.login = async (req, res, next) => {
             /* Save to Database or Redis */
             if (process.env.SESSIONS === 'DATABASE') {
                 let sqlInsert = {
-                    sql: "INSERT INTO `ci_jwt`( `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?)",
-                    param: [JSON.stringify(req.headers), req.ip, token, expire_at, 'TIDAK', 'LOGIN']
+                    sql: "INSERT INTO `tbl_jwt`(`id_user`, `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    param: [getUser[0].id_user, JSON.stringify(req.headers), req.ip, token, expire_at, 'TIDAK', 'LOGIN']
                 }
                 await helper.runSQL(sqlInsert);
             } else if (process.env.SESSIONS === 'REDIS') {
@@ -245,7 +249,6 @@ Controller.register = async (req, res, next) => {
         const {
             username,
             password,
-            cabang,
         } = req.body;
 
         /* Checking username */
@@ -262,8 +265,8 @@ Controller.register = async (req, res, next) => {
 
         /* Save to Database */
         await helper.runSQL({
-            sql: "INSERT INTO `tbl_users`(`username`, `password`, `level`, `cabang`, `import`) VALUES (?, ?, ?, ?, ?)",
-            param: [username, hashedPassword, "ANGGOTA", cabang, 'TIDAK']
+            sql: "INSERT INTO `tbl_users`(`ids_grup`, `username`, `password`) VALUES (?, ?, ?)",
+            param: [8, username, hashedPassword]
         });
 
         return response.sc200('Data added successfully.', {}, res);
@@ -284,7 +287,7 @@ Controller.logout = async (req, res, next) => {
 
         if (process.env.SESSIONS === 'DATABASE') {
             let sqlUpdate = {
-                sql: "UPDATE `ci_jwt` SET `expired` = ?, `keterangan` = ?  WHERE `token` = ?",
+                sql: "UPDATE `tbl_jwt` SET `expired` = ?, `keterangan` = ?  WHERE `token` = ?",
                 param: ['YA', 'LOGOUT', req.authToken]
             }
             await helper.runSQL(sqlUpdate);
@@ -323,7 +326,7 @@ Controller.createToken = async (req, res, next) => {
         /* Save to Database or Redis */
         if (process.env.SESSIONS === 'DATABASE') {
             let sqlInsert = {
-                sql: "INSERT INTO `ci_jwt`( `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?)",
+                sql: "INSERT INTO `tbl_jwt`( `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?)",
                 param: [JSON.stringify(req.headers), req.ip, token, expire_at, 'TIDAK', 'LOGIN']
             }
             await helper.runSQL(sqlInsert);
@@ -376,7 +379,7 @@ Controller.refreshToken = async (req, res, next) => {
         /* Save to Database or Redis */
         if (process.env.SESSIONS === 'DATABASE') {
             let sqlInsert = {
-                sql: "INSERT INTO `ci_jwt`( `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?)",
+                sql: "INSERT INTO `tbl_jwt`( `headers`, `ip_address`, `token`, `expire_at`, `expired`, `keterangan`) VALUES (?, ?, ?, ?, ?, ?)",
                 param: [JSON.stringify(req.headers), req.ip, token, expire_at, 'TIDAK', 'LOGIN']
             }
             await helper.runSQL(sqlInsert);
@@ -429,7 +432,7 @@ Controller.deleteToken = async (req, res, next) => {
         if (process.env.SESSIONS === 'DATABASE') {
             // Check if the token exists
             let sqlCheck = {
-                sql: "SELECT * FROM `ci_jwt` WHERE `token` = ? AND `expired` = 'TIDAK'",
+                sql: "SELECT * FROM `tbl_jwt` WHERE `token` = ? AND `expired` = 'TIDAK'",
                 param: [req.authToken]
             }
             let checkToken = await helper.runSQL(sqlCheck);
@@ -440,7 +443,7 @@ Controller.deleteToken = async (req, res, next) => {
 
             // SQL Update to mark the token as expired
             let sqlUpdate = {
-                sql: "UPDATE `ci_jwt` SET `expired` = ?, `keterangan` = ? WHERE `token` = ?",
+                sql: "UPDATE `tbl_jwt` SET `expired` = ?, `keterangan` = ? WHERE `token` = ?",
                 param: ['YA', keterangan, req.authToken]
             }
             await helper.runSQL(sqlUpdate);

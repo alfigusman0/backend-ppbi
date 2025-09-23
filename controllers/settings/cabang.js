@@ -31,7 +31,7 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "settings:bobot_jurusan:";
+const redisPrefix = process.env.REDIS_PREFIX + "settings:bobot_pulau:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
@@ -57,36 +57,20 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            kode_jurusan,
-            tpa,
-            ips,
-            ipa,
-            btq,
-            tkd,
-            keislaman,
-            bhs_arab,
-            bhs_inggris,
-            bhs_indonesia,
-            pembagi
+            cabang,
+            ids_kabkota,
+            alamat,
+            status,
         } = req.body;
 
-        // Check existing data by kode_jurusan
-        const checkData = await helper.runSQL({
-            sql: 'SELECT ids_bobot_jurusan FROM `tbs_bobot_jurusan` WHERE kode_jurusan = ? LIMIT 1',
-            param: [kode_jurusan],
-        });
-        if (checkData.length) {
-            return response.sc400('Data already exists.', {}, res);
-        }
-
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_bobot_jurusan`(`kode_jurusan`, `tpa`, `ips`, `ipa`, `btq`, `tkd`, `keislaman`, `bhs_arab`, `bhs_inggris`, `bhs_indonesia`, `pembagi`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [kode_jurusan, tpa, ips, ipa, btq, tkd, keislaman, bhs_arab, bhs_inggris, bhs_indonesia, pembagi, req.authIdUser]
+            sql: "INSERT INTO `tbs_cabang`(`cabang`, `ids_kabkota`, `alamat`, `status`,`created_by`) VALUES (?, ?, ?, ?, ?)",
+            param: [cabang, ids_kabkota, alamat, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            ids_bobot_jurusan: result.insertId
+            ids_cabang: result.insertId
         };
 
         try {
@@ -110,15 +94,17 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_bobot_jurusan,
-            ids_fakultas,
-            fakultas,
-            jenjang,
-            kode_jurusan,
-            jurusan,
-            kategori,
+            ids_cabang,
+            cabang,
+            ids_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kabkota,
+            alamat,
+            status,
         } = req.query;
-        const order_by = req.query.order_by || 'date_created ASC';
+        const order_by = req.query.order_by || 'created_at DESC';
         const key = redisPrefix + "read:" + md5(req.originalUrl);
 
         // Check Redis cache
@@ -140,8 +126,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `views_bobot_jurusan`";
-        let sqlReadTotalData = "SELECT COUNT(ids_bobot_jurusan) as total FROM `views_bobot_jurusan`";
+        let sqlRead = "SELECT * FROM `views_cabang`";
+        let sqlReadTotalData = "SELECT COUNT(ids_cabang) as total FROM `views_cabang`";
         const params = [];
         const totalParams = [];
 
@@ -175,13 +161,15 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_bobot_jurusan', ids_bobot_jurusan);
-        addCondition('ids_fakultas', ids_fakultas);
-        addCondition('fakultas', fakultas, 'LIKE');
-        addCondition('jenjang', jenjang);
-        addCondition('kode_jurusan', kode_jurusan);
-        addCondition('jurusan', jurusan, 'LIKE');
-        addCondition('kategori', kategori, 'LIKE');
+        addCondition('ids_cabang', ids_cabang);
+        addCondition('cabang', cabang, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau, 'LIKE');
+        addCondition('ids_kabkota', ids_kabkota);
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('alamat', alamat, 'LIKE');
+        addCondition('status', status);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
         params.push(page * resPerPage, resPerPage);
@@ -233,22 +221,15 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            kode_jurusan,
-            tpa,
-            ips,
-            ipa,
-            btq,
-            tkd,
-            keislaman,
-            bhs_arab,
-            bhs_inggris,
-            bhs_indonesia,
-            pembagi
+            cabang,
+            ids_kabkota,
+            alamat,
+            status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_bobot_jurusan FROM `tbs_bobot_jurusan` WHERE ids_bobot_jurusan = ? LIMIT 1',
+            sql: 'SELECT ids_cabang FROM `tbs_cabang` WHERE ids_cabang = ? LIMIT 1',
             param: [id],
         });
 
@@ -267,17 +248,10 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('kode_jurusan', kode_jurusan);
-        addUpdate('tpa', tpa);
-        addUpdate('ips', ips);
-        addUpdate('ipa', ipa);
-        addUpdate('btq', btq);
-        addUpdate('tkd', tkd);
-        addUpdate('keislaman', keislaman);
-        addUpdate('bhs_arab', bhs_arab);
-        addUpdate('bhs_inggris', bhs_inggris);
-        addUpdate('bhs_indonesia', bhs_indonesia);
-        addUpdate('pembagi', pembagi);
+        addUpdate('cabang', cabang);
+        addUpdate('ids_kabkota', ids_kabkota);
+        addUpdate('alamat', alamat);
+        addUpdate('status', status);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -286,13 +260,13 @@ Controller.update = async (req, res) => {
 
         /* addUpdate('updated_by', req.authIdUser); */
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_bobot_jurusan\` SET ${updates.join(', ')} WHERE \`ids_bobot_jurusan\` = ?`,
+            sql: `UPDATE \`tbs_cabang\` SET ${updates.join(', ')} WHERE \`ids_cabang\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            ids_bobot_jurusan: id
+            ids_cabang: id
         };
 
         // Hapus cache Redis
@@ -320,7 +294,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_bobot_jurusan FROM `tbs_bobot_jurusan` WHERE ids_bobot_jurusan = ? LIMIT 1',
+            sql: 'SELECT ids_cabang FROM `tbs_cabang` WHERE ids_cabang = ? LIMIT 1',
             param: [id],
         });
 
@@ -330,7 +304,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_bobot_jurusan` WHERE ids_bobot_jurusan = ?',
+            sql: 'DELETE FROM `tbs_cabang` WHERE ids_cabang = ?',
             param: [id],
         };
 
@@ -358,13 +332,15 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_bobot_jurusan,
-            ids_fakultas,
-            fakultas,
-            jenjang,
-            kode_jurusan,
-            jurusan,
-            kategori,
+            ids_cabang,
+            cabang,
+            ids_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kabkota,
+            alamat,
+            status,
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
 
@@ -382,7 +358,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `views_bobot_jurusan`";
+        let sqlSingle = "SELECT * FROM `views_cabang`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -412,13 +388,15 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_bobot_jurusan', ids_bobot_jurusan);
-        addCondition('ids_fakultas', ids_fakultas);
-        addCondition('fakultas', fakultas, 'LIKE');
-        addCondition('jenjang', jenjang);
-        addCondition('kode_jurusan', kode_jurusan);
-        addCondition('jurusan', jurusan, 'LIKE');
-        addCondition('kategori', kategori, 'LIKE');
+        addCondition('ids_cabang', ids_cabang);
+        addCondition('cabang', cabang, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau, 'LIKE');
+        addCondition('ids_kabkota', ids_kabkota);
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('alamat', alamat, 'LIKE');
+        addCondition('status', status);
 
         // Limit to 1 row
         sqlSingle += ' LIMIT 1';

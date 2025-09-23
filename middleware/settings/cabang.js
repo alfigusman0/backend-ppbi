@@ -1,7 +1,7 @@
 /* Helpers */
 const response = require('../../helpers/response');
 /* Validation */
-const validation = require('../../validation/settings/bobot_jurusan');
+const validation = require('../../validation/settings/cabang');
 
 module.exports = async (req, res, next) => {
     /* Validation */

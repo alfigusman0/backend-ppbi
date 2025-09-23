@@ -1,10 +1,10 @@
 /* Libraries */
 const router = require('express').Router();
 /* Controller */
-const Controller = require('../../controllers/settings/bobot_jurusan');
+const Controller = require('../../controllers/settings/cabang');
 /* Middleware */
 const isAuth = require('../../middleware/isAuth');
-const validation = require('../../middleware/settings/bobot_jurusan');
+const validation = require('../../middleware/settings/cabang');
 const paramsid = require('../../middleware/params-id');
 
 router.get('/', isAuth, Controller.read);
