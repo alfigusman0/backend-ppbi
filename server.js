@@ -63,8 +63,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const authRoutes = require('./routes/auth');
-/* const awsRoutes = require('./routes/aws');
 const cronejobRoutes = require('./routes/cronejob');
+/* const awsRoutes = require('./routes/aws');
 const usersRoutes = require('./routes/users'); */
 /* Daftar */
 /* const fileDRoutes = require('./routes/daftar/file');
@@ -96,17 +96,17 @@ const sekolahPRoutes = require('./routes/pradaftar/sekolah');
 const settingPRoutes = require('./routes/pradaftar/setting'); */
 /* Settings */
 const sCabangRoutes = require('./routes/settings/cabang');
+const sGrupRoutes = require('./routes/settings/grup');
+const sHakAksesRoutes = require('./routes/settings/hak_akses');
+const sLevelRoutes = require('./routes/settings/level');
+const sModulRoutes = require('./routes/settings/modul');
 /*
 const settingBobotNilaiUktRoutes = require('./routes/settings/bobot_nilai_ukt');
 const settingBobotRangeUktRoutes = require('./routes/settings/bobot_range_ukt');
 const settingDayaTampungRoutes = require('./routes/settings/daya_tampung');
-const settingGrupRoutes = require('./routes/settings/grup');
-const settingHakAksesRoutes = require('./routes/settings/hak_akses');
 const settingJadwalRoutes = require('./routes/settings/jadwal');
 const settingJalurMasukRoutes = require('./routes/settings/jalur_masuk');
 const settingJurusanRoutes = require('./routes/settings/jurusan');
-const settingLevelRoutes = require('./routes/settings/level');
-const settingModulRoutes = require('./routes/settings/modul');
 const settingProgramRoutes = require('./routes/settings/program');
 const settingSanggahRoutes = require('./routes/settings/sanggah');
 const settingSliderRoutes = require('./routes/settings/slider');
@@ -116,8 +116,8 @@ const settingTipeUjianRoutes = require('./routes/settings/tipe_ujian'); */
 
 // use routes
 router.use('/auth', authRoutes);
-/* router.use('/aws', awsRoutes);
 router.use('/cronejob', cronejobRoutes);
+/* router.use('/aws', awsRoutes);
 router.use('/users', usersRoutes); */
 /* Daftar */
 /* router.use('/daftar/file', fileDRoutes);
@@ -149,16 +149,17 @@ router.use('/pradaftar/sekolah', sekolahPRoutes);
 router.use('/pradaftar/setting', settingPRoutes); */
 /* Settings */
 router.use('/settings/cabang', sCabangRoutes);
+router.use('/settings/grup', sGrupRoutes);
+router.use('/settings/hak-akses', sHakAksesRoutes);
+router.use('/settings/level', sLevelRoutes);
+router.use('/settings/modul', sModulRoutes);
+
 /* router.use('/settings/bobot-nilai-ukt', settingBobotNilaiUktRoutes);
 router.use('/settings/bobot-range-ukt', settingBobotRangeUktRoutes);
 router.use('/settings/daya-tampung', settingDayaTampungRoutes);
-router.use('/settings/grup', settingGrupRoutes);
-router.use('/settings/hak-akses', settingHakAksesRoutes);
 router.use('/settings/jadwal', settingJadwalRoutes);
 router.use('/settings/jalur-masuk', settingJalurMasukRoutes);
 router.use('/settings/jurusan', settingJurusanRoutes);
-router.use('/settings/level', settingLevelRoutes);
-router.use('/settings/modul', settingModulRoutes);
 router.use('/settings/program', settingProgramRoutes);
 router.use('/settings/sanggah', settingSanggahRoutes);
 router.use('/settings/slider', settingSliderRoutes);

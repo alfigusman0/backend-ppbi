@@ -189,11 +189,18 @@ Controller.login = async (req, res, next) => {
             getUser[0].password = '$2b$' + getUser[0].password.slice(4);
         }
         if (encrypt.Check(password, getUser[0].password)) {
+            const getProfile = await helper.runSQL({
+                sql: "SELECT * FROM `tbl_profile` WHERE `created_by` = ? LIMIT 1",
+                param: [getUser[0].id_user]
+            });
+
             const userJwt = {
                 userTime: await helper.id(),
                 app: process.env.APPLICATION_NAME,
                 id_user: getUser[0].id_user,
+                nama: (getProfile.length) ? getProfile[0].nama : "-",
                 username: getUser[0].username,
+                nmr_tlpn: (getProfile.length) ? getProfile[0].nmr_tlpn : "-",
                 ids_level: getUser[0].ids_level,
                 level: getUser[0].level,
                 tingkat: getUser[0].tingkat,
@@ -201,6 +208,7 @@ Controller.login = async (req, res, next) => {
                 grup: getUser[0].grup,
                 import: getUser[0].import,
                 keterangan: getUser[0].keterangan,
+                foto: (getProfile.length) ? getProfile[0].foto : null,
                 login_as: "TIDAK",
                 id_admin: null,
             };

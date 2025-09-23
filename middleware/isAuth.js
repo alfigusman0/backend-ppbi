@@ -65,16 +65,16 @@ module.exports = async (req, res, next) => {
   req.authApp = decodedToken.app;
   req.authIdUser = decodedToken.id_user;
   req.authNama = decodedToken.nama;
-  req.authEmail = decodedToken.email;
   req.authUsername = decodedToken.username;
   req.authNmrTlpn = decodedToken.nmr_tlpn;
-  req.authMandiri = decodedToken.mandiri;
   req.authIdsLevel = decodedToken.ids_level;
   req.authLevel = decodedToken.level;
   req.authTingkat = decodedToken.tingkat;
   req.authIdsGrup = decodedToken.ids_grup;
   req.authGrup = decodedToken.grup;
+  req.authImport = decodedToken.import;
   req.authKeterangan = decodedToken.keterangan;
+  req.authFoto = decodedToken.foto;
   req.authLoginAs = decodedToken.login_as;
   req.authIdAdmin = decodedToken.id_admin;
 

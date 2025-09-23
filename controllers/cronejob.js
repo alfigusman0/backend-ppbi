@@ -75,11 +75,11 @@ Controller.cj1 = async (req, res) => {
                     insertValues.push([
                         level.ids_level,
                         modul.ids_modul,
-                        level.tingkat <= 1 ? modul.aksi : 'read,single',
+                        level.tingkat <= 4 ? modul.aksi : 'read,single',
                         1, // created_by
                     ]);
                     count_create++;
-                } else if (level.tingkat <= 1) {
+                } else if (level.tingkat <= 3) {
                     // Prepare for bulk update
                     updateCases.push(`WHEN ids_level = ? AND ids_modul = ? THEN ?`);
                     updateParams.push(level.ids_level, modul.ids_modul, modul.aksi);
