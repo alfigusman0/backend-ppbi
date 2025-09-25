@@ -57,27 +57,36 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            sanggah,
-            status,
+            ids_cabang,
+            ketua,
+            sekeretaris,
+            bendahara,
+            profile,
+            visi,
+            misi,
+            program,
+            nomor_sk,
+            masa_aktif,
+            file_sk,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT sanggah FROM `tbs_sanggah` WHERE sanggah = ? LIMIT 1',
-            param: [sanggah],
+            sql: 'SELECT ids_cabang FROM `tbs_profile_cabang` WHERE ids_cabang = ? LIMIT 1',
+            param: [ids_cabang],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_sanggah`(`sanggah`, `status`, `created_by`) VALUES (?, ?, ?)",
-            param: [sanggah, status, req.authIdUser]
+            sql: "INSERT INTO `tbs_profile_cabang`(`ids_cabang`, `ketua`, `sekeretaris`, `bendahara`, `profile`, `visi`, `misi`, `program`, `nomor_sk`, `masa_aktif`, `file_sk`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [ids_cabang, ketua, sekeretaris, bendahara, profile, visi, misi, program, nomor_sk, masa_aktif, file_sk, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            ids_sanggah: result.insertId
+            ids_profile_cabang: result.insertId
         };
 
         // Hapus cache Redis
@@ -102,9 +111,16 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_sanggah,
-            sanggah,
-            status,
+            ids_profile_cabang,
+            ids_cabang,
+            cabang,
+            ids_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kabkota,
+            id_profile_ketua,
+            ketua,
         } = req.query;
         const order_by = req.query.order_by || 'created_at ASC';
         const key = redisPrefix + "read:" + md5(req.originalUrl);
@@ -128,8 +144,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `tbs_sanggah`";
-        let sqlReadTotalData = "SELECT COUNT(ids_sanggah) as total FROM `tbs_sanggah`";
+        let sqlRead = "SELECT * FROM `views_profile_cabang`";
+        let sqlReadTotalData = "SELECT COUNT(ids_profile_cabang) as total FROM `views_profile_cabang`";
         const params = [];
         const totalParams = [];
 
@@ -163,9 +179,16 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_sanggah', ids_sanggah);
-        addCondition('sanggah', sanggah, 'LIKE');
-        addCondition('status', status);
+        addCondition('ids_profile_cabang', ids_profile_cabang, 'IN');
+        addCondition('ids_cabang', ids_cabang, 'IN');
+        addCondition('cabang', cabang, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi, 'IN');
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
+        addCondition('ids_kabkota', ids_kabkota, 'IN');
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('id_profile_ketua', id_profile_ketua, 'IN');
+        addCondition('ketua', ketua, 'LIKE');
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
         params.push(page * resPerPage, resPerPage);
@@ -217,13 +240,22 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            sanggah,
-            status,
+            ids_cabang,
+            ketua,
+            sekeretaris,
+            bendahara,
+            profile,
+            visi,
+            misi,
+            program,
+            nomor_sk,
+            masa_aktif,
+            file_sk,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_sanggah FROM `tbs_sanggah` WHERE ids_sanggah = ? LIMIT 1',
+            sql: 'SELECT ids_profile_cabang FROM `tbs_profile_cabang` WHERE ids_profile_cabang = ? LIMIT 1',
             param: [id],
         });
 
@@ -242,23 +274,32 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('sanggah', sanggah);
-        addUpdate('status', status);
+        addUpdate('ids_cabang', ids_cabang);
+        addUpdate('ketua', ketua);
+        addUpdate('sekeretaris', sekeretaris);
+        addUpdate('bendahara', bendahara);
+        addUpdate('profile', profile);
+        addUpdate('visi', visi);
+        addUpdate('misi', misi);
+        addUpdate('program', program);
+        addUpdate('nomor_sk', nomor_sk);
+        addUpdate('masa_aktif', masa_aktif);
+        addUpdate('file_sk', file_sk);
 
         // Check Data Update
         if (isEmpty(params)) {
             return response.sc400("No data has been changed.", {}, res);
         }
 
-        /* addUpdate('updated_by', req.authIdUser); */
+        addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_sanggah\` SET ${updates.join(', ')} WHERE \`ids_sanggah\` = ?`,
+            sql: `UPDATE \`tbs_profile_cabang\` SET ${updates.join(', ')} WHERE \`ids_profile_cabang\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            ids_sanggah: id
+            ids_profile_cabang: id
         };
 
         // Hapus cache Redis
@@ -286,7 +327,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_sanggah FROM `tbs_sanggah` WHERE ids_sanggah = ? LIMIT 1',
+            sql: 'SELECT ids_profile_cabang FROM `tbs_profile_cabang` WHERE ids_profile_cabang = ? LIMIT 1',
             param: [id],
         });
 
@@ -296,7 +337,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_sanggah` WHERE ids_sanggah = ?',
+            sql: 'DELETE FROM `tbs_profile_cabang` WHERE ids_profile_cabang = ?',
             param: [id],
         };
 
@@ -324,9 +365,16 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_sanggah,
-            sanggah,
-            status,
+            ids_profile_cabang,
+            ids_cabang,
+            cabang,
+            ids_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kabkota,
+            id_profile_ketua,
+            ketua,
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
 
@@ -344,7 +392,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `tbs_sanggah`";
+        let sqlSingle = "SELECT * FROM `tbs_profile_cabang`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -374,9 +422,16 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_sanggah', ids_sanggah);
-        addCondition('sanggah', sanggah, 'LIKE');
-        addCondition('status', status);
+        addCondition('ids_profile_cabang', ids_profile_cabang);
+        addCondition('ids_cabang', ids_cabang);
+        addCondition('cabang', cabang, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
+        addCondition('ids_kabkota', ids_kabkota);
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('id_profile_ketua', id_profile_ketua);
+        addCondition('ketua', ketua, 'LIKE');
 
         // Limit to 1 row
         sqlSingle += ' LIMIT 1';

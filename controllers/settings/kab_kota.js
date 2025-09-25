@@ -57,30 +57,29 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            kategori,
-            nilai_min,
-            nilai_max,
-            ids_jalur_masuk,
-            tahun
+            kode_kabkota,
+            ids_provinsi,
+            kabkota,
+            status,
         } = req.body;
 
-        // Check existing data by kategori
+        // Check existing data by kode_kabkota
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_bobot_range_ukt FROM `tbs_bobot_range_ukt` WHERE kategori = ? LIMIT 1',
-            param: [kategori],
+            sql: 'SELECT ids_kabkota FROM `tbs_kabkota` WHERE kode_kabkota = ? LIMIT 1',
+            param: [kode_kabkota],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_bobot_range_ukt`(`kategori`, `nilai_min`, `nilai_max`, `ids_jalur_masuk`, `tahun`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
-            param: [kategori, nilai_min, nilai_max, ids_jalur_masuk, tahun, req.authIdUser]
+            sql: "INSERT INTO `tbs_kabkota`(`kode_kabkota`, `ids_provinsi`, `kabkota`, `status`, `tahun`, `created_by`) VALUES (?, ?, ?, ?, ?)",
+            param: [kode_kabkota, ids_provinsi, kabkota, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            ids_bobot_range_ukt: result.insertId
+            ids_kabkota: result.insertId
         };
 
         // Hapus cache Redis
@@ -105,13 +104,14 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_bobot_range_ukt,
-            ids_jalur_masuk,
-            alias_jalur_masuk,
-            kategori,
-            nilai_min,
-            nilai_max,
-            tahun
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            status,
         } = req.query;
         const order_by = req.query.order_by || 'created_at ASC';
         const key = redisPrefix + "read:" + md5(req.originalUrl);
@@ -135,8 +135,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `views_bobot_range_ukt`";
-        let sqlReadTotalData = "SELECT COUNT(ids_bobot_range_ukt) as total FROM `views_bobot_range_ukt`";
+        let sqlRead = "SELECT * FROM `views_kabkota`";
+        let sqlReadTotalData = "SELECT COUNT(ids_kabkota) as total FROM `views_kabkota`";
         const params = [];
         const totalParams = [];
 
@@ -170,13 +170,14 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_bobot_range_ukt', ids_bobot_range_ukt);
-        addCondition('ids_jalur_masuk', ids_jalur_masuk);
-        addCondition('alias_jalur_masuk', alias_jalur_masuk, 'LIKE');
-        addCondition('kategori', kategori);
-        addCondition('nilai_min', nilai_min);
-        addCondition('nilai_max', nilai_max);
-        addCondition('tahun', tahun);
+        addCondition('ids_provinsi', ids_provinsi, 'IN');
+        addCondition('kode_provinsi', kode_provinsi, 'IN');
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau, 'IN');
+        addCondition('ids_kabkota', ids_kabkota, 'IN');
+        addCondition('kode_kabkota', kode_kabkota, 'IN');
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('status', status);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
         params.push(page * resPerPage, resPerPage);
@@ -228,17 +229,16 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            ids_bobot_range_ukt,
-            kategori,
-            nilai_min,
-            nilai_max,
-            ids_jalur_masuk,
-            tahun
+            ids_kabkota,
+            kode_kabkota,
+            ids_provinsi,
+            kabkota,
+            status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_bobot_range_ukt FROM `tbs_bobot_range_ukt` WHERE ids_bobot_range_ukt = ? LIMIT 1',
+            sql: 'SELECT ids_kabkota FROM `tbs_kabkota` WHERE ids_kabkota = ? LIMIT 1',
             param: [id],
         });
 
@@ -257,27 +257,26 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('ids_bobot_range_ukt', ids_bobot_range_ukt);
-        addUpdate('kategori', kategori);
-        addUpdate('nilai_min', nilai_min);
-        addUpdate('nilai_max', nilai_max);
-        addUpdate('ids_jalur_masuk ', ids_jalur_masuk);
-        addUpdate('tahun', tahun);
+        addUpdate('ids_kabkota', ids_kabkota);
+        addUpdate('kode_kabkota', kode_kabkota);
+        addUpdate('ids_provinsi', ids_provinsi);
+        addUpdate('kabkota', kabkota);
+        addUpdate('status ', status);
 
         // Check Data Update
         if (isEmpty(params)) {
             return response.sc400("No data has been changed.", {}, res);
         }
 
-        /* addUpdate('updated_by', req.authIdUser); */
+        addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_bobot_range_ukt\` SET ${updates.join(', ')} WHERE \`ids_bobot_range_ukt\` = ?`,
+            sql: `UPDATE \`tbs_kabkota\` SET ${updates.join(', ')} WHERE \`ids_kabkota\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            ids_bobot_range_ukt: id
+            ids_kabkota: id
         };
 
         // Hapus cache Redis
@@ -305,7 +304,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_bobot_range_ukt FROM `tbs_bobot_range_ukt` WHERE ids_bobot_range_ukt = ? LIMIT 1',
+            sql: 'SELECT ids_kabkota FROM `tbs_kabkota` WHERE ids_kabkota = ? LIMIT 1',
             param: [id],
         });
 
@@ -315,7 +314,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_bobot_range_ukt` WHERE ids_bobot_range_ukt = ?',
+            sql: 'DELETE FROM `tbs_kabkota` WHERE ids_kabkota = ?',
             param: [id],
         };
 
@@ -343,13 +342,14 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_bobot_range_ukt,
-            ids_jalur_masuk,
-            alias_jalur_masuk,
-            kategori,
-            nilai_min,
-            nilai_max,
-            tahun
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            status,
 
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
@@ -368,7 +368,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `views_bobot_range_ukt`";
+        let sqlSingle = "SELECT * FROM `views_kabkota`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -398,13 +398,14 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_bobot_range_ukt', ids_bobot_range_ukt);
-        addCondition('ids_jalur_masuk', ids_jalur_masuk);
-        addCondition('alias_jalur_masuk', alias_jalur_masuk, 'LIKE');
-        addCondition('kategori', kategori);
-        addCondition('nilai_min', nilai_min);
-        addCondition('nilai_max', nilai_max);
-        addCondition('tahun', tahun);
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('kode_provinsi', kode_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
+        addCondition('ids_kabkota', ids_kabkota);
+        addCondition('kode_kabkota', kode_kabkota);
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('status', status);
 
         // Limit to 1 row
         sqlSingle += ' LIMIT 1';

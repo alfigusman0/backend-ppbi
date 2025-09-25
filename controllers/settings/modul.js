@@ -255,7 +255,7 @@ Controller.update = async (req, res) => {
             return response.sc400("No data has been changed.", {}, res);
         }
 
-        /* addUpdate('updated_by', req.authIdUser); */
+        addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
             sql: `UPDATE \`tbs_modul\` SET ${updates.join(', ')} WHERE \`ids_modul\` = ?`,
             param: [...params, id]

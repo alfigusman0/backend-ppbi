@@ -57,35 +57,29 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            kode_jurusan,
-            kelas,
-            dt_awal,
-            daya_tampung,
-            afirmasi,
-            kuota,
-            grade,
-            nilai_min,
-            nilai_max,
+            kode_kecamatan,
+            ids_kabkota,
+            kecamatan,
             status
         } = req.body;
 
-        // Check existing data by kode_jurusan
+        // Check existing data by kode_kecamatan
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_daya_tampung FROM `tbs_daya_tampung` WHERE kode_jurusan = ? AND YEAR(created_at) = ? LIMIT 1',
-            param: [kode_jurusan, new Date().getFullYear()],
+            sql: 'SELECT ids_kecamatan FROM `tbs_kecamatan` WHERE kode_kecamatan = ? LIMIT 1',
+            param: [kode_kecamatan],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_daya_tampung`(`kode_jurusan`, `kelas`, `dt_awal`, `daya_tampung`, `afirmasi`, `kuota`, `grade`, `nilai_min`, `nilai_max`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [kode_jurusan, kelas, dt_awal, daya_tampung, afirmasi, kuota, grade, nilai_min, nilai_max, status, req.authIdUser]
+            sql: "INSERT INTO `tbs_kecamatan`(`kode_kecamatan`, `ids_kabkota`, `kecamatan`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?)",
+            param: [kode_kecamatan, ids_kabkota, kecamatan, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            ids_daya_tampung: result.insertId
+            ids_kecamatan: result.insertId
         };
 
         // Hapus cache Redis
@@ -110,16 +104,17 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_daya_tampung,
-            ids_fakultas,
-            fakultas,
-            jenjang,
-            kode_jurusan,
-            jurusan,
-            akreditasi,
-            kategori,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            ids_kecamatan,
+            kode_kecamatan,
+            kecamatan,
             status,
-            tahun,
         } = req.query;
         const order_by = req.query.order_by || 'created_at ASC';
         const key = redisPrefix + "read:" + md5(req.originalUrl);
@@ -143,8 +138,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `views_daya_tampung`";
-        let sqlReadTotalData = "SELECT COUNT(ids_daya_tampung) as total FROM `views_daya_tampung`";
+        let sqlRead = "SELECT * FROM `views_kecamatan`";
+        let sqlReadTotalData = "SELECT COUNT(ids_kecamatan) as total FROM `views_kecamatan`";
         const params = [];
         const totalParams = [];
 
@@ -178,16 +173,17 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_daya_tampung', ids_daya_tampung);
-        addCondition('ids_fakultas', ids_fakultas);
-        addCondition('fakultas', fakultas, 'LIKE');
-        addCondition('jenjang', jenjang);
-        addCondition('kode_jurusan', kode_jurusan);
-        addCondition('jurusan', jurusan, 'LIKE');
-        addCondition('akreditasi', akreditasi);
-        addCondition('kategori', kategori);
+        addCondition('ids_provinsi', ids_provinsi, 'IN');
+        addCondition('kode_provinsi', kode_provinsi, 'IN');
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau, 'IN');
+        addCondition('ids_kabkota', ids_kabkota, 'IN');
+        addCondition('kode_kabkota', kode_kabkota, 'IN');
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('ids_kecamatan', ids_kecamatan, 'IN');
+        addCondition('kode_kecamatan', kode_kecamatan, 'IN');
+        addCondition('kecamatan', kecamatan, 'LIKE');
         addCondition('status', status);
-        addCondition('YEAR(created_at)', tahun);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
         params.push(page * resPerPage, resPerPage);
@@ -239,22 +235,16 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            ids_daya_tampung,
-            kode_jurusan,
-            kelas,
-            dt_awal,
-            daya_tampung,
-            afirmasi,
-            kuota,
-            grade,
-            nilai_min,
-            nilai_max,
+            ids_kecamatan,
+            kode_kecamatan,
+            ids_kabkota,
+            kecamatan,
             status
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_daya_tampung FROM `tbs_daya_tampung` WHERE ids_daya_tampung = ? LIMIT 1',
+            sql: 'SELECT ids_kecamatan FROM `tbs_kecamatan` WHERE ids_kecamatan = ? LIMIT 1',
             param: [id],
         });
 
@@ -273,16 +263,10 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('ids_daya_tampung', ids_daya_tampung);
-        addUpdate('kode_jurusan', kode_jurusan);
-        addUpdate('kelas', kelas);
-        addUpdate('dt_awal', dt_awal);
-        addUpdate('daya_tampung', daya_tampung);
-        addUpdate('afirmasi', afirmasi);
-        addUpdate('kuota', kuota);
-        addUpdate('grade', grade);
-        addUpdate('nilai_min', nilai_min);
-        addUpdate('nilai_max', nilai_max);
+        addUpdate('ids_kecamatan', ids_kecamatan);
+        addUpdate('kode_kecamatan', kode_kecamatan);
+        addUpdate('ids_kabkota', ids_kabkota);
+        addUpdate('kecamatan', kecamatan);
         addUpdate('status', status);
 
         // Check Data Update
@@ -290,15 +274,15 @@ Controller.update = async (req, res) => {
             return response.sc400("No data has been changed.", {}, res);
         }
 
-        /* addUpdate('updated_by', req.authIdUser); */
+        addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_daya_tampung\` SET ${updates.join(', ')} WHERE \`ids_daya_tampung\` = ?`,
+            sql: `UPDATE \`tbs_kecamatan\` SET ${updates.join(', ')} WHERE \`ids_kecamatan\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            ids_daya_tampung: id
+            ids_kecamatan: id
         };
 
         // Hapus cache Redis
@@ -326,7 +310,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_daya_tampung FROM `tbs_daya_tampung` WHERE ids_daya_tampung = ? LIMIT 1',
+            sql: 'SELECT ids_kecamatan FROM `tbs_kecamatan` WHERE ids_kecamatan = ? LIMIT 1',
             param: [id],
         });
 
@@ -336,7 +320,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_daya_tampung` WHERE ids_daya_tampung = ?',
+            sql: 'DELETE FROM `tbs_kecamatan` WHERE ids_kecamatan = ?',
             param: [id],
         };
 
@@ -364,16 +348,17 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_daya_tampung,
-            ids_fakultas,
-            fakultas,
-            jenjang,
-            kode_jurusan,
-            jurusan,
-            akreditasi,
-            kategori,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            ids_kecamatan,
+            kode_kecamatan,
+            kecamatan,
             status,
-            tahun,
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
 
@@ -391,7 +376,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `views_daya_tampung`";
+        let sqlSingle = "SELECT * FROM `views_kecamatan`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -421,16 +406,17 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_daya_tampung', ids_daya_tampung);
-        addCondition('ids_fakultas', ids_fakultas);
-        addCondition('fakultas', fakultas, 'LIKE');
-        addCondition('jenjang', jenjang);
-        addCondition('kode_jurusan', kode_jurusan);
-        addCondition('jurusan', jurusan, 'LIKE');
-        addCondition('akreditasi', akreditasi);
-        addCondition('kategori', kategori);
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('kode_provinsi', kode_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
+        addCondition('ids_kabkota', ids_kabkota);
+        addCondition('kode_kabkota', kode_kabkota);
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('ids_kecamatan', ids_kecamatan);
+        addCondition('kode_kecamatan', kode_kecamatan);
+        addCondition('kecamatan', kecamatan, 'LIKE');
         addCondition('status', status);
-        addCondition('YEAR(created_at)', tahun);
 
         // Limit to 1 row
         sqlSingle += ' LIMIT 1';

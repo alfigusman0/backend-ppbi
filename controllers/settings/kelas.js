@@ -57,29 +57,28 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            kode_jurusan,
-            kategori,
-            tipe_ujian,
+            nama_kelas,
+            jenis,
             status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT kode_jurusan FROM `tbs_jurusan` WHERE kode_jurusan = ? LIMIT 1',
-            param: [kode_jurusan],
+            sql: 'SELECT ids_kelas FROM `tbs_kelas` WHERE nama_kelas = ? LIMIT 1',
+            param: [nama_kelas],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_jurusan`(`kode_jurusan`, `kategori`, `tipe_ujian`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?)",
-            param: [kode_jurusan, kategori, tipe_ujian, status, req.authIdUser]
+            sql: "INSERT INTO `tbs_kelas`(`nama_kelas`, `jenis`, `status`, `created_by`) VALUES (?, ?, ?, ?)",
+            param: [nama_kelas, jenis, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            kode_jurusan: kode_jurusan,
+            ids_kelas: result.insertId
         };
 
         // Hapus cache Redis
@@ -104,19 +103,9 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_fakultas,
-            fakultas,
-            fak_asing,
-            kode_jurusan,
-            id_dikti,
-            id_unit_sip,
-            jurusan,
-            jur_asing,
-            jenjang,
-            akreditasi,
-            kelas,
-            kategori,
-            tipe_ujian,
+            ids_kelas,
+            nama_kelas,
+            jenis,
             status,
         } = req.query;
         const order_by = req.query.order_by || 'created_at ASC';
@@ -141,8 +130,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `views_fakultas_jurusan`";
-        let sqlReadTotalData = "SELECT COUNT(kode_jurusan) as total FROM `views_fakultas_jurusan`";
+        let sqlRead = "SELECT * FROM `tbs_kelas`";
+        let sqlReadTotalData = "SELECT COUNT(ids_kelas) as total FROM `tbs_kelas`";
         const params = [];
         const totalParams = [];
 
@@ -176,19 +165,9 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_fakultas', ids_fakultas);
-        addCondition('fakultas', fakultas, 'LIKE');
-        addCondition('fak_asing', fak_asing, 'LIKE');
-        addCondition('kode_jurusan', kode_jurusan);
-        addCondition('id_dikti', id_dikti);
-        addCondition('id_unit_sip', id_unit_sip);
-        addCondition('jurusan', jurusan, 'LIKE');
-        addCondition('jur_asing', jur_asing, 'LIKE');
-        addCondition('jenjang', jenjang, 'LIKE');
-        addCondition('akreditasi', akreditasi);
-        addCondition('kelas', kelas, 'LIKE');
-        addCondition('kategori', kategori);
-        addCondition('tipe_ujian', tipe_ujian, 'LIKE');
+        addCondition('ids_kelas', ids_kelas, 'IN');
+        addCondition('nama_kelas', nama_kelas, 'LIKE');
+        addCondition('jenis', jenis);
         addCondition('status', status);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -241,16 +220,15 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            kode_jurusan,
-            kategori,
-            tipe_ujian,
+            nama_kelas,
+            jenis,
             status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT kode_jurusan FROM `tbs_jurusan` WHERE kode_jurusan = ? LIMIT 1',
-            param: [id],
+            sql: 'SELECT ids_kelas FROM `tbs_kelas` WHERE nama_kelas = ? AND ids_kelas != ? LIMIT 1',
+            param: [nama_kelas, id],
         });
 
         if (!checkData.length) {
@@ -268,9 +246,8 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('kode_jurusan', kode_jurusan);
-        addUpdate('kategori', kategori);
-        addUpdate('tipe_ujian', tipe_ujian);
+        addUpdate('nama_kelas', nama_kelas);
+        addUpdate('jenis', jenis);
         addUpdate('status', status);
 
         // Check Data Update
@@ -278,15 +255,15 @@ Controller.update = async (req, res) => {
             return response.sc400("No data has been changed.", {}, res);
         }
 
-        /* addUpdate('updated_by', req.authIdUser); */
+        addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_jurusan\` SET ${updates.join(', ')} WHERE \`kode_jurusan\` = ?`,
+            sql: `UPDATE \`tbs_kelas\` SET ${updates.join(', ')} WHERE \`ids_kelas\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            kode_jurusan: id
+            ids_kelas: id
         };
 
         // Hapus cache Redis
@@ -314,7 +291,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT kode_jurusan FROM `tbs_jurusan` WHERE kode_jurusan = ? LIMIT 1',
+            sql: 'SELECT ids_kelas FROM `tbs_kelas` WHERE ids_kelas = ? LIMIT 1',
             param: [id],
         });
 
@@ -324,7 +301,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_jurusan` WHERE kode_jurusan = ?',
+            sql: 'DELETE FROM `tbs_kelas` WHERE ids_kelas = ?',
             param: [id],
         };
 
@@ -352,19 +329,9 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_fakultas,
-            fakultas,
-            fak_asing,
-            kode_jurusan,
-            id_dikti,
-            id_unit_sip,
-            jurusan,
-            jur_asing,
-            jenjang,
-            akreditasi,
-            kelas,
-            kategori,
-            tipe_ujian,
+            ids_kelas,
+            nama_kelas,
+            jenis,
             status,
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
@@ -383,7 +350,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `views_fakultas_jurusan`";
+        let sqlSingle = "SELECT * FROM `tbs_kelas`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -413,19 +380,9 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_fakultas', ids_fakultas);
-        addCondition('fakultas', fakultas, 'LIKE');
-        addCondition('fak_asing', fak_asing, 'LIKE');
-        addCondition('kode_jurusan', kode_jurusan);
-        addCondition('id_dikti', id_dikti);
-        addCondition('id_unit_sip', id_unit_sip);
-        addCondition('jurusan', jurusan, 'LIKE');
-        addCondition('jur_asing', jur_asing, 'LIKE');
-        addCondition('jenjang', jenjang, 'LIKE');
-        addCondition('akreditasi', akreditasi);
-        addCondition('kelas', kelas, 'LIKE');
-        addCondition('kategori', kategori);
-        addCondition('tipe_ujian', tipe_ujian, 'LIKE');
+        addCondition('ids_kelas', ids_kelas);
+        addCondition('nama_kelas', nama_kelas, 'LIKE');
+        addCondition('jenis', jenis);
         addCondition('status', status);
 
         // Limit to 1 row

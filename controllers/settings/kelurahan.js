@@ -57,30 +57,29 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            kode_program,
-            program,
-            jenjang,
-            kelas,
+            kode_kelurahan,
+            ids_kecamatan,
+            kelurahan,
             status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT kode_program FROM `tbs_program` WHERE kode_program = ? LIMIT 1',
-            param: [kode_program],
+            sql: 'SELECT kode_kelurahan FROM `tbs_kelurahan` WHERE kode_kelurahan = ? LIMIT 1',
+            param: [kode_kelurahan],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_program`(`kode_program`, `program`, `jenjang`, `kelas`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
-            param: [kode_program, program, jenjang, kelas, status, req.authIdUser]
+            sql: "INSERT INTO `tbs_kelurahan`(`kode_kelurahan`, `ids_kecamatan`, `kelurahan`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?)",
+            param: [kode_kelurahan, ids_kecamatan, kelurahan, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            ids_program: result.insertId
+            ids_kelurahan: result.insertId
         };
 
         // Hapus cache Redis
@@ -105,11 +104,19 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_program,
-            kode_program,
-            program,
-            jenjang,
-            kelas,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            ids_kecamatan,
+            kode_kecamatan,
+            kecamatan,
+            ids_kelurahan,
+            kode_kelurahan,
+            kelurahan,
             status,
         } = req.query;
         const order_by = req.query.order_by || 'created_at ASC';
@@ -134,8 +141,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `tbs_program`";
-        let sqlReadTotalData = "SELECT COUNT(kode_program) as total FROM `tbs_program`";
+        let sqlRead = "SELECT * FROM `views_kelurahan`";
+        let sqlReadTotalData = "SELECT COUNT(kode_kelurahan) as total FROM `views_kelurahan`";
         const params = [];
         const totalParams = [];
 
@@ -169,11 +176,19 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_program', ids_program);
-        addCondition('kode_program', kode_program);
-        addCondition('program', program, 'LIKE');
-        addCondition('jenjang', jenjang, 'LIKE');
-        addCondition('kelas', kelas, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi, 'IN');
+        addCondition('kode_provinsi', kode_provinsi, 'IN');
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau, 'IN');
+        addCondition('ids_kabkota', ids_kabkota, 'IN');
+        addCondition('kode_kabkota', kode_kabkota, 'IN');
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('ids_kecamatan', ids_kecamatan, 'IN');
+        addCondition('kode_kecamatan', kode_kecamatan, 'IN');
+        addCondition('kecamatan', kecamatan, 'LIKE');
+        addCondition('ids_kelurahan', ids_kelurahan, 'IN');
+        addCondition('kode_kelurahan', kode_kelurahan, 'IN');
+        addCondition('kelurahan', kelurahan, 'LIKE');
         addCondition('status', status);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -226,16 +241,15 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            kode_program,
-            program,
-            jenjang,
-            kelas,
+            kode_kelurahan,
+            ids_kecamatan,
+            kelurahan,
             status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_program FROM `tbs_program` WHERE ids_program = ? LIMIT 1',
+            sql: 'SELECT ids_kelurahan FROM `tbs_kelurahan` WHERE ids_kelurahan = ? LIMIT 1',
             param: [id],
         });
 
@@ -254,10 +268,9 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('kode_program', kode_program);
-        addUpdate('program', program);
-        addUpdate('jenjang', jenjang);
-        addUpdate('kelas', kelas);
+        addUpdate('kode_kelurahan', kode_kelurahan);
+        addUpdate('ids_kecamatan', ids_kecamatan);
+        addUpdate('kelurahan', kelurahan);
         addUpdate('status', status);
 
         // Check Data Update
@@ -265,15 +278,15 @@ Controller.update = async (req, res) => {
             return response.sc400("No data has been changed.", {}, res);
         }
 
-        /* addUpdate('updated_by', req.authIdUser); */
+        addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_program\` SET ${updates.join(', ')} WHERE \`ids_program\` = ?`,
+            sql: `UPDATE \`tbs_kelurahan\` SET ${updates.join(', ')} WHERE \`ids_kelurahan\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            ids_program: id
+            ids_kelurahan: id
         };
 
         // Hapus cache Redis
@@ -301,7 +314,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_program FROM `tbs_program` WHERE ids_program = ? LIMIT 1',
+            sql: 'SELECT ids_kelurahan FROM `tbs_kelurahan` WHERE ids_kelurahan = ? LIMIT 1',
             param: [id],
         });
 
@@ -311,7 +324,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_program` WHERE ids_program = ?',
+            sql: 'DELETE FROM `tbs_kelurahan` WHERE ids_kelurahan = ?',
             param: [id],
         };
 
@@ -339,11 +352,19 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_program,
-            kode_program,
-            program,
-            jenjang,
-            kelas,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            ids_kecamatan,
+            kode_kecamatan,
+            kecamatan,
+            ids_kelurahan,
+            kode_kelurahan,
+            kelurahan,
             status,
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
@@ -362,7 +383,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `tbs_program`";
+        let sqlSingle = "SELECT * FROM `views_kelurahan`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -392,11 +413,19 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_program', ids_program);
-        addCondition('kode_program', kode_program);
-        addCondition('program', program, 'LIKE');
-        addCondition('jenjang', jenjang, 'LIKE');
-        addCondition('kelas', kelas, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('kode_provinsi', kode_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
+        addCondition('ids_kabkota', ids_kabkota);
+        addCondition('kode_kabkota', kode_kabkota);
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('ids_kecamatan', ids_kecamatan);
+        addCondition('kode_kecamatan', kode_kecamatan);
+        addCondition('kecamatan', kecamatan, 'LIKE');
+        addCondition('ids_kelurahan', ids_kelurahan);
+        addCondition('kode_kelurahan', kode_kelurahan);
+        addCondition('kelurahan', kelurahan, 'LIKE');
         addCondition('status', status);
 
         // Limit to 1 row

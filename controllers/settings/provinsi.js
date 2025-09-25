@@ -57,28 +57,29 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            gambar,
-            konten,
+            kode_provinsi,
+            provinsi,
+            pulau,
             status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT gambar FROM `tbs_slider` WHERE gambar = ? LIMIT 1',
-            param: [gambar],
+            sql: 'SELECT ids_provinsi FROM `tbs_provinsi` WHERE kode_provinsi = ? LIMIT 1',
+            param: [kode_provinsi],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_slider`(`gambar`, `konten`, `status`, `created_by`) VALUES (?, ?, ?, ?)",
-            param: [gambar, konten, status, req.authIdUser]
+            sql: "INSERT INTO `tbs_provinsi`(`kode_provinsi`, `provinsi`, `pulau`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?)",
+            param: [kode_provinsi, provinsi, pulau, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            ids_slider: result.insertId
+            ids_provinsi: result.insertId
         };
 
         // Hapus cache Redis
@@ -103,9 +104,10 @@ Controller.read = async (req, res) => {
         }
 
         const {
-            ids_slider,
-            gambar,
-            konten,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
             status,
         } = req.query;
         const order_by = req.query.order_by || 'created_at ASC';
@@ -130,8 +132,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `tbs_slider`";
-        let sqlReadTotalData = "SELECT COUNT(ids_slider) as total FROM `tbs_slider`";
+        let sqlRead = "SELECT * FROM `tbs_provinsi`";
+        let sqlReadTotalData = "SELECT COUNT(ids_provinsi) as total FROM `tbs_provinsi`";
         const params = [];
         const totalParams = [];
 
@@ -165,9 +167,10 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('ids_slider', ids_slider);
-        addCondition('gambar', gambar);
-        addCondition('konten', konten, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi, 'IN');
+        addCondition('kode_provinsi', kode_provinsi, 'IN');
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
         addCondition('status', status);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -220,15 +223,15 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            ids_slider,
-            gambar,
-            konten,
+            kode_provinsi,
+            provinsi,
+            pulau,
             status,
         } = req.body;
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_slider FROM `tbs_slider` WHERE ids_slider = ? LIMIT 1',
+            sql: 'SELECT ids_provinsi FROM `tbs_provinsi` WHERE ids_provinsi = ? LIMIT 1',
             param: [id],
         });
 
@@ -247,9 +250,9 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('ids_slider', ids_slider);
-        addUpdate('gambar', gambar);
-        addUpdate('konten', konten);
+        addUpdate('kode_provinsi', kode_provinsi);
+        addUpdate('provinsi', provinsi);
+        addUpdate('pulau', pulau);
         addUpdate('status', status);
 
         // Check Data Update
@@ -257,15 +260,15 @@ Controller.update = async (req, res) => {
             return response.sc400("No data has been changed.", {}, res);
         }
 
-        /* addUpdate('updated_by', req.authIdUser); */
+        addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbs_slider\` SET ${updates.join(', ')} WHERE \`ids_slider\` = ?`,
+            sql: `UPDATE \`tbs_provinsi\` SET ${updates.join(', ')} WHERE \`ids_provinsi\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            ids_slider: id
+            ids_provinsi: id
         };
 
         // Hapus cache Redis
@@ -293,7 +296,7 @@ Controller.delete = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_slider FROM `tbs_slider` WHERE ids_slider = ? LIMIT 1',
+            sql: 'SELECT ids_provinsi FROM `tbs_provinsi` WHERE ids_provinsi = ? LIMIT 1',
             param: [id],
         });
 
@@ -303,7 +306,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbs_slider` WHERE ids_slider = ?',
+            sql: 'DELETE FROM `tbs_provinsi` WHERE ids_provinsi = ?',
             param: [id],
         };
 
@@ -331,9 +334,10 @@ Controller.single = async (req, res) => {
         }
 
         const {
-            ids_slider,
-            gambar,
-            konten,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
             status,
         } = req.query;
         const key = redisPrefix + "single:" + md5(req.originalUrl);
@@ -352,7 +356,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `tbs_slider`";
+        let sqlSingle = "SELECT * FROM `tbs_provinsi`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -382,9 +386,10 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('ids_slider', ids_slider);
-        addCondition('gambar', gambar);
-        addCondition('konten', konten, 'LIKE');
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('kode_provinsi', kode_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
         addCondition('status', status);
 
         // Limit to 1 row
