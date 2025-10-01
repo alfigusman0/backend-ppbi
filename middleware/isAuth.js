@@ -41,7 +41,7 @@ module.exports = async (req, res, next) => {
       }
     } else if (process.env.SESSIONS === 'DATABASE') {
       let checkData = await helper.runSQL({
-        sql: "SELECT token FROM `ci_jwt` WHERE `token` LIKE ? AND `expired` = ? LIMIT 1",
+        sql: "SELECT token FROM `tbl_jwt` WHERE `token` LIKE ? AND `expired` = ? LIMIT 1",
         param: [token[1], 'TIDAK'],
       });
       if (checkData.length == 0) {
