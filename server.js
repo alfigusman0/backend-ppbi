@@ -147,21 +147,15 @@ router.use('/pradaftar/setting', settingPRoutes); */
 router.use('/settings/cabang', sCabangRoutes);
 router.use('/settings/grup', sGrupRoutes);
 router.use('/settings/hak-akses', sHakAksesRoutes);
+router.use('/settings/jenis-bonsai', sJenisBonsaiRoutes);
+router.use('/settings/kab-kota', sKabKotaRoutes);
+router.use('/settings/kecamatan', sKecamatanRoutes);
+router.use('/settings/kelas', sKelasRoutes);
+router.use('/settings/kelurahan', sKelurahanRoutes);
 router.use('/settings/level', sLevelRoutes);
 router.use('/settings/modul', sModulRoutes);
-
-/* router.use('/settings/bobot-nilai-ukt', settingBobotNilaiUktRoutes);
-router.use('/settings/bobot-range-ukt', settingBobotRangeUktRoutes);
-router.use('/settings/daya-tampung', settingDayaTampungRoutes);
-router.use('/settings/jadwal', settingJadwalRoutes);
-router.use('/settings/jalur-masuk', settingJalurMasukRoutes);
-router.use('/settings/jurusan', settingJurusanRoutes);
-router.use('/settings/program', settingProgramRoutes);
-router.use('/settings/sanggah', settingSanggahRoutes);
-router.use('/settings/slider', settingSliderRoutes);
-router.use('/settings/sub-daya-tampung', settingSubDayaTampungRoutes);
-router.use('/settings/tipe-file', settingTipeFileRoutes);
-router.use('/settings/tipe-ujian', settingTipeUjianRoutes); */
+router.use('/settings/profile-cabang', sProfileCabangRoutes);
+router.use('/settings/provinsi', sProvinsiRoutes);
 
 app.use('/api', router);
 app.use('/api', (req, res, next) => {
