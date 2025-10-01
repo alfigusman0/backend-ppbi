@@ -227,8 +227,8 @@ Controller.update = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_kelas FROM `tbs_kelas` WHERE nama_kelas = ? AND ids_kelas != ? LIMIT 1',
-            param: [nama_kelas, id],
+            sql: 'SELECT ids_kelas FROM `tbs_kelas` WHERE ids_kelas = ? LIMIT 1',
+            param: [id],
         });
 
         if (!checkData.length) {
