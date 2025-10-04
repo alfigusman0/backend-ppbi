@@ -65,36 +65,15 @@ if (process.env.NODE_ENV === 'production') {
 const authRoutes = require('./routes/auth');
 const cronejobRoutes = require('./routes/cronejob');
 const usersRoutes = require('./routes/users');
-
 /* const awsRoutes = require('./routes/aws');*/
-/* Daftar */
-/* const fileDRoutes = require('./routes/daftar/file');
-const kelulusanDRoutes = require('./routes/daftar/kelulusan');
-const mahasiswaDRoutes = require('./routes/daftar/mahasiswa');
-const orangtuaDRoutes = require('./routes/daftar/orangtua');
-const pembayaranDRoutes = require('./routes/daftar/pembayaran');
-const pendidikanDRoutes = require('./routes/daftar/pendidikan');
-const rumahDRoutes = require('./routes/daftar/rumah');
-const sekolahDRoutes = require('./routes/daftar/sekolah');
-const uktDRoutes = require('./routes/daftar/ukt'); */
-/* Pradaftar */
-/* const biodataPRoutes = require('./routes/pradaftar/biodata');
-const daftartungguPRoutes = require('./routes/pradaftar/daftar_tunggu');
-const filePRoutes = require('./routes/pradaftar/file');
-const formulirPRoutes = require('./routes/pradaftar/formulir');
-const jadwalPRoutes = require('./routes/pradaftar/jadwal');
-const kelulusanPRoutes = require('./routes/pradaftar/kelulusan');
-const nilaiPRoutes = require('./routes/pradaftar/nilai');
-const orangtuaPRoutes = require('./routes/pradaftar/orangtua');
-const pekerjaanPRoutes = require('./routes/pradaftar/pekerjaan');
-const pembayaranPRoutes = require('./routes/pradaftar/pembayaran');
-const pendidikanPRoutes = require('./routes/pradaftar/pendidikan');
-const pilihanPRoutes = require('./routes/pradaftar/pilihan');
-const prestasiPRoutes = require('./routes/pradaftar/prestasi');
-const rumahPRoutes = require('./routes/pradaftar/rumah');
-const sanggahPRoutes = require('./routes/pradaftar/sanggah');
-const sekolahPRoutes = require('./routes/pradaftar/sekolah');
-const settingPRoutes = require('./routes/pradaftar/setting'); */
+
+/* Event Setting */
+const eacaraRoutes = require('./routes/event/acara');
+const ejuaraRoutes = require('./routes/event/juara');
+const ejuriRoutes = require('./routes/event/juri');
+const ekategoriRoutes = require('./routes/event/kategori');
+const esettingsRoutes = require('./routes/event/settings');
+
 /* Settings */
 const sCabangRoutes = require('./routes/settings/cabang');
 const sGrupRoutes = require('./routes/settings/grup');
@@ -115,34 +94,13 @@ router.use('/cronejob', cronejobRoutes);
 router.use('/users', usersRoutes);
 /* router.use('/aws', awsRoutes);*/
 
-/* Daftar */
-/* router.use('/daftar/file', fileDRoutes);
-router.use('/daftar/kelulusan', kelulusanDRoutes);
-router.use('/daftar/mahasiswa', mahasiswaDRoutes);
-router.use('/daftar/orangtua', orangtuaDRoutes);
-router.use('/daftar/pembayaran', pembayaranDRoutes);
-router.use('/daftar/pendidikan', pendidikanDRoutes);
-router.use('/daftar/rumah', rumahDRoutes);
-router.use('/daftar/sekolah', sekolahDRoutes);
-router.use('/daftar/ukt', uktDRoutes); */
-/* Pradaftar */
-/* router.use('/pradaftar/biodata', biodataPRoutes);
-router.use('/pradaftar/daftar-tunggu', daftartungguPRoutes);
-router.use('/pradaftar/file', filePRoutes);
-router.use('/pradaftar/formulir', formulirPRoutes);
-router.use('/pradaftar/jadwal', jadwalPRoutes);
-router.use('/pradaftar/kelulusan', kelulusanPRoutes);
-router.use('/pradaftar/nilai', nilaiPRoutes);
-router.use('/pradaftar/orangtua', orangtuaPRoutes);
-router.use('/pradaftar/pekerjaan', pekerjaanPRoutes);
-router.use('/pradaftar/pembayaran', pembayaranPRoutes);
-router.use('/pradaftar/pendidikan', pendidikanPRoutes);
-router.use('/pradaftar/pilihan', pilihanPRoutes);
-router.use('/pradaftar/prestasi', prestasiPRoutes);
-router.use('/pradaftar/rumah', rumahPRoutes);
-router.use('/pradaftar/sanggah', sanggahPRoutes);
-router.use('/pradaftar/sekolah', sekolahPRoutes);
-router.use('/pradaftar/setting', settingPRoutes); */
+/* Event Setting */
+router.use('/event/acara', eacaraRoutes);
+router.use('/event/juara', ejuaraRoutes);
+router.use('/event/juri', ejuriRoutes);
+router.use('/event/kategori', ekategoriRoutes);
+router.use('/event/settings', esettingsRoutes);
+
 /* Settings */
 router.use('/settings/cabang', sCabangRoutes);
 router.use('/settings/grup', sGrupRoutes);
