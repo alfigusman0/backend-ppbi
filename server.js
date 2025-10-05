@@ -67,7 +67,9 @@ const authRoutes = require('./routes/auth');
 const cronejobRoutes = require('./routes/cronejob');
 const ktaRoutes = require('./routes/kta');
 const notifRoutes = require('./routes/notif');
+const pohonRoutes = require('./routes/pohon');
 const profileRoutes = require('./routes/profile');
+const suisekiRoutes = require('./routes/suiseki');
 const usersRoutes = require('./routes/users');
 
 /* Event Setting */
@@ -97,7 +99,9 @@ router.use('/auth', authRoutes);
 router.use('/cronejob', cronejobRoutes);
 router.use('/kta', ktaRoutes);
 router.use('/notif', notifRoutes);
+router.use('/pohon', pohonRoutes);
 router.use('/profile', profileRoutes);
+router.use('/suiseki', suisekiRoutes);
 router.use('/users', usersRoutes);
 
 /* Event Setting */
