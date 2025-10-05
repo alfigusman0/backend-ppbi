@@ -38,7 +38,7 @@ const redisPrefix = process.env.REDIS_PREFIX + "event:juri:";
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 17, `%${action}%`]
+        param: [req.authIdsLevel, 18, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;

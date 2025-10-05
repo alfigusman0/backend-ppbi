@@ -37,7 +37,7 @@ const redisPrefix = process.env.REDIS_PREFIX + "settings:provinsi:";
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 14, `%${action}%`]
+        param: [req.authIdsLevel, 15, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;

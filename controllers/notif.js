@@ -1,15 +1,13 @@
 /* Config */
-const redis = require('../../config/redis');
+const redis = require('../config/redis');
 /* Libraries */
-const md5 = require('md5');
-const moment = require('moment');
 const winston = require('winston');
+const md5 = require('md5');
 const DailyRotateFile = require('winston-daily-rotate-file');
-
 /* Helpers */
-const helper = require('../../helpers/helper');
-const response = require('../../helpers/response');
-const isEmpty = require('../../validation/is-empty');
+const helper = require('../helpers/helper');
+const response = require('../helpers/response');
+const isEmpty = require('../validation/is-empty');
 /* Logger */
 const logger = winston.createLogger({
     level: "info",
@@ -33,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "daftar:sekolah:";
+const redisPrefix = process.env.REDIS_PREFIX + "notif:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 27, `%${action}%`]
+        param: [req.authIdsLevel, 21, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -59,33 +57,22 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            idd_kelulusan,
-            nisn,
-            ids_jurusan_sekolah,
-            nama_sekolah,
-            akreditasi_sekolah,
-            ids_rumpun,
+            id_user,
+            judul,
+            isi,
+            dibaca,
+            whatsapp,
         } = req.body;
 
-        /* Check existing data */
-        let checkData = await helper.runSQL({
-            sql: 'SELECT idd_kelulusan FROM `tbd_sekolah` WHERE idd_kelulusan = ? LIMIT 1',
-            param: [idd_kelulusan],
-        });
-        if (checkData.length) {
-            return response.sc400('Data already exists.', {}, res);
-        }
+        const sqlInsert = {
+            sql: "INSERT INTO `tbl_notif`(`id_user`, `judul`, `isi`, `dibaca`, `whatsapp`, `nomor_tlpn`, `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
+            param: [id_user, judul, isi, dibaca, whatsapp, req.authIdUser]
+        };
 
-        /* SQL Insert Data */
-        const result = await helper.runSQL({
-            sql: "INSERT INTO `tbd_sekolah` (`idd_kelulusan`, `nisn`, `ids_jurusan_sekolah`, `nama_sekolah`, `akreditasi_sekolah`, `ids_rumpun`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            param: [idd_kelulusan, nisn, ids_jurusan_sekolah, nama_sekolah, akreditasi_sekolah, ids_rumpun, req.authIdUser]
-        });
-
-        json = {
-            idd_kelulusan: idd_kelulusan,
-            idd_sekolah: result.insertId,
-        }
+        const result = await helper.runSQL(sqlInsert);
+        const json = {
+            id_notif: result.insertId
+        };
 
         try {
             await helper.deleteKeysByPattern(redisPrefix + '*');
@@ -98,8 +85,7 @@ Controller.create = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-
-}
+};
 
 Controller.read = async (req, res) => {
     try {
@@ -108,14 +94,15 @@ Controller.read = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const order_by = req.query.order_by || 'date_created DESC';
-        const key = redisPrefix + "read:" + md5(req.authToken + req.originalUrl);
+        const key = redisPrefix + "read:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
+        const order_by = req.query.order_by || 'created_at DESC';
         const {
-            idd_sekolah,
-            idd_kelulusan,
-            nomor_peserta,
-            nisn,
+            id_notif,
+            id_user,
+            judul,
+            dibaca,
+            whastapp,
         } = req.query;
 
         // Check Redis cache
@@ -137,8 +124,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `viewd_sekolah`";
-        let sqlReadTotalData = "SELECT COUNT(idd_sekolah) as total FROM `viewd_sekolah`";
+        let sqlRead = "SELECT * FROM `tbl_notif`";
+        let sqlReadTotalData = "SELECT COUNT(id_notif) as total FROM `tbl_notif`";
         const params = [];
         const totalParams = [];
 
@@ -172,10 +159,11 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('idd_sekolah', idd_sekolah);
-        addCondition('idd_kelulusan', idd_kelulusan);
-        addCondition('nomor_peserta', nomor_peserta);
-        addCondition('nisn', nisn);
+        addCondition('id_notif', id_notif, 'IN');
+        addCondition('id_user', id_user, 'IN');
+        addCondition('judul', judul, 'LIKE');
+        addCondition('dibaca', dibaca);
+        addCondition('whastapp', whastapp);
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -217,7 +205,7 @@ Controller.read = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.update = async (req, res) => {
     try {
@@ -227,28 +215,20 @@ Controller.update = async (req, res) => {
         }
 
         const id = req.params.id;
-        const created_by = (req.authIdsLevel === '5') ? req.authIdUser : req.body.created_by;
         const {
-            idd_kelulusan,
-            nisn,
-            ids_jurusan_sekolah,
-            nama_sekolah,
-            akreditasi_sekolah,
-            ids_rumpun,
+            id_user,
+            judul,
+            isi,
+            dibaca,
+            whatsapp,
         } = req.body;
 
-        /* Check existing data */
-        let sql = 'SELECT idd_sekolah FROM `tbd_sekolah` WHERE idd_sekolah = ?';
-        const param = [id];
-        if (req.authIdsLevel == "5") {
-            sql += ' AND created_by = ?';
-            param.push(req.authIdUser);
-        }
-        sql += ' LIMIT 1';
+        // Check existing data
         const checkData = await helper.runSQL({
-            sql,
-            param
+            sql: 'SELECT id_notif FROM `tbl_notif` WHERE id_notif = ? LIMIT 1',
+            param: [id],
         });
+
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
@@ -264,13 +244,11 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('idd_kelulusan', idd_kelulusan);
-        addUpdate('nisn', nisn);
-        addUpdate('ids_jurusan_sekolah', ids_jurusan_sekolah);
-        addUpdate('nama_sekolah', nama_sekolah);
-        addUpdate('akreditasi_sekolah', akreditasi_sekolah);
-        addUpdate('ids_rumpun', ids_rumpun);
-        addUpdate('created_by', created_by);
+        addUpdate('id_user', id_user);
+        addUpdate('judul', judul);
+        addUpdate('isi', isi);
+        addUpdate('dibaca', dibaca);
+        addUpdate('whatsapp', whatsapp);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -278,10 +256,15 @@ Controller.update = async (req, res) => {
         }
 
         addUpdate('updated_by', req.authIdUser);
-        await helper.runSQL({
-            sql: `UPDATE tbd_sekolah SET ${updates.join(', ')} WHERE idd_sekolah = ?`,
-            param: [...params, id],
-        });
+        const sqlUpdate = {
+            sql: `UPDATE \`tbl_notif\` SET ${updates.join(', ')} WHERE \`id_notif\` = ?`,
+            param: [...params, id]
+        };
+
+        await helper.runSQL(sqlUpdate);
+        const json = {
+            id_notif: id
+        };
 
         // Hapus cache Redis
         try {
@@ -290,12 +273,12 @@ Controller.update = async (req, res) => {
             logger.error('Failed to delete Redis cache in update:', redisError);
         }
 
-        return response.sc200('Data changed successfully.', {}, res);
+        return response.sc200('Data changed successfully.', json, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.delete = async (req, res) => {
     try {
@@ -306,27 +289,23 @@ Controller.delete = async (req, res) => {
 
         const id = req.params.id;
 
-        /* Check existing data */
-        let sql = 'SELECT idd_sekolah FROM `tbd_sekolah` WHERE idd_sekolah = ?';
-        const param = [id];
-        if (req.authIdsLevel == "5") {
-            sql += ' AND created_by = ?';
-            param.push(req.authIdUser);
-        }
-        sql += ' LIMIT 1';
+        // Check existing data
         const checkData = await helper.runSQL({
-            sql,
-            param
+            sql: 'SELECT id_notif FROM `tbl_notif` WHERE id_notif = ? LIMIT 1',
+            param: [id],
         });
+
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
 
         // SQL Delete Data
-        await helper.runSQL({
-            sql: 'DELETE FROM `tbd_sekolah` WHERE idd_sekolah = ?',
+        const sqlDelete = {
+            sql: 'DELETE FROM `tbl_notif` WHERE id_notif = ?',
             param: [id],
-        });
+        };
+
+        await helper.runSQL(sqlDelete);
 
         // Hapus cache Redis
         try {
@@ -334,12 +313,13 @@ Controller.delete = async (req, res) => {
         } catch (redisError) {
             logger.error('Failed to delete Redis cache in delete:', redisError);
         }
+
         return response.sc200('Data deleted successfully.', {}, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.single = async (req, res) => {
     try {
@@ -348,13 +328,14 @@ Controller.single = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const key = redisPrefix + "single:" + md5(req.authToken + req.originalUrl);
+        const key = redisPrefix + "single:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
         const {
-            idd_sekolah,
-            idd_kelulusan,
-            nomor_peserta,
-            nisn,
+            id_notif,
+            id_user,
+            judul,
+            dibaca,
+            whastapp,
         } = req.query;
 
         // Check Redis cache
@@ -371,7 +352,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `viewd_sekolah`";
+        let sqlSingle = "SELECT * FROM `tbl_notif`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -401,10 +382,11 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('idd_sekolah', idd_sekolah);
-        addCondition('idd_kelulusan', idd_kelulusan);
-        addCondition('nomor_peserta', nomor_peserta);
-        addCondition('nisn', nisn);
+        addCondition('id_notif', id_notif);
+        addCondition('id_user', id_user);
+        addCondition('judul', judul, 'LIKE');
+        addCondition('dibaca', dibaca);
+        addCondition('whastapp', whastapp);
         addCondition('created_by', created_by);
 
         // Limit to 1 row
@@ -436,6 +418,6 @@ Controller.single = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 module.exports = Controller;

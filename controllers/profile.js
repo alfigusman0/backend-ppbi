@@ -1,15 +1,13 @@
 /* Config */
-const redis = require('../../config/redis');
+const redis = require('../config/redis');
 /* Libraries */
-const md5 = require('md5');
-const moment = require('moment');
 const winston = require('winston');
+const md5 = require('md5');
 const DailyRotateFile = require('winston-daily-rotate-file');
-
 /* Helpers */
-const helper = require('../../helpers/helper');
-const response = require('../../helpers/response');
-const isEmpty = require('../../validation/is-empty');
+const helper = require('../helpers/helper');
+const response = require('../helpers/response');
+const isEmpty = require('../validation/is-empty');
 /* Logger */
 const logger = winston.createLogger({
     level: "info",
@@ -33,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "daftar:ukt:";
+const redisPrefix = process.env.REDIS_PREFIX + "profile:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 36, `%${action}%`]
+        param: [req.authIdsLevel, 3, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -59,32 +57,25 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            idd_kelulusan,
-            score,
-            kategori,
-            jumlah,
-            potongan,
+            nama_lengkap,
+            jenis_kelamin,
+            ids_kelurahan,
+            rw,
+            rt,
+            alamat,
+            nomor_tlpn,
+            foto,
         } = req.body;
 
-        /* Check existing data */
-        let checkData = await helper.runSQL({
-            sql: 'SELECT idd_kelulusan FROM `tbd_ukt` WHERE idd_kelulusan = ? LIMIT 1',
-            param: [idd_kelulusan],
-        });
-        if (checkData.length) {
-            return response.sc400('Data already exists.', {}, res);
-        }
+        const sqlInsert = {
+            sql: "INSERT INTO `tbl_profile`(`nama_lengkap`, `jenis_kelamin`, `ids_kelurahan`, `rw`, `rt`, `alamat`, `nomor_tlpn`, `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [nama_lengkap, jenis_kelamin, ids_kelurahan, rw, rt, alamat, nomor_tlpn, foto, req.authIdUser]
+        };
 
-        /* SQL Insert Data */
-        const result = await helper.runSQL({
-            sql: "INSERT INTO `tbd_ukt` (`idd_kelulusan`, `score`, `kategori`, `jumlah`, `potongan`, `ids_agama`, `kewarganegaraan`, `ids_jenis_tinggal`, `ids_alat_transportasi`, `ids_sktm`, `terima_kps`, `no_kps`, `ids_jenis_pendaftaran`, `ids_jenis_pembiayaan`, `ids_lktl`, `ukuran_baju`, `ukuran_jas`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [idd_kelulusan, score, kategori, jumlah, potongan, ids_agama, kewarganegaraan, ids_jenis_tinggal, ids_alat_transportasi, ids_sktm, terima_kps, no_kps, ids_jenis_pendaftaran, ids_jenis_pembiayaan, ids_lktl, ukuran_baju, ukuran_jas, req.authIdUser]
-        });
-
-        json = {
-            idd_kelulusan: idd_kelulusan,
-            idd_ukt: result.insertId,
-        }
+        const result = await helper.runSQL(sqlInsert);
+        const json = {
+            id_profile: result.insertId
+        };
 
         try {
             await helper.deleteKeysByPattern(redisPrefix + '*');
@@ -97,8 +88,7 @@ Controller.create = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-
-}
+};
 
 Controller.read = async (req, res) => {
     try {
@@ -107,13 +97,32 @@ Controller.read = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const order_by = req.query.order_by || 'date_created DESC';
-        const key = redisPrefix + "read:" + md5(req.authToken + req.originalUrl);
+        const key = redisPrefix + "read:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
+        const order_by = req.query.order_by || 'created_at DESC';
         const {
-            idd_ukt,
-            idd_kelulusan,
-            nomor_peserta,
+            id_profile,
+            username,
+            ids_level,
+            level,
+            ids_grup,
+            grup,
+            nama_lengkap,
+            jenis_kelamin,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            ids_kecamatan,
+            kode_kecamatan,
+            kecamatan,
+            ids_kelurahan,
+            kode_kelurahan,
+            kelurahan,
+            nomor_tlpn,
         } = req.query;
 
         // Check Redis cache
@@ -135,8 +144,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `viewd_ukt`";
-        let sqlReadTotalData = "SELECT COUNT(idd_ukt) as total FROM `viewd_ukt`";
+        let sqlRead = "SELECT * FROM `view_profile`";
+        let sqlReadTotalData = "SELECT COUNT(id_profile) as total FROM `view_profile`";
         const params = [];
         const totalParams = [];
 
@@ -170,10 +179,29 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('idd_ukt', idd_ukt);
-        addCondition('idd_kelulusan', idd_kelulusan);
-        addCondition('nomor_peserta', nomor_peserta);
-        /* addCondition('created_by', created_by); */
+        addCondition('id_profile', id_profile, 'IN');
+        addCondition('username', username);
+        addCondition('ids_level', ids_level, 'IN');
+        addCondition('level', level, 'LIKE');
+        addCondition('ids_grup', ids_grup, 'IN');
+        addCondition('grup', grup, 'LIKE');
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('jenis_kelamin', jenis_kelamin);
+        addCondition('ids_provinsi', ids_provinsi, 'IN');
+        addCondition('kode_provinsi', kode_provinsi, 'IN');
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
+        addCondition('ids_kabkota', ids_kabkota, 'IN');
+        addCondition('kode_kabkota', kode_kabkota, 'IN');
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('ids_kecamatan', ids_kecamatan, 'IN');
+        addCondition('kode_kecamatan', kode_kecamatan, 'IN');
+        addCondition('kecamatan', kecamatan, 'LIKE');
+        addCondition('ids_kelurahan', ids_kelurahan, 'IN');
+        addCondition('kode_kelurahan', kode_kelurahan, 'IN');
+        addCondition('kelurahan', kelurahan, 'LIKE');
+        addCondition('nomor_tlpn', nomor_tlpn, 'LIKE');
+        addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
         params.push(page * resPerPage, resPerPage);
@@ -214,7 +242,7 @@ Controller.read = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.update = async (req, res) => {
     try {
@@ -224,27 +252,23 @@ Controller.update = async (req, res) => {
         }
 
         const id = req.params.id;
-        const created_by = (req.authIdsLevel === '5') ? req.authIdUser : req.body.created_by;
         const {
-            idd_kelulusan,
-            score,
-            kategori,
-            jumlah,
-            potongan,
+            nama_lengkap,
+            jenis_kelamin,
+            ids_kelurahan,
+            rw,
+            rt,
+            alamat,
+            nomor_tlpn,
+            foto,
         } = req.body;
 
-        /* Check existing data */
-        let sql = 'SELECT idd_ukt FROM `tbd_ukt` WHERE idd_ukt = ?';
-        const param = [id];
-        if (req.authIdsLevel == "5") {
-            sql += ' AND created_by = ?';
-            param.push(req.authIdUser);
-        }
-        sql += ' LIMIT 1';
+        // Check existing data
         const checkData = await helper.runSQL({
-            sql,
-            param
+            sql: 'SELECT id_profile FROM `tbl_profile` WHERE id_profile = ? LIMIT 1',
+            param: [id],
         });
+
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
@@ -260,12 +284,14 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('idd_kelulusan', idd_kelulusan);
-        addUpdate('score', score);
-        addUpdate('kategori', kategori);
-        addUpdate('jumlah', jumlah);
-        addUpdate('potongan', potongan);
-        addUpdate('created_by', created_by);
+        addUpdate('nama_lengkap', nama_lengkap);
+        addUpdate('jenis_kelamin', jenis_kelamin);
+        addUpdate('ids_kelurahan', ids_kelurahan);
+        addUpdate('rw', rw);
+        addUpdate('rt', rt);
+        addUpdate('alamat', alamat);
+        addUpdate('nomor_tlpn', nomor_tlpn);
+        addUpdate('foto', foto);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -273,10 +299,15 @@ Controller.update = async (req, res) => {
         }
 
         addUpdate('updated_by', req.authIdUser);
-        await helper.runSQL({
-            sql: `UPDATE tbd_ukt SET ${updates.join(', ')} WHERE idd_ukt = ?`,
-            param: [...params, id],
-        });
+        const sqlUpdate = {
+            sql: `UPDATE \`tbl_profile\` SET ${updates.join(', ')} WHERE \`id_profile\` = ?`,
+            param: [...params, id]
+        };
+
+        await helper.runSQL(sqlUpdate);
+        const json = {
+            id_profile: id
+        };
 
         // Hapus cache Redis
         try {
@@ -285,12 +316,12 @@ Controller.update = async (req, res) => {
             logger.error('Failed to delete Redis cache in update:', redisError);
         }
 
-        return response.sc200('Data changed successfully.', {}, res);
+        return response.sc200('Data changed successfully.', json, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.delete = async (req, res) => {
     try {
@@ -301,27 +332,23 @@ Controller.delete = async (req, res) => {
 
         const id = req.params.id;
 
-        /* Check existing data */
-        let sql = 'SELECT idd_ukt FROM `tbd_ukt` WHERE idd_ukt = ?';
-        const param = [id];
-        if (req.authIdsLevel == "5") {
-            sql += ' AND created_by = ?';
-            param.push(req.authIdUser);
-        }
-        sql += ' LIMIT 1';
+        // Check existing data
         const checkData = await helper.runSQL({
-            sql,
-            param
+            sql: 'SELECT id_profile FROM `tbl_profile` WHERE id_profile = ? LIMIT 1',
+            param: [id],
         });
+
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
 
         // SQL Delete Data
-        await helper.runSQL({
-            sql: 'DELETE FROM `tbd_ukt` WHERE idd_ukt = ?',
+        const sqlDelete = {
+            sql: 'DELETE FROM `tbl_profile` WHERE id_profile = ?',
             param: [id],
-        });
+        };
+
+        await helper.runSQL(sqlDelete);
 
         // Hapus cache Redis
         try {
@@ -329,12 +356,13 @@ Controller.delete = async (req, res) => {
         } catch (redisError) {
             logger.error('Failed to delete Redis cache in delete:', redisError);
         }
+
         return response.sc200('Data deleted successfully.', {}, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.single = async (req, res) => {
     try {
@@ -343,12 +371,31 @@ Controller.single = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const key = redisPrefix + "single:" + md5(req.authToken + req.originalUrl);
+        const key = redisPrefix + "single:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
         const {
-            idd_ukt,
-            idd_kelulusan,
-            nomor_peserta,
+            id_profile,
+            username,
+            ids_level,
+            level,
+            ids_grup,
+            grup,
+            nama_lengkap,
+            jenis_kelamin,
+            ids_provinsi,
+            kode_provinsi,
+            provinsi,
+            pulau,
+            ids_kabkota,
+            kode_kabkota,
+            kabkota,
+            ids_kecamatan,
+            kode_kecamatan,
+            kecamatan,
+            ids_kelurahan,
+            kode_kelurahan,
+            kelurahan,
+            nomor_tlpn,
         } = req.query;
 
         // Check Redis cache
@@ -365,7 +412,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `viewd_ukt`";
+        let sqlSingle = "SELECT * FROM `view_profile`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -395,10 +442,29 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('idd_ukt', idd_ukt);
-        addCondition('idd_kelulusan', idd_kelulusan);
-        addCondition('nomor_peserta', nomor_peserta);
-        /* addCondition('created_by', created_by); */
+        addCondition('id_profile', id_profile);
+        addCondition('username', username);
+        addCondition('ids_level', ids_level);
+        addCondition('level', level, 'LIKE');
+        addCondition('ids_grup', ids_grup);
+        addCondition('grup', grup, 'LIKE');
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('jenis_kelamin', jenis_kelamin);
+        addCondition('ids_provinsi', ids_provinsi);
+        addCondition('kode_provinsi', kode_provinsi);
+        addCondition('provinsi', provinsi, 'LIKE');
+        addCondition('pulau', pulau);
+        addCondition('ids_kabkota', ids_kabkota);
+        addCondition('kode_kabkota', kode_kabkota);
+        addCondition('kabkota', kabkota, 'LIKE');
+        addCondition('ids_kecamatan', ids_kecamatan);
+        addCondition('kode_kecamatan', kode_kecamatan);
+        addCondition('kecamatan', kecamatan, 'LIKE');
+        addCondition('ids_kelurahan', ids_kelurahan);
+        addCondition('kode_kelurahan', kode_kelurahan);
+        addCondition('kelurahan', kelurahan, 'LIKE');
+        addCondition('nomor_tlpn', nomor_tlpn, 'LIKE');
+        addCondition('created_by', created_by);
 
         // Limit to 1 row
         sqlSingle += ' LIMIT 1';
@@ -429,6 +495,6 @@ Controller.single = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 module.exports = Controller;

@@ -31,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "settings:profile_cabang:";
+const redisPrefix = process.env.REDIS_PREFIX + "settings:profile-cabang:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 13, `%${action}%`]
+        param: [req.authIdsLevel, 14, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;

@@ -31,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "settings:hak_akses:";
+const redisPrefix = process.env.REDIS_PREFIX + "settings:hak-akses:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 8, `%${action}%`]
+        param: [req.authIdsLevel, 6, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;

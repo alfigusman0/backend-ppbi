@@ -63,9 +63,12 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const authRoutes = require('./routes/auth');
-const cronejobRoutes = require('./routes/cronejob');
-const usersRoutes = require('./routes/users');
 /* const awsRoutes = require('./routes/aws');*/
+const cronejobRoutes = require('./routes/cronejob');
+const ktaRoutes = require('./routes/kta');
+const notifRoutes = require('./routes/notif');
+const profileRoutes = require('./routes/profile');
+const usersRoutes = require('./routes/users');
 
 /* Event Setting */
 const eacaraRoutes = require('./routes/event/acara');
@@ -90,9 +93,12 @@ const sProvinsiRoutes = require('./routes/settings/provinsi');
 
 // use routes
 router.use('/auth', authRoutes);
-router.use('/cronejob', cronejobRoutes);
-router.use('/users', usersRoutes);
 /* router.use('/aws', awsRoutes);*/
+router.use('/cronejob', cronejobRoutes);
+router.use('/kta', ktaRoutes);
+router.use('/notif', notifRoutes);
+router.use('/profile', profileRoutes);
+router.use('/users', usersRoutes);
 
 /* Event Setting */
 router.use('/event/acara', eacaraRoutes);
