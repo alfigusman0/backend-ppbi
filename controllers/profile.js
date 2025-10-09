@@ -87,9 +87,7 @@ Controller.create = async (req, res) => {
     } catch (error) {
         console.log(error);
         return handleError(error, res);
-    }
-};
-
+    }};
 Controller.read = async (req, res) => {
     try {
         const hasAccess = await checkAccess(req, 'read');
@@ -122,7 +120,7 @@ Controller.read = async (req, res) => {
             ids_kelurahan,
             kode_kelurahan,
             kelurahan,
-            nomor_tlpn,
+            nmr_tlpn,
         } = req.query;
 
         // Check Redis cache
@@ -200,7 +198,7 @@ Controller.read = async (req, res) => {
         addCondition('ids_kelurahan', ids_kelurahan, 'IN');
         addCondition('kode_kelurahan', kode_kelurahan, 'IN');
         addCondition('kelurahan', kelurahan, 'LIKE');
-        addCondition('nomor_tlpn', nomor_tlpn, 'LIKE');
+        addCondition('nmr_tlpn', nmr_tlpn, 'LIKE');
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -259,7 +257,7 @@ Controller.update = async (req, res) => {
             rw,
             rt,
             alamat,
-            nomor_tlpn,
+            nmr_tlpn,
             foto,
         } = req.body;
 
@@ -290,7 +288,7 @@ Controller.update = async (req, res) => {
         addUpdate('rw', rw);
         addUpdate('rt', rt);
         addUpdate('alamat', alamat);
-        addUpdate('nomor_tlpn', nomor_tlpn);
+        addUpdate('nmr_tlpn', nmr_tlpn);
         addUpdate('foto', foto);
 
         // Check Data Update
@@ -395,7 +393,7 @@ Controller.single = async (req, res) => {
             ids_kelurahan,
             kode_kelurahan,
             kelurahan,
-            nomor_tlpn,
+            nmr_tlpn,
         } = req.query;
 
         // Check Redis cache
@@ -463,7 +461,7 @@ Controller.single = async (req, res) => {
         addCondition('ids_kelurahan', ids_kelurahan);
         addCondition('kode_kelurahan', kode_kelurahan);
         addCondition('kelurahan', kelurahan, 'LIKE');
-        addCondition('nomor_tlpn', nomor_tlpn, 'LIKE');
+        addCondition('nmr_tlpn', nmr_tlpn, 'LIKE');
         addCondition('created_by', created_by);
 
         // Limit to 1 row
