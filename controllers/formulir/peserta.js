@@ -1,18 +1,16 @@
 /* Config */
-const redis = require('../../config/redis');
+const redis = require('../config/redis');
 /* Libraries */
-const md5 = require('md5');
-const moment = require('moment');
 const winston = require('winston');
+const md5 = require('md5');
 const DailyRotateFile = require('winston-daily-rotate-file');
-
 /* Helpers */
-const helper = require('../../helpers/helper');
-const response = require('../../helpers/response');
-const isEmpty = require('../../validation/is-empty');
+const helper = require('../helpers/helper');
+const response = require('../helpers/response');
+const isEmpty = require('../validation/is-empty');
 /* Logger */
 const logger = winston.createLogger({
-    level: "info",
+    jenis_suiseki: "info",
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.ms(),
@@ -33,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "daftar:file:";
+const redisPrefix = process.env.REDIS_PREFIX + "formulir:peserta:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 29, `%${action}%`]
+        param: [req.authIdsLevel, 24, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -59,31 +57,23 @@ Controller.create = async (req, res) => {
         }
 
         const {
-            idd_kelulusan,
-            ids_tipe_file,
-            file,
-            url,
+            id_event,
+            id_pohon,
+            id_suiseki,
+            id_kategori,
+            ukuran,
+            foto,
         } = req.body;
 
-        /* Check existing data */
-        let checkData = await helper.runSQL({
-            sql: 'SELECT idd_kelulusan FROM `tbd_file` WHERE idd_kelulusan = ? AND ids_tipe_file = ? LIMIT 1',
-            param: [idd_kelulusan, ids_tipe_file],
-        });
-        if (checkData.length) {
-            return response.sc400('Data already exists.', {}, res);
-        }
+        const sqlInsert = {
+            sql: "INSERT INTO `tbl_formulir`(`id_event`, `id_pohon`, `id_suiseki`, `id_kategori`,  `ukuran`, foto, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            param: [id_event, id_pohon, id_suiseki, id_kategori, ukuran, foto, req.authIdUser]
+        };
 
-        /* SQL Insert Data */
-        const result = await helper.runSQL({
-            sql: "INSERT INTO `tbd_file` (`idd_kelulusan`, `ids_tipe_file`, `file`, `url`, `created_by`) VALUES (?, ?, ?, ?, ?)",
-            param: [idd_kelulusan, ids_tipe_file, file, url, req.authIdUser]
-        });
-
-        json = {
-            idd_kelulusan: idd_kelulusan,
-            idd_file: result.insertId,
-        }
+        const result = await helper.runSQL(sqlInsert);
+        const json = {
+            id_formulir: result.insertId
+        };
 
         try {
             await helper.deleteKeysByPattern(redisPrefix + '*');
@@ -96,8 +86,7 @@ Controller.create = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-
-}
+};
 
 Controller.read = async (req, res) => {
     try {
@@ -106,17 +95,20 @@ Controller.read = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const order_by = req.query.order_by || 'date_created DESC';
-        const key = redisPrefix + "read:" + md5(req.authToken + req.originalUrl);
+        const key = redisPrefix + "read:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
+        const order_by = req.query.order_by || 'created_at DESC';
         const {
-            idd_file,
-            idd_kelulusan,
-            ids_tipe_file,
-            no_ids_tipe_file,
-            setting,
-            nama_file,
-            upload,
+            id_formulir,
+            uuid,
+            id_event,
+            nama_lengkap,
+            id_pohon,
+            jenis_suiseki,
+            nama_latin,
+            id_suiseki,
+            nama_kelas,
+            id_kategori,
         } = req.query;
 
         // Check Redis cache
@@ -138,8 +130,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `viewd_file`";
-        let sqlReadTotalData = "SELECT COUNT(idd_file) as total FROM `viewd_file`";
+        let sqlRead = "SELECT * FROM `view_formulir`";
+        let sqlReadTotalData = "SELECT COUNT(id_formulir) as total FROM `view_formulir`";
         const params = [];
         const totalParams = [];
 
@@ -173,13 +165,16 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('idd_file', idd_file, 'IN');
-        addCondition('idd_kelulusan', idd_kelulusan, 'IN');
-        addCondition('ids_tipe_file', ids_tipe_file, 'IN');
-        addCondition('ids_tipe_file', no_ids_tipe_file, 'NOT IN');
-        addCondition('setting', setting);
-        addCondition('nama_file', nama_file, 'LIKE');
-        addCondition('upload', upload);
+        addCondition('id_formulir', id_formulir, 'IN');
+        addCondition('uuid', uuid);
+        addCondition('id_event', id_event, 'IN');
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('id_pohon', id_pohon, 'IN');
+        addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
+        addCondition('nama_latin', nama_latin, 'LIKE');
+        addCondition('id_suiseki', id_suiseki, 'IN');
+        addCondition('nama_kelas', nama_kelas, 'LIKE');
+        addCondition('id_kategori', id_kategori, '>=');
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -221,7 +216,7 @@ Controller.read = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.update = async (req, res) => {
     try {
@@ -232,17 +227,26 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            idd_kelulusan,
-            ids_tipe_file,
-            file,
-            url,
+            id_event,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
+            id_pohon,
+            id_suiseki,
+            id_kategori,
+            ukuran,
+            bukti_bayar,
+            bayar,
+            cetak,
+            arena,
+            meja,
+            foto,
         } = req.body;
-        const created_by = (req.authIdsLevel === '5') ? req.authIdUser : req.body.created_by || req.authIdUser;
 
         /* Check existing data */
-        let sql = 'SELECT idd_file FROM `tbd_file` WHERE idd_file = ? AND ids_tipe_file = ?';
-        const param = [id, ids_tipe_file];
-        if (req.authIdsLevel == "5") {
+        let sql = 'SELECT id_formulir FROM `tbl_formulir` WHERE id_formulir = ?';
+        const param = [id];
+        if (req.authTingkat > 5) {
             sql += ' AND created_by = ?';
             param.push(req.authIdUser);
         }
@@ -266,11 +270,20 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('idd_kelulusan', idd_kelulusan);
-        addUpdate('ids_tipe_file', ids_tipe_file);
-        addUpdate('file', file);
-        addUpdate('url', url);
-        addUpdate('created_by', created_by);
+        addUpdate('id_event', id_event);
+        addUpdate('nomor_sertifikat', nomor_sertifikat);
+        addUpdate('no_registrasi', no_registrasi);
+        addUpdate('no_juri', no_juri);
+        addUpdate('id_pohon', id_pohon);
+        addUpdate('id_suiseki', id_suiseki);
+        addUpdate('id_kategori', id_kategori);
+        addUpdate('ukuran', ukuran);
+        addUpdate('bukti_bayar', bukti_bayar);
+        addUpdate('bayar', bayar);
+        addUpdate('cetak', cetak);
+        addUpdate('arena', arena);
+        addUpdate('meja', meja);
+        addUpdate('foto', foto);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -278,10 +291,15 @@ Controller.update = async (req, res) => {
         }
 
         addUpdate('updated_by', req.authIdUser);
-        await helper.runSQL({
-            sql: `UPDATE tbd_file SET ${updates.join(', ')} WHERE idd_file = ?`,
-            param: [...params, id],
-        });
+        const sqlUpdate = {
+            sql: `UPDATE \`tbl_formulir\` SET ${updates.join(', ')} WHERE \`id_event\` = ?`,
+            param: [...params, id]
+        };
+
+        await helper.runSQL(sqlUpdate);
+        const json = {
+            id_event: id
+        };
 
         // Hapus cache Redis
         try {
@@ -290,12 +308,12 @@ Controller.update = async (req, res) => {
             logger.error('Failed to delete Redis cache in update:', redisError);
         }
 
-        return response.sc200('Data changed successfully.', {}, res);
+        return response.sc200('Data changed successfully.', json, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.delete = async (req, res) => {
     try {
@@ -307,9 +325,9 @@ Controller.delete = async (req, res) => {
         const id = req.params.id;
 
         /* Check existing data */
-        let sql = 'SELECT idd_file FROM `tbd_file` WHERE idd_file = ?';
+        let sql = 'SELECT id_formulir FROM `tbl_formulir` WHERE id_formulir = ?';
         const param = [id];
-        if (req.authIdsLevel == "5") {
+        if (req.authTingkat > 5) {
             sql += ' AND created_by = ?';
             param.push(req.authIdUser);
         }
@@ -323,10 +341,12 @@ Controller.delete = async (req, res) => {
         }
 
         // SQL Delete Data
-        await helper.runSQL({
-            sql: 'DELETE FROM `tbd_file` WHERE idd_file = ?',
+        const sqlDelete = {
+            sql: 'DELETE FROM `tbl_formulir` WHERE id_formulir = ?',
             param: [id],
-        });
+        };
+
+        await helper.runSQL(sqlDelete);
 
         // Hapus cache Redis
         try {
@@ -334,12 +354,13 @@ Controller.delete = async (req, res) => {
         } catch (redisError) {
             logger.error('Failed to delete Redis cache in delete:', redisError);
         }
+
         return response.sc200('Data deleted successfully.', {}, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.single = async (req, res) => {
     try {
@@ -348,16 +369,20 @@ Controller.single = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
+        const key = redisPrefix + "single:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
         const {
-            idd_file,
-            idd_kelulusan,
-            ids_tipe_file,
-            setting,
-            nama_file,
-            upload,
+            id_formulir,
+            uuid,
+            id_event,
+            nama_lengkap,
+            id_pohon,
+            jenis_suiseki,
+            nama_latin,
+            id_suiseki,
+            nama_kelas,
+            id_kategori,
         } = req.query;
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const key = redisPrefix + "single:" + md5(req.authToken + req.originalUrl);
 
         // Check Redis cache
         let cache = null;
@@ -373,7 +398,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `viewd_file`";
+        let sqlSingle = "SELECT * FROM `view_formulir`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -403,12 +428,16 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('idd_file', idd_file);
-        addCondition('idd_kelulusan', idd_kelulusan);
-        addCondition('ids_tipe_file', ids_tipe_file);
-        addCondition('setting', setting);
-        addCondition('nama_file', nama_file, 'LIKE');
-        addCondition('upload', upload);
+        addCondition('id_formulir', id_formulir);
+        addCondition('uuid', uuid);
+        addCondition('id_event', id_event);
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('id_pohon', id_pohon);
+        addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
+        addCondition('nama_latin', nama_latin, 'LIKE');
+        addCondition('id_suiseki', id_suiseki);
+        addCondition('nama_kelas', nama_kelas, 'LIKE');
+        addCondition('id_kategori', id_kategori, '>=');
         addCondition('created_by', created_by);
 
         // Limit to 1 row
@@ -440,6 +469,6 @@ Controller.single = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 module.exports = Controller;
