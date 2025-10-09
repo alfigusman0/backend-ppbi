@@ -63,13 +63,13 @@ Controller.create = async (req, res) => {
             rw,
             rt,
             alamat,
-            nomor_tlpn,
+            nmr_tlpn,
             foto,
         } = req.body;
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbl_profile`(`nama_lengkap`, `jenis_kelamin`, `ids_kelurahan`, `rw`, `rt`, `alamat`, `nomor_tlpn`, `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [nama_lengkap, jenis_kelamin, ids_kelurahan, rw, rt, alamat, nomor_tlpn, foto, req.authIdUser]
+            sql: "INSERT INTO `tbl_profile`(`nama_lengkap`, `jenis_kelamin`, `ids_kelurahan`, `rw`, `rt`, `alamat`, `nmr_tlpn`, `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [nama_lengkap, jenis_kelamin, ids_kelurahan, rw, rt, alamat, nmr_tlpn, foto, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
@@ -87,7 +87,8 @@ Controller.create = async (req, res) => {
     } catch (error) {
         console.log(error);
         return handleError(error, res);
-    }};
+    }
+};
 Controller.read = async (req, res) => {
     try {
         const hasAccess = await checkAccess(req, 'read');
