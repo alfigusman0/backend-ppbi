@@ -44,17 +44,6 @@ module.exports = function validateInput(method, path, data) {
           errors.confirm_password = 'password and confirm password do not match.';
         }
       }
-
-      if (Validator.isEmpty(data.cabang)) {
-        errors.cabang = 'cabang cannot be empty.';
-      } else {
-        if (!Validator.isLength(data.cabang, {
-            min: 3,
-            max: 3
-          })) {
-          errors.cabang = 'cabang must be 3 characters.';
-        }
-      }
     }
 
     if (path === '/login') {

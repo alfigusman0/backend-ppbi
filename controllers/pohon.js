@@ -95,7 +95,7 @@ Controller.read = async (req, res) => {
         }
 
         const key = redisPrefix + "read:" + md5(req.originalUrl);
-        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
         const order_by = req.query.order_by || 'created_at DESC';
         const {
             id_pohon,
@@ -339,7 +339,7 @@ Controller.single = async (req, res) => {
         }
 
         const key = redisPrefix + "single:" + md5(req.originalUrl);
-        const created_by = (req.authTingkat <= 5) ? req.query.created_by : null;
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
         const {
             id_pohon,
             uuid,

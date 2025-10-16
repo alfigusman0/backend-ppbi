@@ -79,6 +79,12 @@ const ejuriRoutes = require('./routes/event/juri');
 const ekategoriRoutes = require('./routes/event/kategori');
 const esettingsRoutes = require('./routes/event/settings');
 
+/* Formulir */
+const fBonsaiRoutes = require('./routes/formulir/bonsai');
+const fPengantarRoutes = require('./routes/formulir/pengantar');
+const fPenghargaanRoutes = require('./routes/formulir/penghargaan');
+const fPenilaianRoutes = require('./routes/formulir/penilaian');
+
 /* Settings */
 const sCabangRoutes = require('./routes/settings/cabang');
 const sGrupRoutes = require('./routes/settings/grup');
@@ -110,6 +116,12 @@ router.use('/event/juara', ejuaraRoutes);
 router.use('/event/juri', ejuriRoutes);
 router.use('/event/kategori', ekategoriRoutes);
 router.use('/event/settings', esettingsRoutes);
+
+/* Formulir */
+router.use('/formulir/bonsai', fBonsaiRoutes);
+router.use('/formulir/pengantar', fPengantarRoutes);
+router.use('/formulir/penghargaan', fPenghargaanRoutes);
+router.use('/formulir/penilaian', fPenilaianRoutes);
 
 /* Settings */
 router.use('/settings/cabang', sCabangRoutes);

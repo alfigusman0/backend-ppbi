@@ -1,13 +1,13 @@
 /* Config */
-const redis = require('../config/redis');
+const redis = require('../../config/redis');
 /* Libraries */
 const winston = require('winston');
 const md5 = require('md5');
 const DailyRotateFile = require('winston-daily-rotate-file');
 /* Helpers */
-const helper = require('../helpers/helper');
-const response = require('../helpers/response');
-const isEmpty = require('../validation/is-empty');
+const helper = require('../../helpers/helper');
+const response = require('../../helpers/response');
+const isEmpty = require('../../validation/is-empty');
 /* Logger */
 const logger = winston.createLogger({
     jenis_suiseki: "info",
@@ -31,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "suiseki:";
+const redisPrefix = process.env.REDIS_PREFIX + "formulir:bonsai:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 24, `%${action}%`]
+        param: [req.authIdsLevel, 25, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -56,22 +56,38 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
+        const id_pengantar = (isEmpty(req.body.id_pengantar)) ? null : req.body.id_pengantar;
         const {
-            id_profile,
-            ids_jenis_suiseki,
-            ids_kelas,
+            id_event,
+            id_pohon,
+            id_kategori,
             ukuran,
             foto,
         } = req.body;
 
+        /* Get Data Kelas */
+        const getKelas = await helper.runSQL({
+            sql: "SELECT ids_kelas FROM tbl_kategori WHERE id_event = ? AND id_kategori = ? LIMIT 1",
+            param: [id_event, id_kategori]
+        })
+        if (!getKelas.length) {
+            return response.sc400("Failed to generate registration number. Please check class data.", {}, res);
+        }
+        console.log(getKelas);
+
+        const no_registrasi = await Controller.getNoRegistrasi(id_event, getKelas[0].ids_kelas);
+        if (!no_registrasi) {
+            return response.sc400("Failed to generate registration number. Please check event and class data.", {}, res);
+        }
+
         const sqlInsert = {
-            sql: "INSERT INTO `tbl_suiseki`(`id_profile`, `ids_jenis_suiseki`, `ids_kelas`, `ukuran`,  `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
-            param: [id_profile, ids_jenis_suiseki, ids_kelas, ukuran, foto, req.authIdUser]
+            sql: "INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_kategori`, `ukuran`, `foto`, `id_pengantar`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [id_event, no_registrasi, id_pohon, id_kategori, ukuran, foto, id_pengantar, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
         const json = {
-            id_suiseki: result.insertId
+            id_formulir: result.insertId
         };
 
         try {
@@ -98,16 +114,29 @@ Controller.read = async (req, res) => {
         const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
         const order_by = req.query.order_by || 'created_at DESC';
         const {
-            id_suiseki,
+            id_formulir,
             uuid,
+            id_event,
+            nama_acara,
+            ids_cabang,
+            cabang,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
+            id_bonsai,
+            uuid_bonsai,
             id_profile,
             nama_lengkap,
-            ids_jenis_suiseki,
-            jenis_suiseki,
-            nama_latin,
+            ids_jenis_bonsai,
+            jenis_bonsai,
             ids_kelas,
             nama_kelas,
-            ukuran,
+            id_kategori,
+            nama_kategori,
+            bayar,
+            cetak,
+            arena,
+            meja,
         } = req.query;
 
         // Check Redis cache
@@ -129,8 +158,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `view_suiseki`";
-        let sqlReadTotalData = "SELECT COUNT(id_suiseki) as total FROM `view_suiseki`";
+        let sqlRead = "SELECT * FROM `view_formulir_pohon`";
+        let sqlReadTotalData = "SELECT COUNT(id_formulir) as total FROM `view_formulir_pohon`";
         const params = [];
         const totalParams = [];
 
@@ -164,16 +193,29 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('id_suiseki', id_suiseki, 'IN');
+        addCondition('id_formulir', id_formulir, 'IN');
         addCondition('uuid', uuid);
+        addCondition('id_event', id_event, 'IN');
+        addCondition('nama_acara', nama_acara, 'LIKE');
+        addCondition('ids_cabang', ids_cabang, 'IN');
+        addCondition('cabang', cabang, 'LIKE');
+        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('no_registrasi', no_registrasi, 'LIKE');
+        addCondition('no_juri', no_juri, 'LIKE');
+        addCondition('id_bonsai', id_bonsai, 'IN');
+        addCondition('uuid_bonsai', uuid_bonsai);
         addCondition('id_profile', id_profile, 'IN');
         addCondition('nama_lengkap', nama_lengkap, 'LIKE');
-        addCondition('ids_jenis_suiseki', ids_jenis_suiseki, 'IN');
-        addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
-        addCondition('nama_latin', nama_latin, 'LIKE');
+        addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
+        addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
         addCondition('ids_kelas', ids_kelas, 'IN');
         addCondition('nama_kelas', nama_kelas, 'LIKE');
-        addCondition('ukuran', ukuran, '>=');
+        addCondition('id_kategori', id_kategori, 'IN');
+        addCondition('nama_kategori', nama_kategori, 'LIKE');
+        addCondition('bayar', bayar);
+        addCondition('cetak', cetak);
+        addCondition('arena', arena);
+        addCondition('meja', meja);
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -226,19 +268,33 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
-            id_profile,
-            ids_jenis_suiseki,
-            ids_kelas,
+            id_event,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
+            id_pohon,
+            id_kategori,
             ukuran,
+            bukti_bayar,
+            bayar,
+            cetak,
+            arena,
+            meja,
             foto,
         } = req.body;
 
-        // Check existing data
+        /* Check existing data */
+        let sql = 'SELECT id_formulir FROM `tbl_formulir` WHERE id_formulir = ?';
+        const param = [id];
+        if (req.authTingkat > 5) {
+            sql += ' AND created_by = ?';
+            param.push(req.authIdUser);
+        }
+        sql += ' LIMIT 1';
         const checkData = await helper.runSQL({
-            sql: 'SELECT id_suiseki FROM `tbl_suiseki` WHERE id_suiseki = ? LIMIT 1',
-            param: [id],
+            sql,
+            param
         });
-
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
@@ -254,10 +310,21 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('id_profile', id_profile);
-        addUpdate('ids_jenis_suiseki', ids_jenis_suiseki);
-        addUpdate('ids_kelas', ids_kelas);
+        if (req.authTingkat < 5) {
+            addUpdate('id_event', id_event);
+            addUpdate('nomor_sertifikat', nomor_sertifikat);
+            addUpdate('no_registrasi', no_registrasi);
+            addUpdate('no_juri', no_juri);
+            addUpdate('bayar', bayar);
+            addUpdate('arena', arena);
+            addUpdate('meja', meja);
+        }
+
+        addUpdate('id_pohon', id_pohon);
+        addUpdate('id_kategori', id_kategori);
         addUpdate('ukuran', ukuran);
+        addUpdate('bukti_bayar', bukti_bayar);
+        addUpdate('cetak', cetak);
         addUpdate('foto', foto);
 
         // Check Data Update
@@ -267,13 +334,13 @@ Controller.update = async (req, res) => {
 
         addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbl_suiseki\` SET ${updates.join(', ')} WHERE \`id_profile\` = ?`,
+            sql: `UPDATE \`tbl_formulir\` SET ${updates.join(', ')} WHERE \`id_event\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            id_profile: id
+            id_event: id
         };
 
         // Hapus cache Redis
@@ -299,19 +366,30 @@ Controller.delete = async (req, res) => {
 
         const id = req.params.id;
 
-        // Check existing data
+        /* Check existing data */
+        let sql = 'SELECT id_formulir FROM `tbl_formulir` WHERE id_formulir = ?';
+        const param = [id];
+        if (req.authTingkat > 5) {
+            sql += ' AND created_by = ?';
+            param.push(req.authIdUser);
+        }
+        sql += ' LIMIT 1';
         const checkData = await helper.runSQL({
-            sql: 'SELECT id_suiseki FROM `tbl_suiseki` WHERE id_suiseki = ? LIMIT 1',
-            param: [id],
+            sql,
+            param
         });
-
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
 
+        /* Status Pembayaran */
+        if (checkData[0].bayar === "SUDAH") {
+            return response.sc400("Data tidak dapat dihapus karena sudah dibayar.", {}, res);
+        }
+
         // SQL Delete Data
         const sqlDelete = {
-            sql: 'DELETE FROM `tbl_suiseki` WHERE id_suiseki = ?',
+            sql: 'DELETE FROM `tbl_formulir` WHERE id_formulir = ?',
             param: [id],
         };
 
@@ -341,16 +419,29 @@ Controller.single = async (req, res) => {
         const key = redisPrefix + "single:" + md5(req.originalUrl);
         const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
         const {
-            id_suiseki,
+            id_formulir,
             uuid,
+            id_event,
+            nama_acara,
+            ids_cabang,
+            cabang,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
+            id_bonsai,
+            uuid_bonsai,
             id_profile,
             nama_lengkap,
-            ids_jenis_suiseki,
-            jenis_suiseki,
-            nama_latin,
+            ids_jenis_bonsai,
+            jenis_bonsai,
             ids_kelas,
             nama_kelas,
-            ukuran,
+            id_kategori,
+            nama_kategori,
+            bayar,
+            cetak,
+            arena,
+            meja,
         } = req.query;
 
         // Check Redis cache
@@ -367,7 +458,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `view_suiseki`";
+        let sqlSingle = "SELECT * FROM `view_formulir_pohon`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -397,16 +488,29 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('id_suiseki', id_suiseki);
+        addCondition('id_formulir', id_formulir);
         addCondition('uuid', uuid);
+        addCondition('id_event', id_event);
+        addCondition('nama_acara', nama_acara, 'LIKE');
+        addCondition('ids_cabang', ids_cabang);
+        addCondition('cabang', cabang, 'LIKE');
+        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('no_registrasi', no_registrasi, 'LIKE');
+        addCondition('no_juri', no_juri, 'LIKE');
+        addCondition('id_bonsai', id_bonsai);
+        addCondition('uuid_bonsai', uuid_bonsai);
         addCondition('id_profile', id_profile);
         addCondition('nama_lengkap', nama_lengkap, 'LIKE');
-        addCondition('ids_jenis_suiseki', ids_jenis_suiseki);
-        addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
-        addCondition('nama_latin', nama_latin, 'LIKE');
+        addCondition('ids_jenis_bonsai', ids_jenis_bonsai);
+        addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
         addCondition('ids_kelas', ids_kelas);
         addCondition('nama_kelas', nama_kelas, 'LIKE');
-        addCondition('ukuran', ukuran, '>=');
+        addCondition('id_kategori', id_kategori);
+        addCondition('nama_kategori', nama_kategori, 'LIKE');
+        addCondition('bayar', bayar);
+        addCondition('cetak', cetak);
+        addCondition('arena', arena);
+        addCondition('meja', meja);
         addCondition('created_by', created_by);
 
         // Limit to 1 row
@@ -437,6 +541,37 @@ Controller.single = async (req, res) => {
     } catch (error) {
         console.log(error);
         return handleError(error, res);
+    }
+};
+
+/* Get Kode Nomor Registrasi */
+Controller.getNoRegistrasi = async (id_event, ids_kelas) => {
+    try {
+        const result = await helper.runSQL({
+            sql: "SELECT no_registrasi FROM view_formulir_pohon WHERE id_event = ? AND ids_kelas = ? ORDER BY no_registrasi DESC LIMIT 1",
+            param: [id_event, ids_kelas]
+        });
+        if (!result.length) {
+            const getKelas = await helper.runSQL({
+                sql: "SELECT kode FROM tbs_kelas WHERE ids_kelas = ? LIMIT 1",
+                param: [ids_kelas]
+            });
+            if (!getKelas.length) {
+                return null;
+            }
+            return `${getKelas[0].kode}-00001`;
+        }
+        console.log(result);
+        const lastNo = result[0].no_registrasi;
+        const parts = lastNo.split('-');
+        const lastPart = parseInt(parts[parts.length - 1]);
+        const newPart = lastPart + 1;
+        const newNo = `${parts.slice(0, parts.length - 1).join('-')}-${newPart.toString().padStart(5, '0')}`;
+        return newNo;
+    } catch (error) {
+        console.log(error);
+        logger.error('Error getting registration number:', error);
+        return null;
     }
 };
 

@@ -136,6 +136,8 @@ Controller.cj2 = async (req, res) => {
             'Metode Pembayaran': 'Masukkan metode pembayaran di sini',
             'Tanggal Awal Akses': '2025-01-01',
             'Tanggal Akhir Akses': '2025-12-31',
+            'Tanggal Awal Pendaftaran': '2025-01-01',
+            'Tanggal Akhir Pendaftaran': '2025-12-31',
             'Tanggal Awal Penilaian': '2025-01-01',
             'Tanggal Akhir Penilaian': '2025-12-31'
         };

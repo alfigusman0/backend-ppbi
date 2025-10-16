@@ -71,6 +71,7 @@ Controller.create = async (req, res) => {
             alamat,
             poster,
             bukti_bayar,
+            jenis,
             status,
         } = req.body;
 
@@ -85,8 +86,8 @@ Controller.create = async (req, res) => {
 
         /* SQL Insert Data */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_event` (`ids_cabang`, `nama_acara`, `slug_event`, `proposal`, `tgl_awal_acara`, `tgl_akhir_acara`, `ids_kelurahan`, `rw`, `rt`, `alamat`, `poster`, `bukti_bayar`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [ids_cabang, nama_acara, slug_event, proposal, tgl_awal_acara, tgl_akhir_acara, ids_kelurahan, rw, rt, alamat, poster, bukti_bayar, status, req.authIdUser]
+            sql: "INSERT INTO `tbl_event` (`ids_cabang`, `nama_acara`, `slug_event`, `proposal`, `tgl_awal_acara`, `tgl_akhir_acara`, `ids_kelurahan`, `rw`, `rt`, `alamat`, `poster`, `bukti_bayar`, `jenis`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [ids_cabang, nama_acara, slug_event, proposal, tgl_awal_acara, tgl_akhir_acara, ids_kelurahan, rw, rt, alamat, poster, bukti_bayar, jenis, status, req.authIdUser]
         });
 
         json = {
@@ -134,6 +135,7 @@ Controller.read = async (req, res) => {
             kecamatan,
             ids_kelurahan,
             kelurahan,
+            jenis,
             status,
         } = req.query;
 
@@ -207,6 +209,7 @@ Controller.read = async (req, res) => {
         addCondition('kecamatan', kecamatan, 'LIKE');
         addCondition('ids_kelurahan', ids_kelurahan, 'IN');
         addCondition('kelurahan', kelurahan, 'LIKE');
+        addCondition('jenis', jenis);
         addCondition('status', status);
         addCondition('created_by', created_by);
 
@@ -277,6 +280,7 @@ Controller.update = async (req, res) => {
             alamat,
             poster,
             bukti_bayar,
+            jenis,
             status,
         } = req.body;
 
@@ -330,6 +334,7 @@ Controller.update = async (req, res) => {
         addUpdate('alamat', alamat);
         addUpdate('poster', poster);
         addUpdate('bukti_bayar', bukti_bayar);
+        addUpdate('jenis', jenis);
         addUpdate('status', status);
 
         // Check Data Update
@@ -427,6 +432,7 @@ Controller.single = async (req, res) => {
             kecamatan,
             ids_kelurahan,
             kelurahan,
+            jenis,
             status,
         } = req.query;
 
@@ -490,6 +496,7 @@ Controller.single = async (req, res) => {
         addCondition('kecamatan', kecamatan, 'LIKE');
         addCondition('ids_kelurahan', ids_kelurahan);
         addCondition('kelurahan', kelurahan, 'LIKE');
+        addCondition('jenis', jenis);
         addCondition('status', status);
         addCondition('created_by', created_by);
 

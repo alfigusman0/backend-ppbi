@@ -57,6 +57,7 @@ Controller.create = async (req, res) => {
         }
 
         const {
+            kode,
             nama_kelas,
             jenis,
             status,
@@ -64,16 +65,16 @@ Controller.create = async (req, res) => {
 
         // Check existing data
         const checkData = await helper.runSQL({
-            sql: 'SELECT ids_kelas FROM `tbs_kelas` WHERE nama_kelas = ? LIMIT 1',
-            param: [nama_kelas],
+            sql: 'SELECT ids_kelas FROM `tbs_kelas` WHERE kode = ? OR nama_kelas = ? LIMIT 1',
+            param: [kode, nama_kelas],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbs_kelas`(`nama_kelas`, `jenis`, `status`, `created_by`) VALUES (?, ?, ?, ?)",
-            param: [nama_kelas, jenis, status, req.authIdUser]
+            sql: "INSERT INTO `tbs_kelas`(`kode`,`nama_kelas`, `jenis`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?)",
+            param: [kode, nama_kelas, jenis, status, req.authIdUser]
         };
 
         const result = await helper.runSQL(sqlInsert);
@@ -104,6 +105,7 @@ Controller.read = async (req, res) => {
 
         const {
             ids_kelas,
+            kode,
             nama_kelas,
             jenis,
             status,
@@ -166,6 +168,7 @@ Controller.read = async (req, res) => {
         };
 
         addCondition('ids_kelas', ids_kelas, 'IN');
+        addCondition('kode', kode, 'IN');
         addCondition('nama_kelas', nama_kelas, 'LIKE');
         addCondition('jenis', jenis);
         addCondition('status', status);
@@ -220,6 +223,7 @@ Controller.update = async (req, res) => {
 
         const id = req.params.id;
         const {
+            kode,
             nama_kelas,
             jenis,
             status,
@@ -246,6 +250,7 @@ Controller.update = async (req, res) => {
             }
         };
 
+        addUpdate('kode', kode);
         addUpdate('nama_kelas', nama_kelas);
         addUpdate('jenis', jenis);
         addUpdate('status', status);
@@ -330,6 +335,7 @@ Controller.single = async (req, res) => {
 
         const {
             ids_kelas,
+            kode,
             nama_kelas,
             jenis,
             status,
@@ -381,6 +387,7 @@ Controller.single = async (req, res) => {
         };
 
         addCondition('ids_kelas', ids_kelas);
+        addCondition('kode', kode);
         addCondition('nama_kelas', nama_kelas, 'LIKE');
         addCondition('jenis', jenis);
         addCondition('status', status);
