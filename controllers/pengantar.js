@@ -56,7 +56,7 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authTingkat <= 5) ? req.body.created_by : req.authIdUser;
+        const created_by = (req.authTingkat <= 5) ? req.body.created_by || req.authIdUser : req.authIdUser;
         const {
             pengantar_nama,
             pengantar_alamat,
