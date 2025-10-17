@@ -328,4 +328,50 @@ helper.convertoDateTime = (date) => {
   return localDate.format('YYYY-MM-DD HH:mm:ss');
 };
 
+/**
+ * Helper Axios Request
+ * @param {Object} options
+ * @param {string} options.url - Target URL
+ * @param {string} [options.method="GET"] - HTTP Method (GET, POST, PUT, DELETE, PATCH)
+ * @param {Object} [options.headers={}] - Custom headers
+ * @param {Object} [options.params={}] - Query params (untuk GET dsb.)
+ * @param {Object|FormData|string} [options.data={}] - Body data (untuk POST/PUT/PATCH)
+ * @param {number} [options.timeout=15000] - Timeout request (default 15 detik)
+ */
+helper.httpRequest = async function (options) {
+  try {
+    const config = {
+      method: options.method || "GET",
+      url: options.url,
+      headers: options.headers || {},
+      params: options.params || {},
+      data: options.data || {},
+      timeout: options.timeout || 15000,
+      validateStatus: function (status) {
+        // Jangan langsung throw error, biar bisa handle status code manual
+        return true;
+      },
+    };
+
+    const response = await axios(config);
+
+    return {
+      success: true,
+      status: response.status,
+      headers: response.headers,
+      data: response.data,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message,
+      error: error.response ? {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers,
+      } : null,
+    };
+  }
+};
+
 module.exports = helper;

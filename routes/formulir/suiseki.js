@@ -1,11 +1,11 @@
 /* Libraries */
 const router = require('express').Router();
 /* Controller */
-const Controller = require('../controllers/pengantar');
+const Controller = require('../../controllers/formulir/suiseki');
 /* Middleware */
-const isAuth = require('../middleware/isAuth');
-const paramsid = require('../middleware/params-id');
-const validation = require('../middleware/pengantar');
+const isAuth = require('../../middleware/isAuth');
+const validation = require('../../middleware/formulir/suiseki');
+const paramsid = require('../../middleware/params-id');
 
 router.get('/', isAuth, Controller.read);
 router.post('/', isAuth, validation, Controller.create);

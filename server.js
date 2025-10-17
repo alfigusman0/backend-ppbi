@@ -63,7 +63,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const authRoutes = require('./routes/auth');
-/* const awsRoutes = require('./routes/aws');*/
+const awsRoutes = require('./routes/aws');
 const cronejobRoutes = require('./routes/cronejob');
 const ktaRoutes = require('./routes/kta');
 const notifRoutes = require('./routes/notif');
@@ -82,9 +82,9 @@ const esettingsRoutes = require('./routes/event/settings');
 
 /* Formulir */
 const fBonsaiRoutes = require('./routes/formulir/bonsai');
-const fPengantarRoutes = require('./routes/pengantar');
 const fPenghargaanRoutes = require('./routes/formulir/penghargaan');
 const fPenilaianRoutes = require('./routes/formulir/penilaian');
+const fSuisekiRoutes = require('./routes/formulir/suiseki');
 
 /* Settings */
 const sCabangRoutes = require('./routes/settings/cabang');
@@ -102,7 +102,7 @@ const sProvinsiRoutes = require('./routes/settings/provinsi');
 
 // use routes
 router.use('/auth', authRoutes);
-/* router.use('/aws', awsRoutes);*/
+router.use('/aws', awsRoutes);
 router.use('/cronejob', cronejobRoutes);
 router.use('/kta', ktaRoutes);
 router.use('/notif', notifRoutes);
@@ -123,6 +123,7 @@ router.use('/event/settings', esettingsRoutes);
 router.use('/formulir/bonsai', fBonsaiRoutes);
 router.use('/formulir/penghargaan', fPenghargaanRoutes);
 router.use('/formulir/penilaian', fPenilaianRoutes);
+router.use('/formulir/suiseki', fSuisekiRoutes);
 
 /* Settings */
 router.use('/settings/cabang', sCabangRoutes);

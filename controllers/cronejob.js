@@ -219,7 +219,7 @@ Controller.cj3 = async (req, res) => {
 
         // Ambil semua data juri dan formulir dengan JOIN untuk mendapatkan pasangan yang perlu diproses
         const juriFormulirPairs = await helper.runSQL({
-            sql: `SELECT DISTINCT j.id_juri, j.id_profile, j.id_event, f.id_folmulir FROM tbl_juri j INNER JOIN tbl_formulir f ON j.id_event = f.id_event WHERE j.penilaian = 'BELUM' ORDER BY j.id_juri, f.id_folmulir`,
+            sql: `SELECT DISTINCT j.id_juri, j.id_profile, j.id_event, f.id_formulir FROM tbl_juri j INNER JOIN tbl_formulir f ON j.id_event = f.id_event WHERE j.penilaian = 'BELUM' ORDER BY j.id_juri, f.id_formulir`,
             param: []
         });
 
@@ -249,12 +249,12 @@ Controller.cj3 = async (req, res) => {
 
         // Proses setiap pasangan juri-formulir
         for (const pair of juriFormulirPairs) {
-            const key = `${pair.id_folmulir}-${pair.id_profile}`;
+            const key = `${pair.id_formulir}-${pair.id_profile}`;
 
             // Hanya INSERT jika belum ada penilaian untuk kombinasi formulir-juri ini
             if (!existingPenilaianSet.has(key)) {
                 insertValues.push([
-                    pair.id_folmulir, // id_formulir
+                    pair.id_formulir, // id_formulir
                     pair.id_profile, // id_profile (juri)
                     0.0, // penampilan (default 0)
                     0.0, // gerak_dasar (default 0)
