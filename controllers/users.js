@@ -280,7 +280,6 @@ Controller.update = async (req, res) => {
         addUpdate('ids_grup', ids_grup);
         addUpdate('username', username);
         addUpdate('password', hashedPassword);
-        addUpdate('mandiri', mandiri);
 
         // Check Data Update
         if (isEmpty(params)) {
