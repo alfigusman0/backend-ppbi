@@ -62,14 +62,14 @@ Controller.create = async (req, res) => {
             kta_lama,
             id_profile,
             masa_berlaku,
-            ids_cabang,
+            id_cabang,
             bukti_bayara,
             status,
         } = req.body;
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbl_kta`(`no_kta`, `kta_lama`, `id_profile`, `masa_berlaku`, `ids_cabang`, `bukti_bayara`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [no_kta, kta_lama, id_profile, masa_berlaku, ids_cabang, bukti_bayara, status, created_by]
+            sql: "INSERT INTO `tbl_kta`(`no_kta`, `kta_lama`, `id_profile`, `masa_berlaku`, `id_cabang`, `bukti_bayara`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [no_kta, kta_lama, id_profile, masa_berlaku, id_cabang, bukti_bayara, status, created_by]
         };
 
         const result = await helper.runSQL(sqlInsert);
@@ -106,7 +106,7 @@ Controller.read = async (req, res) => {
             nama_lengkap,
             no_kta,
             kta_lama,
-            ids_cabang,
+            id_cabang,
             cabang,
             masa_berlaku,
             status,
@@ -171,7 +171,7 @@ Controller.read = async (req, res) => {
         addCondition('nama_lengkap', nama_lengkap, 'LIKE');
         addCondition('no_kta', no_kta);
         addCondition('kta_lama', kta_lama);
-        addCondition('ids_cabang', ids_cabang, 'IN');
+        addCondition('id_cabang', id_cabang, 'IN');
         addCondition('cabang', cabang, 'LIKE');
         addCondition('masa_berlaku', masa_berlaku, '<=');
         addCondition('status', status);
@@ -231,7 +231,7 @@ Controller.update = async (req, res) => {
             kta_lama,
             id_profile,
             masa_berlaku,
-            ids_cabang,
+            id_cabang,
             bukti_bayara,
             status,
         } = req.body;
@@ -262,7 +262,7 @@ Controller.update = async (req, res) => {
         addUpdate('id_profile', id_profile);
         addUpdate('status', status);
         addUpdate('masa_berlaku', masa_berlaku);
-        addUpdate('ids_cabang', ids_cabang);
+        addUpdate('id_cabang', id_cabang);
         addUpdate('bukti_bayara', bukti_bayara);
 
         // Check Data Update
@@ -351,7 +351,7 @@ Controller.single = async (req, res) => {
             nama_lengkap,
             no_kta,
             kta_lama,
-            ids_cabang,
+            id_cabang,
             cabang,
             masa_berlaku,
             status,
@@ -406,7 +406,7 @@ Controller.single = async (req, res) => {
         addCondition('nama_lengkap', nama_lengkap, 'LIKE');
         addCondition('no_kta', no_kta);
         addCondition('kta_lama', kta_lama);
-        addCondition('ids_cabang', ids_cabang);
+        addCondition('id_cabang', id_cabang);
         addCondition('cabang', cabang, 'LIKE');
         addCondition('masa_berlaku', masa_berlaku, '<=');
         addCondition('status', status);
