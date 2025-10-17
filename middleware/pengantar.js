@@ -2,9 +2,9 @@
 const {
     json
 } = require('body-parser');
-const response = require('../../helpers/response');
+const response = require('../helpers/response');
 /* Validation */
-const validation = require('../../validation/formulir/pengantar');
+const validation = require('../validation/pengantar');
 
 module.exports = async (req, res, next) => {
     /* Validation */

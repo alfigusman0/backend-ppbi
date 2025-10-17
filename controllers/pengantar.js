@@ -1,15 +1,13 @@
 /* Config */
-const redis = require('../../config/redis');
+const redis = require('../config/redis');
 /* Libraries */
-const md5 = require('md5');
-const moment = require('moment');
 const winston = require('winston');
+const md5 = require('md5');
 const DailyRotateFile = require('winston-daily-rotate-file');
-
 /* Helpers */
-const helper = require('../../helpers/helper');
-const response = require('../../helpers/response');
-const isEmpty = require('../../validation/is-empty');
+const helper = require('../helpers/helper');
+const response = require('../helpers/response');
+const isEmpty = require('../validation/is-empty');
 /* Logger */
 const logger = winston.createLogger({
     level: "info",
@@ -33,13 +31,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "daftar:mahasiswa:";
+const redisPrefix = process.env.REDIS_PREFIX + "pengantar:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 24, `%${action}%`]
+        param: [req.authIdsLevel, 26, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -58,44 +56,24 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const ids_alat_transportasi = req.body.ids_alat_transportasi || null;
+        const created_by = (req.authTingkat <= 5) ? req.body.created_by : req.authIdUser;
         const {
-            idd_kelulusan,
-            nik,
-            jenis_kelamin,
-            tempat_lahir,
-            tgl_lahir,
-            ids_agama,
-            kewarganegaraan,
-            ids_jenis_tinggal,
-            ids_sktm,
-            terima_kps,
-            no_kps,
-            ids_jenis_pendaftaran,
-            ids_jenis_pembiayaan,
-            ukuran_baju,
-            ukuran_jas,
+            pengantar_nama,
+            pengantar_alamat,
+            pengantar_handphone,
+            pengantar_fotoktp,
+            pengantar_fotosuratpernyataan,
         } = req.body;
 
-        /* Check existing data */
-        let checkData = await helper.runSQL({
-            sql: 'SELECT idd_kelulusan FROM `tbd_mahasiswa` WHERE idd_kelulusan = ? LIMIT 1',
-            param: [idd_kelulusan],
-        });
-        if (checkData.length) {
-            return response.sc400('Data already exists.', {}, res);
-        }
+        const sqlInsert = {
+            sql: "INSERT INTO `tbl_pengantar`(`pengantar_nama`, `pengantar_alamat`, `pengantar_handphone`, `pengantar_fotoktp`, `pengantar_fotosuratpernyataan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
+            param: [pengantar_nama, pengantar_alamat, pengantar_handphone, pengantar_fotoktp, pengantar_fotosuratpernyataan, created_by]
+        };
 
-        /* SQL Insert Data */
-        const result = await helper.runSQL({
-            sql: "INSERT INTO `tbd_mahasiswa` (`idd_kelulusan`, `nik`, `jenis_kelamin`, `tempat_lahir`, `tgl_lahir`, `ids_agama`, `kewarganegaraan`, `ids_jenis_tinggal`, `ids_alat_transportasi`, `ids_sktm`, `terima_kps`, `no_kps`, `ids_jenis_pendaftaran`, `ids_jenis_pembiayaan`, `ukuran_baju`, `ukuran_jas`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [idd_kelulusan, nik, jenis_kelamin, tempat_lahir, tgl_lahir, ids_agama, kewarganegaraan, ids_jenis_tinggal, ids_alat_transportasi, ids_sktm, terima_kps, no_kps, ids_jenis_pendaftaran, ids_jenis_pembiayaan, ukuran_baju, ukuran_jas, req.authIdUser]
-        });
-
-        json = {
-            idd_kelulusan: idd_kelulusan,
-            idd_mahasiswa: result.insertId,
-        }
+        const result = await helper.runSQL(sqlInsert);
+        const json = {
+            id_pengantar: result.insertId
+        };
 
         try {
             await helper.deleteKeysByPattern(redisPrefix + '*');
@@ -108,9 +86,7 @@ Controller.create = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-
-}
-
+};
 Controller.read = async (req, res) => {
     try {
         const hasAccess = await checkAccess(req, 'read');
@@ -118,15 +94,13 @@ Controller.read = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const order_by = req.query.order_by || 'date_created DESC';
-        const key = redisPrefix + "read:" + md5(req.authToken + req.originalUrl);
+        const key = redisPrefix + "read:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
+        const order_by = req.query.order_by || 'created_at DESC';
         const {
-            idd_mahasiswa,
-            idd_kelulusan,
-            nomor_peserta,
-            nik,
-            nama,
+            id_pengantar,
+            pengantar_nama,
+            pengantar_handphone,
         } = req.query;
 
         // Check Redis cache
@@ -148,8 +122,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `viewd_mahasiswa`";
-        let sqlReadTotalData = "SELECT COUNT(idd_mahasiswa) as total FROM `viewd_mahasiswa`";
+        let sqlRead = "SELECT * FROM `tbl_pengantar`";
+        let sqlReadTotalData = "SELECT COUNT(id_pengantar) as total FROM `tbl_pengantar`";
         const params = [];
         const totalParams = [];
 
@@ -183,11 +157,9 @@ Controller.read = async (req, res) => {
             }
         };
 
-        addCondition('idd_mahasiswa', idd_mahasiswa);
-        addCondition('idd_kelulusan', idd_kelulusan);
-        addCondition('nomor_peserta', nomor_peserta);
-        addCondition('nik', nik);
-        addCondition('nama', nama, 'LIKE');
+        addCondition('id_pengantar', id_pengantar, 'IN');
+        addCondition('pengantar_nama', pengantar_nama, 'LIKE');
+        addCondition('pengantar_handphone', pengantar_handphone, 'LIKE');
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -209,10 +181,6 @@ Controller.read = async (req, res) => {
             return response.sc404('Data not found.', {}, res);
         }
 
-        getData.forEach(item => {
-            item.tgl_lahir = helper.convertoDate(item.tgl_lahir);
-        });
-
         const pagination = helper.getPagination(getTotalData, resPerPage, currentPage);
         const json = {
             data: getData,
@@ -233,7 +201,7 @@ Controller.read = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.update = async (req, res) => {
     try {
@@ -243,38 +211,20 @@ Controller.update = async (req, res) => {
         }
 
         const id = req.params.id;
-        const created_by = (req.authIdsLevel === '5') ? req.authIdUser : req.body.created_by;
-        const ids_alat_transportasi = req.body.ids_alat_transportasi || null;
         const {
-            idd_kelulusan,
-            nik,
-            jenis_kelamin,
-            tempat_lahir,
-            tgl_lahir,
-            ids_agama,
-            kewarganegaraan,
-            ids_jenis_tinggal,
-            ids_sktm,
-            terima_kps,
-            no_kps,
-            ids_jenis_pendaftaran,
-            ids_jenis_pembiayaan,
-            ukuran_baju,
-            ukuran_jas,
+            pengantar_nama,
+            pengantar_alamat,
+            pengantar_handphone,
+            pengantar_fotoktp,
+            pengantar_fotosuratpernyataan,
         } = req.body;
 
-        /* Check existing data */
-        let sql = 'SELECT idd_mahasiswa FROM `tbd_mahasiswa` WHERE idd_mahasiswa = ?';
-        const param = [id];
-        if (req.authIdsLevel == "5") {
-            sql += ' AND created_by = ?';
-            param.push(req.authIdUser);
-        }
-        sql += ' LIMIT 1';
+        // Check existing data
         const checkData = await helper.runSQL({
-            sql,
-            param
+            sql: 'SELECT id_pengantar FROM `tbl_pengantar` WHERE id_pengantar = ? LIMIT 1',
+            param: [id],
         });
+
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
@@ -290,23 +240,11 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('idd_kelulusan', idd_kelulusan);
-        addUpdate('nik', nik);
-        addUpdate('jenis_kelamin', jenis_kelamin);
-        addUpdate('tempat_lahir', tempat_lahir);
-        addUpdate('tgl_lahir', tgl_lahir);
-        addUpdate('ids_agama', ids_agama);
-        addUpdate('kewarganegaraan', kewarganegaraan);
-        addUpdate('ids_jenis_tinggal', ids_jenis_tinggal);
-        addUpdate('ids_alat_transportasi', ids_alat_transportasi);
-        addUpdate('ids_sktm', ids_sktm);
-        addUpdate('terima_kps', terima_kps);
-        addUpdate('no_kps', no_kps);
-        addUpdate('ids_jenis_pendaftaran', ids_jenis_pendaftaran);
-        addUpdate('ids_jenis_pembiayaan', ids_jenis_pembiayaan);
-        addUpdate('ukuran_baju', ukuran_baju);
-        addUpdate('ukuran_jas', ukuran_jas);
-        addUpdate('created_by', created_by);
+        addUpdate('pengantar_nama', pengantar_nama);
+        addUpdate('pengantar_alamat', pengantar_alamat);
+        addUpdate('pengantar_handphone', pengantar_handphone);
+        addUpdate('pengantar_fotoktp', pengantar_fotoktp);
+        addUpdate('pengantar_fotosuratpernyataan', pengantar_fotosuratpernyataan);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -314,10 +252,15 @@ Controller.update = async (req, res) => {
         }
 
         addUpdate('updated_by', req.authIdUser);
-        await helper.runSQL({
-            sql: `UPDATE tbd_mahasiswa SET ${updates.join(', ')} WHERE idd_mahasiswa = ?`,
-            param: [...params, id],
-        });
+        const sqlUpdate = {
+            sql: `UPDATE \`tbl_pengantar\` SET ${updates.join(', ')} WHERE \`id_pengantar\` = ?`,
+            param: [...params, id]
+        };
+
+        await helper.runSQL(sqlUpdate);
+        const json = {
+            id_pengantar: id
+        };
 
         // Hapus cache Redis
         try {
@@ -326,12 +269,12 @@ Controller.update = async (req, res) => {
             logger.error('Failed to delete Redis cache in update:', redisError);
         }
 
-        return response.sc200('Data changed successfully.', {}, res);
+        return response.sc200('Data changed successfully.', json, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.delete = async (req, res) => {
     try {
@@ -342,27 +285,23 @@ Controller.delete = async (req, res) => {
 
         const id = req.params.id;
 
-        /* Check existing data */
-        let sql = 'SELECT idd_mahasiswa FROM `tbd_mahasiswa` WHERE idd_mahasiswa = ?';
-        const param = [id];
-        if (req.authIdsLevel == "5") {
-            sql += ' AND created_by = ?';
-            param.push(req.authIdUser);
-        }
-        sql += ' LIMIT 1';
+        // Check existing data
         const checkData = await helper.runSQL({
-            sql,
-            param
+            sql: 'SELECT id_pengantar FROM `tbl_pengantar` WHERE id_pengantar = ? LIMIT 1',
+            param: [id],
         });
+
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
 
         // SQL Delete Data
-        await helper.runSQL({
-            sql: 'DELETE FROM `tbd_mahasiswa` WHERE idd_mahasiswa = ?',
+        const sqlDelete = {
+            sql: 'DELETE FROM `tbl_pengantar` WHERE id_pengantar = ?',
             param: [id],
-        });
+        };
+
+        await helper.runSQL(sqlDelete);
 
         // Hapus cache Redis
         try {
@@ -370,12 +309,13 @@ Controller.delete = async (req, res) => {
         } catch (redisError) {
             logger.error('Failed to delete Redis cache in delete:', redisError);
         }
+
         return response.sc200('Data deleted successfully.', {}, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 Controller.single = async (req, res) => {
     try {
@@ -384,14 +324,12 @@ Controller.single = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authIdsLevel == "5") ? req.authIdUser : req.query.created_by
-        const key = redisPrefix + "single:" + md5(req.authToken + req.originalUrl);
+        const key = redisPrefix + "single:" + md5(req.originalUrl);
+        const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
         const {
-            idd_mahasiswa,
-            idd_kelulusan,
-            nomor_peserta,
-            nik,
-            nama,
+            id_pengantar,
+            pengantar_nama,
+            pengantar_handphone,
         } = req.query;
 
         // Check Redis cache
@@ -408,7 +346,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `viewd_mahasiswa`";
+        let sqlSingle = "SELECT * FROM `tbl_pengantar`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -438,11 +376,9 @@ Controller.single = async (req, res) => {
             }
         };
 
-        addCondition('idd_mahasiswa', idd_mahasiswa);
-        addCondition('idd_kelulusan', idd_kelulusan);
-        addCondition('nomor_peserta', nomor_peserta);
-        addCondition('nik', nik);
-        addCondition('nama', nama, 'LIKE');
+        addCondition('id_pengantar', id_pengantar);
+        addCondition('pengantar_nama', pengantar_nama, 'LIKE');
+        addCondition('pengantar_handphone', pengantar_handphone, 'LIKE');
         addCondition('created_by', created_by);
 
         // Limit to 1 row
@@ -457,8 +393,6 @@ Controller.single = async (req, res) => {
         if (!getData.length) {
             return response.sc404('Data not found.', {}, res);
         }
-
-        getData[0].tgl_lahir = helper.convertoDate(getData[0].tgl_lahir);
 
         const json = getData[0];
 
@@ -476,6 +410,6 @@ Controller.single = async (req, res) => {
         console.log(error);
         return handleError(error, res);
     }
-}
+};
 
 module.exports = Controller;

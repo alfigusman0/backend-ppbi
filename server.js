@@ -67,6 +67,7 @@ const authRoutes = require('./routes/auth');
 const cronejobRoutes = require('./routes/cronejob');
 const ktaRoutes = require('./routes/kta');
 const notifRoutes = require('./routes/notif');
+const pengantarRoutes = require('./routes/pengantar');
 const pohonRoutes = require('./routes/pohon');
 const profileRoutes = require('./routes/profile');
 const suisekiRoutes = require('./routes/suiseki');
@@ -81,7 +82,7 @@ const esettingsRoutes = require('./routes/event/settings');
 
 /* Formulir */
 const fBonsaiRoutes = require('./routes/formulir/bonsai');
-const fPengantarRoutes = require('./routes/formulir/pengantar');
+const fPengantarRoutes = require('./routes/pengantar');
 const fPenghargaanRoutes = require('./routes/formulir/penghargaan');
 const fPenilaianRoutes = require('./routes/formulir/penilaian');
 
@@ -105,6 +106,7 @@ router.use('/auth', authRoutes);
 router.use('/cronejob', cronejobRoutes);
 router.use('/kta', ktaRoutes);
 router.use('/notif', notifRoutes);
+router.use('/pengantar', pengantarRoutes);
 router.use('/pohon', pohonRoutes);
 router.use('/profile', profileRoutes);
 router.use('/suiseki', suisekiRoutes);
@@ -119,7 +121,6 @@ router.use('/event/settings', esettingsRoutes);
 
 /* Formulir */
 router.use('/formulir/bonsai', fBonsaiRoutes);
-router.use('/formulir/pengantar', fPengantarRoutes);
 router.use('/formulir/penghargaan', fPenghargaanRoutes);
 router.use('/formulir/penilaian', fPenilaianRoutes);
 

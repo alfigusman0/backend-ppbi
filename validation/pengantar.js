@@ -1,6 +1,6 @@
 /* Libraries */
 const Validator = require('validator');
-const isEmpty = require('../is-empty');
+const isEmpty = require('./is-empty');
 
 module.exports = function validateInput(method, path, data) {
     let errors = {};
