@@ -36,7 +36,7 @@ const redisPrefix = process.env.REDIS_PREFIX + "kta:";
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
-        sql: "SELECT * FROM tbs_hak_akses WHERE cabang = ? AND ids_modul = ? AND permission LIKE ?",
+        sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
         param: [req.authIdsLevel, 22, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
