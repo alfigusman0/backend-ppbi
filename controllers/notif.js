@@ -56,6 +56,7 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
+        const created_by = (req.authTingkat <= 5) ? req.body.created_by : req.authIdUser;
         const {
             id_user,
             judul,
@@ -65,8 +66,8 @@ Controller.create = async (req, res) => {
         } = req.body;
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbl_notif`(`id_user`, `judul`, `isi`, `dibaca`, `whatsapp`, `nomor_tlpn`, `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
-            param: [id_user, judul, isi, dibaca, whatsapp, req.authIdUser]
+            sql: "INSERT INTO `tbl_notif`(`id_user`, `judul`, `isi`, `dibaca`, `whatsapp`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
+            param: [id_user, judul, isi, dibaca, whatsapp, created_by]
         };
 
         const result = await helper.runSQL(sqlInsert);

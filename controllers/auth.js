@@ -272,12 +272,14 @@ Controller.register = async (req, res, next) => {
         const hashedPassword = await encrypt.Hash(password);
 
         /* Save to Database */
-        await helper.runSQL({
+        const result = await helper.runSQL({
             sql: "INSERT INTO `tbl_users`(`ids_grup`, `username`, `password`) VALUES (?, ?, ?)",
             param: [8, username, hashedPassword]
         });
 
-        return response.sc200('Data added successfully.', {}, res);
+        return response.sc200('Data added successfully.', {
+            id_user: result.insertId
+        }, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);

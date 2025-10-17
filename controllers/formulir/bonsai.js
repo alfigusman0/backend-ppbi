@@ -56,6 +56,7 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
+        const created_by = (req.authTingkat <= 5) ? req.body.created_by : req.authIdUser;
         const id_pengantar = (isEmpty(req.body.id_pengantar)) ? null : req.body.id_pengantar;
         const {
             id_event,
@@ -73,7 +74,6 @@ Controller.create = async (req, res) => {
         if (!getKelas.length) {
             return response.sc400("Failed to generate registration number. Please check class data.", {}, res);
         }
-        console.log(getKelas);
 
         const no_registrasi = await Controller.getNoRegistrasi(id_event, getKelas[0].ids_kelas);
         if (!no_registrasi) {
@@ -82,7 +82,7 @@ Controller.create = async (req, res) => {
 
         const sqlInsert = {
             sql: "INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_kategori`, `ukuran`, `foto`, `id_pengantar`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [id_event, no_registrasi, id_pohon, id_kategori, ukuran, foto, id_pengantar, req.authIdUser]
+            param: [id_event, no_registrasi, id_pohon, id_kategori, ukuran, foto, id_pengantar, created_by]
         };
 
         const result = await helper.runSQL(sqlInsert);

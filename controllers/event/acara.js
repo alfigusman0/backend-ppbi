@@ -58,6 +58,7 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
+        const created_by = (req.authTingkat <= 5) ? req.body.created_by : req.authIdUser;
         const tgl_awal_acara = helper.convertoDate(req.body.tgl_awal_acara);
         const tgl_akhir_acara = helper.convertoDate(req.body.tgl_akhir_acara);
         const {
@@ -87,7 +88,7 @@ Controller.create = async (req, res) => {
         /* SQL Insert Data */
         const result = await helper.runSQL({
             sql: "INSERT INTO `tbl_event` (`ids_cabang`, `nama_acara`, `slug_event`, `proposal`, `tgl_awal_acara`, `tgl_akhir_acara`, `ids_kelurahan`, `rw`, `rt`, `alamat`, `poster`, `bukti_bayar`, `jenis`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [ids_cabang, nama_acara, slug_event, proposal, tgl_awal_acara, tgl_akhir_acara, ids_kelurahan, rw, rt, alamat, poster, bukti_bayar, jenis, status, req.authIdUser]
+            param: [ids_cabang, nama_acara, slug_event, proposal, tgl_awal_acara, tgl_akhir_acara, ids_kelurahan, rw, rt, alamat, poster, bukti_bayar, jenis, status, created_by]
         });
 
         json = {
