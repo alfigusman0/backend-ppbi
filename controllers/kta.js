@@ -63,13 +63,13 @@ Controller.create = async (req, res) => {
             id_profile,
             masa_berlaku,
             ids_cabang,
-            bukti_bayara,
+            bukti_bayar,
             status,
         } = req.body;
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbl_kta`(`no_kta`, `kta_lama`, `id_profile`, `masa_berlaku`, `ids_cabang`, `bukti_bayara`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [no_kta, kta_lama, id_profile, masa_berlaku, ids_cabang, bukti_bayara, status, created_by]
+            sql: "INSERT INTO `tbl_kta`(`no_kta`, `kta_lama`, `id_profile`, `masa_berlaku`, `ids_cabang`, `bukti_bayar`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [no_kta, kta_lama, id_profile, masa_berlaku, ids_cabang, bukti_bayar, status, created_by]
         };
 
         const result = await helper.runSQL(sqlInsert);
@@ -232,7 +232,7 @@ Controller.update = async (req, res) => {
             id_profile,
             masa_berlaku,
             ids_cabang,
-            bukti_bayara,
+            bukti_bayar,
             status,
         } = req.body;
 
@@ -263,7 +263,7 @@ Controller.update = async (req, res) => {
         addUpdate('status', status);
         addUpdate('masa_berlaku', masa_berlaku);
         addUpdate('ids_cabang', ids_cabang);
-        addUpdate('bukti_bayara', bukti_bayara);
+        addUpdate('bukti_bayar', bukti_bayar);
 
         // Check Data Update
         if (isEmpty(params)) {
