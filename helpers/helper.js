@@ -5,7 +5,6 @@ const redis = require('../config/redis');
 const fs = require('fs');
 const chmodr = require('chmodr');
 const mv = require('mv');
-const excel = require("exceljs");
 const moment = require('moment-timezone');
 const multer = require("multer");
 const multerS3 = require("multer-s3");
@@ -71,22 +70,6 @@ helper.getPagination = (value, limit, currentpage) => {
     totalpagination: totalpage,
     currentpage: parseInt(currentpage) || 0,
   };
-};
-
-helper.exportExcel = (columns, rows, filename, res) => {
-  let workbook = new excel.Workbook()
-  let worksheet = workbook.addWorksheet(filename)
-  worksheet.columns = columns
-  worksheet.addRows(rows)
-  res.setHeader(
-    "Content-type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-  )
-  res.setHeader(
-    "Content-Disposition",
-    "attachment; filename=" + filename + ".xlsx"
-  );
-  return workbook.xlsx.write(res)
 };
 
 helper.checkFolder = async (path) => {
