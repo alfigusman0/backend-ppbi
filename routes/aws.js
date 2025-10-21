@@ -8,7 +8,7 @@ const {
     deleteFile
 } = require("../helpers/helper");
 
-router.post("/upload/:folder?", isAuth, (req, res, next) => {
+router.post("/upload/:folder", isAuth, (req, res, next) => {
     let folder = req.params.folder;
     if (!folder || folder === ":folder") {
         folder = "";
