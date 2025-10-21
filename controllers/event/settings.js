@@ -66,7 +66,7 @@ Controller.create = async (req, res) => {
 
         /* SQL Insert Data */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_settings` (`id_event`, `nama_setting`, `setting`, `created_by`) VALUES (?, ?, ?, ?)",
+            sql: "INSERT INTO `tbl_setting` (`id_event`, `nama_setting`, `setting`, `created_by`) VALUES (?, ?, ?, ?)",
             param: [id_event, nama_setting, setting, created_by]
         });
 
@@ -124,8 +124,8 @@ Controller.read = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `tbl_settings`";
-        let sqlReadTotalData = "SELECT COUNT(id_setting) as total FROM `tbl_settings`";
+        let sqlRead = "SELECT * FROM `tbl_setting`";
+        let sqlReadTotalData = "SELECT COUNT(id_setting) as total FROM `tbl_setting`";
         const params = [];
         const totalParams = [];
 
@@ -221,7 +221,7 @@ Controller.update = async (req, res) => {
         } = req.body;
 
         /* Check existing data */
-        let sql = 'SELECT id_setting FROM `tbl_settings` WHERE id_setting = ?';
+        let sql = 'SELECT id_setting FROM `tbl_setting` WHERE id_setting = ?';
         const param = [id];
         if (req.authIdsLevel >= 4) {
             sql += ' AND created_by = ?';
@@ -258,7 +258,7 @@ Controller.update = async (req, res) => {
 
         addUpdate('updated_by', req.authIdUser);
         await helper.runSQL({
-            sql: `UPDATE tbl_settings SET ${updates.join(', ')} WHERE id_setting = ?`,
+            sql: `UPDATE tbl_setting SET ${updates.join(', ')} WHERE id_setting = ?`,
             param: [...params, id],
         });
 
@@ -286,7 +286,7 @@ Controller.delete = async (req, res) => {
         const id = req.params.id;
 
         /* Check existing data */
-        let sql = 'SELECT id_setting FROM `tbl_settings` WHERE id_setting = ?';
+        let sql = 'SELECT id_setting FROM `tbl_setting` WHERE id_setting = ?';
         const param = [id];
         if (req.authIdsLevel >= 4) {
             sql += ' AND created_by = ?';
@@ -303,7 +303,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         await helper.runSQL({
-            sql: 'DELETE FROM `tbl_settings` WHERE id_setting = ?',
+            sql: 'DELETE FROM `tbl_setting` WHERE id_setting = ?',
             param: [id],
         });
 
@@ -350,7 +350,7 @@ Controller.single = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `tbl_settings`";
+        let sqlSingle = "SELECT * FROM `tbl_setting`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
