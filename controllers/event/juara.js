@@ -223,7 +223,7 @@ Controller.update = async (req, res) => {
         } = req.body;
 
         /* Check existing data */
-        let sql = 'SELECT id_juara FROM `tbl_juara` WHERE id_juara = ? LIMIT 1';
+        let sql = 'SELECT id_juara FROM `tbl_juara` WHERE id_juara = ?';
         const param = [id];
         if (req.authIdsLevel >= 4) {
             sql += ' AND created_by = ?';
@@ -288,7 +288,7 @@ Controller.delete = async (req, res) => {
         const id = req.params.id;
 
         /* Check existing data */
-        let sql = 'SELECT id_juara FROM `tbl_juara` WHERE id_juara = ? LIMIT 1';
+        let sql = 'SELECT id_juara FROM `tbl_juara` WHERE id_juara = ?';
         const param = [id];
         if (req.authIdsLevel >= 4) {
             sql += ' AND created_by = ?';
