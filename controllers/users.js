@@ -60,6 +60,7 @@ Controller.create = async (req, res) => {
         }
 
         const created_by = (req.authTingkat <= 5) ? req.body.created_by : req.authIdUser;
+        const reset = req.body.reset || 'TIDAK';
         const {
             ids_grup,
             username,
@@ -79,8 +80,8 @@ Controller.create = async (req, res) => {
 
         /* SQL Insert Data */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_users` (`ids_grup`, `username`, `password`, `created_by`) VALUES (?, ?, ?, ?)",
-            param: [ids_grup, username, hashedPassword, created_by]
+            sql: "INSERT INTO `tbl_users` (`ids_grup`, `username`, `password`, `reset`, `created_by`) VALUES (?, ?, ?, ?, ?)",
+            param: [ids_grup, username, hashedPassword, reset, created_by]
         });
 
         json = {
@@ -119,6 +120,7 @@ Controller.read = async (req, res) => {
             ids_grup,
             grup,
             keterangan,
+            reset,
         } = req.query;
 
         // Check Redis cache
@@ -183,6 +185,7 @@ Controller.read = async (req, res) => {
         addCondition('ids_grup', ids_grup, 'IN');
         addCondition('grup', grup, 'LIKE');
         addCondition('keterangan', keterangan, 'LIKE');
+        addCondition('reset', reset);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
         params.push(page * resPerPage, resPerPage);
@@ -237,6 +240,7 @@ Controller.update = async (req, res) => {
             ids_grup,
             username,
             password,
+            reset,
         } = req.body;
 
         /* Check existing data */
@@ -280,6 +284,7 @@ Controller.update = async (req, res) => {
         addUpdate('ids_grup', ids_grup);
         addUpdate('username', username);
         addUpdate('password', hashedPassword);
+        addUpdate('reset', reset);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -364,6 +369,7 @@ Controller.single = async (req, res) => {
             ids_grup,
             grup,
             keterangan,
+            reset,
         } = req.query;
 
         // Check Redis cache
@@ -399,6 +405,7 @@ Controller.single = async (req, res) => {
         addCondition('ids_grup', ids_grup, 'IN');
         addCondition('grup', grup, 'LIKE');
         addCondition('keterangan', keterangan, 'LIKE');
+        addCondition('reset', reset);
 
         // Limit to 1 row
         sqlSingle += ' LIMIT 1';

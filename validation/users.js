@@ -9,6 +9,7 @@ module.exports = function validateInput(method, path, data) {
   data.username = !isEmpty(data.username) ? data.username : '';
   data.password = !isEmpty(data.password) ? data.password : '';
   data.confirm_password = !isEmpty(data.confirm_password) ? data.confirm_password : '';
+  data.reset = !isEmpty(data.reset) ? data.reset : '';
 
   if (method === 'POST') {
     if (Validator.isEmpty(data.ids_grup)) {

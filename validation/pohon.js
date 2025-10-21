@@ -5,7 +5,11 @@ const isEmpty = require('./is-empty');
 module.exports = function validateInput(method, path, data) {
     let errors = {};
 
-    data.test = !isEmpty(data.test) ? data.test : '';
+    data.id_profile = !isEmpty(data.id_profile) ? data.id_profile : '';
+    data.ids_jenis_bonsai = !isEmpty(data.ids_jenis_bonsai) ? data.ids_jenis_bonsai : '';
+    data.ids_kelas = !isEmpty(data.ids_kelas) ? data.ids_kelas : '';
+    data.ukuran = !isEmpty(data.ukuran) ? data.ukuran : '';
+    data.foto = !isEmpty(data.foto) ? data.foto : '';
 
     if (method === 'POST') {
 

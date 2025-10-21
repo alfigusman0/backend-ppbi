@@ -63,15 +63,15 @@ Controller.create = async (req, res) => {
             ids_kelas,
             nama_kategori,
             ukuran_min,
-            ukuran_max,
+            ukuran_maks,
             uang,
             status,
         } = req.body;
 
         /* SQL Insert Data */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_kategori` (`id_event`, `ids_kelas`, `nama_kategori`, `ukuran_min`, `ukuran_max`, `uang`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [id_event, ids_kelas, nama_kategori, ukuran_min, ukuran_max, uang, status, created_by]
+            sql: "INSERT INTO `tbl_kategori` (`id_event`, `ids_kelas`, `nama_kategori`, `ukuran_min`, `ukuran_maks`, `uang`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [id_event, ids_kelas, nama_kategori, ukuran_min, ukuran_maks, uang, status, created_by]
         });
 
         json = {
@@ -113,7 +113,7 @@ Controller.read = async (req, res) => {
             id_kategori,
             nama_kategori,
             ukuran_min,
-            ukuran_max,
+            ukuran_maks,
             status,
         } = req.query;
 
@@ -181,7 +181,7 @@ Controller.read = async (req, res) => {
         addCondition('id_kategori', id_kategori, 'IN');
         addCondition('nama_kategori', nama_kategori, 'LIKE');
         addCondition('ukuran_min', ukuran_min, '>=');
-        addCondition('ukuran_max', ukuran_max, '<=');
+        addCondition('ukuran_maks', ukuran_maks, '<=');
         addCondition('status', status);
         addCondition('created_by', created_by);
 
@@ -239,13 +239,13 @@ Controller.update = async (req, res) => {
             ids_kelas,
             nama_kategori,
             ukuran_min,
-            ukuran_max,
+            ukuran_maks,
             uang,
             status,
         } = req.body;
 
         /* Check existing data */
-        let sql = 'SELECT id_kategori FROM `tbl_kategori` WHERE id_kategori = ? LIMIT 1';
+        let sql = 'SELECT id_kategori FROM `tbl_kategori` WHERE id_kategori = ?';
         const param = [id];
         if (req.authIdsLevel >= 4) {
             sql += ' AND created_by = ?';
@@ -275,7 +275,7 @@ Controller.update = async (req, res) => {
         addUpdate('ids_kelas', ids_kelas);
         addUpdate('nama_kategori', nama_kategori);
         addUpdate('ukuran_min', ukuran_min);
-        addUpdate('ukuran_max', ukuran_max);
+        addUpdate('ukuran_maks', ukuran_maks);
         addUpdate('uang', uang);
         addUpdate('status', status);
 
@@ -314,7 +314,7 @@ Controller.delete = async (req, res) => {
         const id = req.params.id;
 
         /* Check existing data */
-        let sql = 'SELECT id_kategori FROM `tbl_kategori` WHERE id_kategori = ? LIMIT 1';
+        let sql = 'SELECT id_kategori FROM `tbl_kategori` WHERE id_kategori = ?';
         const param = [id];
         if (req.authIdsLevel >= 4) {
             sql += ' AND created_by = ?';
@@ -368,7 +368,7 @@ Controller.single = async (req, res) => {
             id_kategori,
             nama_kategori,
             ukuran_min,
-            ukuran_max,
+            ukuran_maks,
             status,
         } = req.query;
 
@@ -426,7 +426,7 @@ Controller.single = async (req, res) => {
         addCondition('id_kategori', id_kategori);
         addCondition('nama_kategori', nama_kategori, 'LIKE');
         addCondition('ukuran_min', ukuran_min, '>=');
-        addCondition('ukuran_max', ukuran_max, '<=');
+        addCondition('ukuran_maks', ukuran_maks, '<=');
         addCondition('status', status);
         addCondition('created_by', created_by);
 
