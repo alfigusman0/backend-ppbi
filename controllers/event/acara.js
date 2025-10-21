@@ -58,7 +58,7 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const created_by = (req.authTingkat <= 5) ? req.body.created_by : req.authIdUser;
+        const created_by = (req.authTingkat <= 5) ? req.body.created_by || req.authIdUser : req.authIdUser;
         const tgl_awal_acara = helper.convertoDate(req.body.tgl_awal_acara);
         const tgl_akhir_acara = helper.convertoDate(req.body.tgl_akhir_acara);
         const {
