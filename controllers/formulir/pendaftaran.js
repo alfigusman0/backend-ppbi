@@ -31,7 +31,7 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "formulir:penilaian:";
+const redisPrefix = process.env.REDIS_PREFIX + "formulir:pendaftaran:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
@@ -57,34 +57,37 @@ Controller.create = async (req, res) => {
         }
 
         const created_by = (req.authTingkat <= 5) ? req.body.created_by || req.authIdUser : req.authIdUser;
+        const id_pengantar = (isEmpty(req.body.id_pengantar)) ? null : req.body.id_pengantar;
         const {
-            id_formulir,
-            id_profile,
-            penampilan,
-            gerak_dasar,
-            keserasian,
-            kematangan,
-            total,
+            id_event,
+            id_pohon,
+            id_kategori,
+            ukuran,
+            foto,
         } = req.body;
 
-        /* Check existing data - juri tidak boleh menilai formulir yang sama dua kali */
-        let checkData = await helper.runSQL({
-            sql: 'SELECT id_penilaian FROM `tbl_penilaian` WHERE id_formulir = ? AND id_profile = ? LIMIT 1',
-            param: [id_formulir, id_profile],
-        });
-
-        if (checkData.length) {
-            return response.sc400('This jury has already assessed this form.', {}, res);
+        /* Get Data Kelas */
+        const getKelas = await helper.runSQL({
+            sql: "SELECT ids_kelas FROM tbl_kategori WHERE id_event = ? AND id_kategori = ? LIMIT 1",
+            param: [id_event, id_kategori]
+        })
+        if (!getKelas.length) {
+            return response.sc400("Failed to generate registration number. Please check class data.", {}, res);
         }
 
-        /* SQL Insert Data */
-        const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_penilaian` (`id_formulir`, `id_profile`, `penampilan`, `gerak_dasar`, `keserasian`, `kematangan`, `total`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, total, created_by]
-        });
+        const no_registrasi = await Controller.getNoRegistrasi(id_event, getKelas[0].ids_kelas);
+        if (!no_registrasi) {
+            return response.sc400("Failed to generate registration number. Please check event and class data.", {}, res);
+        }
 
+        const sqlInsert = {
+            sql: "INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_kategori`, `ukuran`, `foto`, `id_pengantar`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [id_event, no_registrasi, id_pohon, id_kategori, ukuran, foto, id_pengantar, created_by]
+        };
+
+        const result = await helper.runSQL(sqlInsert);
         const json = {
-            id_penilaian: result.insertId,
+            id_formulir: result.insertId
         };
 
         try {
@@ -94,7 +97,6 @@ Controller.create = async (req, res) => {
         }
 
         return response.sc200('Data added successfully.', json, res);
-
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -111,32 +113,30 @@ Controller.read_bonsai = async (req, res) => {
         const key = redisPrefix + "read:" + md5(req.originalUrl);
         const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
         const order_by = req.query.order_by || 'created_at DESC';
-
         const {
-            id_penilaian,
             id_formulir,
-            nomor_sertifikat,
+            uuid,
             id_event,
             nama_acara,
             ids_cabang,
             cabang,
-            id_profile,
-            nama_lengkap,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
             id_bonsai,
             uuid_bonsai,
+            id_profile,
+            nama_lengkap,
             ids_jenis_bonsai,
             jenis_bonsai,
             ids_kelas,
             nama_kelas,
             id_kategori,
             nama_kategori,
-            id_profile_juri,
-            nama_juri,
-            penampilan,
-            gerak_dasar,
-            keserasian,
-            kematangan,
-            total,
+            bayar,
+            cetak,
+            arena,
+            meja,
         } = req.query;
 
         // Check Redis cache
@@ -158,9 +158,8 @@ Controller.read_bonsai = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `view_penilaian_pohon`";
-        let sqlReadTotalData = "SELECT COUNT(id_penilaian) as total FROM `view_penilaian_pohon`";
-
+        let sqlRead = "SELECT * FROM `view_formulir_pohon`";
+        let sqlReadTotalData = "SELECT COUNT(id_formulir) as total FROM `view_formulir_pohon`";
         const params = [];
         const totalParams = [];
 
@@ -176,7 +175,6 @@ Controller.read_bonsai = async (req, res) => {
                     } else if (!Array.isArray(value)) {
                         paramValue = [value];
                     }
-
                     // Create placeholders for IN/NOT IN clause
                     condition = `${field} ${operator} (${paramValue.map(() => '?').join(', ')})`;
                     // Spread array values into params
@@ -195,30 +193,29 @@ Controller.read_bonsai = async (req, res) => {
             }
         };
 
-        addCondition('id_penilaian', id_penilaian, 'IN');
         addCondition('id_formulir', id_formulir, 'IN');
-        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('uuid', uuid);
         addCondition('id_event', id_event, 'IN');
         addCondition('nama_acara', nama_acara, 'LIKE');
         addCondition('ids_cabang', ids_cabang, 'IN');
         addCondition('cabang', cabang, 'LIKE');
-        addCondition('id_profile', id_profile, 'IN');
-        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('no_registrasi', no_registrasi, 'LIKE');
+        addCondition('no_juri', no_juri, 'LIKE');
         addCondition('id_bonsai', id_bonsai, 'IN');
         addCondition('uuid_bonsai', uuid_bonsai);
+        addCondition('id_profile', id_profile, 'IN');
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
         addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
         addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
         addCondition('ids_kelas', ids_kelas, 'IN');
         addCondition('nama_kelas', nama_kelas, 'LIKE');
         addCondition('id_kategori', id_kategori, 'IN');
         addCondition('nama_kategori', nama_kategori, 'LIKE');
-        addCondition('id_profile_juri', id_profile_juri, 'IN');
-        addCondition('nama_juri', nama_juri, 'LIKE');
-        addCondition('penampilan', penampilan);
-        addCondition('gerak_dasar', gerak_dasar);
-        addCondition('keserasian', keserasian);
-        addCondition('kematangan', kematangan);
-        addCondition('total', total);
+        addCondition('bayar', bayar);
+        addCondition('cetak', cetak);
+        addCondition('arena', arena);
+        addCondition('meja', meja);
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -241,7 +238,6 @@ Controller.read_bonsai = async (req, res) => {
         }
 
         const pagination = helper.getPagination(getTotalData, resPerPage, currentPage);
-
         const json = {
             data: getData,
             pagination
@@ -257,7 +253,6 @@ Controller.read_bonsai = async (req, res) => {
         }
 
         return response.sc200('', json, res);
-
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -274,32 +269,30 @@ Controller.read_suiseki = async (req, res) => {
         const key = redisPrefix + "read:" + md5(req.originalUrl);
         const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
         const order_by = req.query.order_by || 'created_at DESC';
-
         const {
-            id_penilaian,
             id_formulir,
-            nomor_sertifikat,
+            uuid,
             id_event,
             nama_acara,
             ids_cabang,
             cabang,
-            id_profile,
-            nama_lengkap,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
             id_suiseki,
             uuid_suiseki,
+            id_profile,
+            nama_lengkap,
             ids_jenis_suiseki,
             jenis_suiseki,
             ids_kelas,
             nama_kelas,
             id_kategori,
             nama_kategori,
-            id_profile_juri,
-            nama_juri,
-            penampilan,
-            gerak_dasar,
-            keserasian,
-            kematangan,
-            total,
+            bayar,
+            cetak,
+            arena,
+            meja,
         } = req.query;
 
         // Check Redis cache
@@ -321,9 +314,8 @@ Controller.read_suiseki = async (req, res) => {
         const currentPage = parseInt(req.query.page) || 1;
 
         // Build SQL query
-        let sqlRead = "SELECT * FROM `view_penilaian_suiseki`";
-        let sqlReadTotalData = "SELECT COUNT(id_penilaian) as total FROM `view_penilaian_suiseki`";
-
+        let sqlRead = "SELECT * FROM `view_formulir_suiseki`";
+        let sqlReadTotalData = "SELECT COUNT(id_formulir) as total FROM `view_formulir_suiseki`";
         const params = [];
         const totalParams = [];
 
@@ -339,7 +331,6 @@ Controller.read_suiseki = async (req, res) => {
                     } else if (!Array.isArray(value)) {
                         paramValue = [value];
                     }
-
                     // Create placeholders for IN/NOT IN clause
                     condition = `${field} ${operator} (${paramValue.map(() => '?').join(', ')})`;
                     // Spread array values into params
@@ -358,30 +349,29 @@ Controller.read_suiseki = async (req, res) => {
             }
         };
 
-        addCondition('id_penilaian', id_penilaian, 'IN');
         addCondition('id_formulir', id_formulir, 'IN');
-        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('uuid', uuid);
         addCondition('id_event', id_event, 'IN');
         addCondition('nama_acara', nama_acara, 'LIKE');
         addCondition('ids_cabang', ids_cabang, 'IN');
         addCondition('cabang', cabang, 'LIKE');
-        addCondition('id_profile', id_profile, 'IN');
-        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('no_registrasi', no_registrasi, 'LIKE');
+        addCondition('no_juri', no_juri, 'LIKE');
         addCondition('id_suiseki', id_suiseki, 'IN');
         addCondition('uuid_suiseki', uuid_suiseki);
+        addCondition('id_profile', id_profile, 'IN');
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
         addCondition('ids_jenis_suiseki', ids_jenis_suiseki, 'IN');
         addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
         addCondition('ids_kelas', ids_kelas, 'IN');
         addCondition('nama_kelas', nama_kelas, 'LIKE');
         addCondition('id_kategori', id_kategori, 'IN');
         addCondition('nama_kategori', nama_kategori, 'LIKE');
-        addCondition('id_profile_juri', id_profile_juri, 'IN');
-        addCondition('nama_juri', nama_juri, 'LIKE');
-        addCondition('penampilan', penampilan);
-        addCondition('gerak_dasar', gerak_dasar);
-        addCondition('keserasian', keserasian);
-        addCondition('kematangan', kematangan);
-        addCondition('total', total);
+        addCondition('bayar', bayar);
+        addCondition('cetak', cetak);
+        addCondition('arena', arena);
+        addCondition('meja', meja);
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -404,7 +394,6 @@ Controller.read_suiseki = async (req, res) => {
         }
 
         const pagination = helper.getPagination(getTotalData, resPerPage, currentPage);
-
         const json = {
             data: getData,
             pagination
@@ -420,7 +409,6 @@ Controller.read_suiseki = async (req, res) => {
         }
 
         return response.sc200('', json, res);
-
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -435,33 +423,34 @@ Controller.update = async (req, res) => {
         }
 
         const id = req.params.id;
-
         const {
-            id_formulir,
-            id_profile,
-            penampilan,
-            gerak_dasar,
-            keserasian,
-            kematangan,
-            total,
+            id_event,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
+            id_pohon,
+            id_kategori,
+            ukuran,
+            bukti_bayar,
+            bayar,
+            cetak,
+            arena,
+            meja,
+            foto,
         } = req.body;
 
         /* Check existing data */
-        let sql = 'SELECT id_penilaian FROM `tbl_penilaian` WHERE id_penilaian = ?';
+        let sql = 'SELECT id_formulir FROM `tbl_formulir` WHERE id_formulir = ?';
         const param = [id];
-
         if (req.authTingkat > 5) {
             sql += ' AND created_by = ?';
             param.push(req.authIdUser);
         }
-
         sql += ' LIMIT 1';
-
         const checkData = await helper.runSQL({
             sql,
             param
         });
-
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
@@ -477,13 +466,22 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('id_formulir', id_formulir);
-        addUpdate('id_profile', id_profile);
-        addUpdate('penampilan', penampilan);
-        addUpdate('gerak_dasar', gerak_dasar);
-        addUpdate('keserasian', keserasian);
-        addUpdate('kematangan', kematangan);
-        addUpdate('total', total);
+        if (req.authTingkat < 5) {
+            addUpdate('id_event', id_event);
+            addUpdate('nomor_sertifikat', nomor_sertifikat);
+            addUpdate('no_registrasi', no_registrasi);
+            addUpdate('no_juri', no_juri);
+            addUpdate('bayar', bayar);
+            addUpdate('arena', arena);
+            addUpdate('meja', meja);
+        }
+
+        addUpdate('id_pohon', id_pohon);
+        addUpdate('id_kategori', id_kategori);
+        addUpdate('ukuran', ukuran);
+        addUpdate('bukti_bayar', bukti_bayar);
+        addUpdate('cetak', cetak);
+        addUpdate('foto', foto);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -491,14 +489,14 @@ Controller.update = async (req, res) => {
         }
 
         addUpdate('updated_by', req.authIdUser);
-
-        await helper.runSQL({
-            sql: `UPDATE \`tbl_penilaian\` SET ${updates.join(', ')} WHERE \`id_penilaian\` = ?`,
+        const sqlUpdate = {
+            sql: `UPDATE \`tbl_formulir\` SET ${updates.join(', ')} WHERE \`id_event\` = ?`,
             param: [...params, id]
-        });
+        };
 
+        await helper.runSQL(sqlUpdate);
         const json = {
-            id_penilaian: id
+            id_event: id
         };
 
         // Hapus cache Redis
@@ -509,7 +507,6 @@ Controller.update = async (req, res) => {
         }
 
         return response.sc200('Data changed successfully.', json, res);
-
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -526,30 +523,33 @@ Controller.delete = async (req, res) => {
         const id = req.params.id;
 
         /* Check existing data */
-        let sql = 'SELECT id_penilaian FROM `tbl_penilaian` WHERE id_penilaian = ?';
+        let sql = 'SELECT id_formulir FROM `tbl_formulir` WHERE id_formulir = ?';
         const param = [id];
-
         if (req.authTingkat > 5) {
             sql += ' AND created_by = ?';
             param.push(req.authIdUser);
         }
-
         sql += ' LIMIT 1';
-
         const checkData = await helper.runSQL({
             sql,
             param
         });
-
         if (!checkData.length) {
             return response.sc404('Data not found.', {}, res);
         }
 
+        /* Status Pembayaran */
+        if (checkData[0].bayar === "SUDAH") {
+            return response.sc400("Data tidak dapat dihapus karena sudah dibayar.", {}, res);
+        }
+
         // SQL Delete Data
-        await helper.runSQL({
-            sql: 'DELETE FROM `tbl_penilaian` WHERE id_penilaian = ?',
+        const sqlDelete = {
+            sql: 'DELETE FROM `tbl_formulir` WHERE id_formulir = ?',
             param: [id],
-        });
+        };
+
+        await helper.runSQL(sqlDelete);
 
         // Hapus cache Redis
         try {
@@ -559,7 +559,6 @@ Controller.delete = async (req, res) => {
         }
 
         return response.sc200('Data deleted successfully.', {}, res);
-
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -575,32 +574,30 @@ Controller.single_bonsai = async (req, res) => {
 
         const key = redisPrefix + "single:" + md5(req.originalUrl);
         const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
-
         const {
-            id_penilaian,
             id_formulir,
-            nomor_sertifikat,
+            uuid,
             id_event,
             nama_acara,
             ids_cabang,
             cabang,
-            id_profile,
-            nama_lengkap,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
             id_bonsai,
             uuid_bonsai,
+            id_profile,
+            nama_lengkap,
             ids_jenis_bonsai,
             jenis_bonsai,
             ids_kelas,
             nama_kelas,
             id_kategori,
             nama_kategori,
-            id_profile_juri,
-            nama_juri,
-            penampilan,
-            gerak_dasar,
-            keserasian,
-            kematangan,
-            total,
+            bayar,
+            cetak,
+            arena,
+            meja,
         } = req.query;
 
         // Check Redis cache
@@ -617,7 +614,7 @@ Controller.single_bonsai = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `view_penilaian_pohon`";
+        let sqlSingle = "SELECT * FROM `view_formulir_pohon`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -632,7 +629,6 @@ Controller.single_bonsai = async (req, res) => {
                     } else if (!Array.isArray(value)) {
                         paramValue = [value];
                     }
-
                     // Create placeholders for IN/NOT IN clause
                     condition = `${field} ${operator} (${paramValue.map(() => '?').join(', ')})`;
                     // Spread array values into params
@@ -648,30 +644,29 @@ Controller.single_bonsai = async (req, res) => {
             }
         };
 
-        addCondition('id_penilaian', id_penilaian);
         addCondition('id_formulir', id_formulir);
-        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('uuid', uuid);
         addCondition('id_event', id_event);
         addCondition('nama_acara', nama_acara, 'LIKE');
         addCondition('ids_cabang', ids_cabang);
         addCondition('cabang', cabang, 'LIKE');
-        addCondition('id_profile', id_profile);
-        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('no_registrasi', no_registrasi, 'LIKE');
+        addCondition('no_juri', no_juri, 'LIKE');
         addCondition('id_bonsai', id_bonsai);
         addCondition('uuid_bonsai', uuid_bonsai);
+        addCondition('id_profile', id_profile);
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
         addCondition('ids_jenis_bonsai', ids_jenis_bonsai);
         addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
         addCondition('ids_kelas', ids_kelas);
         addCondition('nama_kelas', nama_kelas, 'LIKE');
         addCondition('id_kategori', id_kategori);
         addCondition('nama_kategori', nama_kategori, 'LIKE');
-        addCondition('id_profile_juri', id_profile_juri);
-        addCondition('nama_juri', nama_juri, 'LIKE');
-        addCondition('penampilan', penampilan);
-        addCondition('gerak_dasar', gerak_dasar);
-        addCondition('keserasian', keserasian);
-        addCondition('kematangan', kematangan);
-        addCondition('total', total);
+        addCondition('bayar', bayar);
+        addCondition('cetak', cetak);
+        addCondition('arena', arena);
+        addCondition('meja', meja);
         addCondition('created_by', created_by);
 
         // Limit to 1 row
@@ -699,7 +694,6 @@ Controller.single_bonsai = async (req, res) => {
         }
 
         return response.sc200('', json, res);
-
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -715,32 +709,30 @@ Controller.single_suiseki = async (req, res) => {
 
         const key = redisPrefix + "single:" + md5(req.originalUrl);
         const created_by = (req.authTingkat <= 5) ? req.query.created_by : req.authIdUser;
-
         const {
-            id_penilaian,
             id_formulir,
-            nomor_sertifikat,
+            uuid,
             id_event,
             nama_acara,
             ids_cabang,
             cabang,
-            id_profile,
-            nama_lengkap,
+            nomor_sertifikat,
+            no_registrasi,
+            no_juri,
             id_suiseki,
             uuid_suiseki,
+            id_profile,
+            nama_lengkap,
             ids_jenis_suiseki,
             jenis_suiseki,
             ids_kelas,
             nama_kelas,
             id_kategori,
             nama_kategori,
-            id_profile_juri,
-            nama_juri,
-            penampilan,
-            gerak_dasar,
-            keserasian,
-            kematangan,
-            total,
+            bayar,
+            cetak,
+            arena,
+            meja,
         } = req.query;
 
         // Check Redis cache
@@ -757,7 +749,7 @@ Controller.single_suiseki = async (req, res) => {
         }
 
         // Build SQL query
-        let sqlSingle = "SELECT * FROM `view_penilaian_suiseki`";
+        let sqlSingle = "SELECT * FROM `view_formulir_suiseki`";
         const params = [];
 
         const addCondition = (field, value, operator = '=') => {
@@ -772,7 +764,6 @@ Controller.single_suiseki = async (req, res) => {
                     } else if (!Array.isArray(value)) {
                         paramValue = [value];
                     }
-
                     // Create placeholders for IN/NOT IN clause
                     condition = `${field} ${operator} (${paramValue.map(() => '?').join(', ')})`;
                     // Spread array values into params
@@ -788,30 +779,29 @@ Controller.single_suiseki = async (req, res) => {
             }
         };
 
-        addCondition('id_penilaian', id_penilaian);
         addCondition('id_formulir', id_formulir);
-        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('uuid', uuid);
         addCondition('id_event', id_event);
         addCondition('nama_acara', nama_acara, 'LIKE');
         addCondition('ids_cabang', ids_cabang);
         addCondition('cabang', cabang, 'LIKE');
-        addCondition('id_profile', id_profile);
-        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
+        addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+        addCondition('no_registrasi', no_registrasi, 'LIKE');
+        addCondition('no_juri', no_juri, 'LIKE');
         addCondition('id_suiseki', id_suiseki);
         addCondition('uuid_suiseki', uuid_suiseki);
+        addCondition('id_profile', id_profile);
+        addCondition('nama_lengkap', nama_lengkap, 'LIKE');
         addCondition('ids_jenis_suiseki', ids_jenis_suiseki);
         addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
         addCondition('ids_kelas', ids_kelas);
         addCondition('nama_kelas', nama_kelas, 'LIKE');
         addCondition('id_kategori', id_kategori);
         addCondition('nama_kategori', nama_kategori, 'LIKE');
-        addCondition('id_profile_juri', id_profile_juri);
-        addCondition('nama_juri', nama_juri, 'LIKE');
-        addCondition('penampilan', penampilan);
-        addCondition('gerak_dasar', gerak_dasar);
-        addCondition('keserasian', keserasian);
-        addCondition('kematangan', kematangan);
-        addCondition('total', total);
+        addCondition('bayar', bayar);
+        addCondition('cetak', cetak);
+        addCondition('arena', arena);
+        addCondition('meja', meja);
         addCondition('created_by', created_by);
 
         // Limit to 1 row
@@ -839,10 +829,40 @@ Controller.single_suiseki = async (req, res) => {
         }
 
         return response.sc200('', json, res);
-
     } catch (error) {
         console.log(error);
         return handleError(error, res);
+    }
+};
+
+/* Get Kode Nomor Registrasi */
+Controller.getNoRegistrasi = async (id_event, ids_kelas) => {
+    try {
+        const result = await helper.runSQL({
+            sql: "SELECT no_registrasi FROM view_formulir_pohon WHERE id_event = ? AND ids_kelas = ? ORDER BY no_registrasi DESC LIMIT 1",
+            param: [id_event, ids_kelas]
+        });
+        if (!result.length) {
+            const getKelas = await helper.runSQL({
+                sql: "SELECT kode FROM tbs_kelas WHERE ids_kelas = ? LIMIT 1",
+                param: [ids_kelas]
+            });
+            if (!getKelas.length) {
+                return null;
+            }
+            return `${getKelas[0].kode}-00001`;
+        }
+        console.log(result);
+        const lastNo = result[0].no_registrasi;
+        const parts = lastNo.split('-');
+        const lastPart = parseInt(parts[parts.length - 1]);
+        const newPart = lastPart + 1;
+        const newNo = `${parts.slice(0, parts.length - 1).join('-')}-${newPart.toString().padStart(5, '0')}`;
+        return newNo;
+    } catch (error) {
+        console.log(error);
+        logger.error('Error getting registration number:', error);
+        return null;
     }
 };
 
