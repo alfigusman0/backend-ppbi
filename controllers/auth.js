@@ -239,7 +239,6 @@ Controller.login = async (req, res, next) => {
             };
             return response.sc200("", json, res);
         } else {
-            message = ;
             return response.sc400('Password is wrong.', {}, res);
         }
     } catch (error) {
