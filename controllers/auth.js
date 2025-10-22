@@ -160,8 +160,6 @@ Controller.callback = async (req, res) => {
 }
 
 Controller.login = async (req, res, next) => {
-    let message = '';
-    let json = {};
     try {
         let username = req.body.username;
         let password = req.body.password;
@@ -174,14 +172,12 @@ Controller.login = async (req, res, next) => {
         }
         let getUser = await helper.runSQL(sqlQuery);
         if (!getUser.length) {
-            message = 'username not found.';
-            return response.sc400(message, json, res);
+            return response.sc400('username not found.', {}, res);
         }
 
         /* Checking password null */
         if (!getUser[0].password) {
-            message = 'Anda login menggunakan google. silahkan login kembali menggunakan google.';
-            return response.sc400(message, json, res);
+            return response.sc400('Anda login menggunakan google. silahkan login kembali menggunakan google.', {}, res);
         }
 
         /* Checking Password */
@@ -241,10 +237,10 @@ Controller.login = async (req, res, next) => {
             json = {
                 token: token
             };
-            return response.sc200(message, json, res);
+            return response.sc200("", json, res);
         } else {
-            message = 'Password is wrong.';
-            return response.sc400(message, json, res);
+            message = ;
+            return response.sc400('Password is wrong.', {}, res);
         }
     } catch (error) {
         console.log(error);
@@ -254,6 +250,7 @@ Controller.login = async (req, res, next) => {
 
 Controller.register = async (req, res, next) => {
     try {
+        const reset = req.body.reset || 'TIDAK';
         const {
             username,
             password,
@@ -273,8 +270,8 @@ Controller.register = async (req, res, next) => {
 
         /* Save to Database */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_users`(`ids_grup`, `username`, `password`) VALUES (?, ?, ?)",
-            param: [8, username, hashedPassword]
+            sql: "INSERT INTO `tbl_users`(`ids_grup`, `username`, `password`, `reset`) VALUES (?, ?, ?, ?)",
+            param: [8, username, hashedPassword, reset]
         });
 
         return response.sc200('Data added successfully.', {
@@ -287,12 +284,9 @@ Controller.register = async (req, res, next) => {
 }
 
 Controller.logout = async (req, res, next) => {
-    let message = '';
-    let json = {};
     try {
         if (!req.authToken) {
-            message = 'You are not logged in.';
-            return response.sc400(message, json, res);
+            return response.sc400('You are not logged in.', {}, res);
         }
 
         if (process.env.SESSIONS === 'DATABASE') {
@@ -317,13 +311,10 @@ Controller.logout = async (req, res, next) => {
 }
 
 Controller.createToken = async (req, res, next) => {
-    let message = '';
-    let json = {};
     try {
         let payload = req.body.payload || null;
         if (!payload) {
-            message = 'Payload is missing.';
-            return response.sc400(message, json, res);
+            return response.sc400('Payload is missing.', {}, res);
         }
 
         let expire_at = moment().add(process.env.JWT_EXPIRED_IN, 'days').format("YYYY-MM-DD HH:mm:ss");
@@ -358,7 +349,7 @@ Controller.createToken = async (req, res, next) => {
         json = {
             token: token
         };
-        return response.sc200(message, json, res);
+        return response.sc200('', json, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -366,19 +357,15 @@ Controller.createToken = async (req, res, next) => {
 }
 
 Controller.refreshToken = async (req, res, next) => {
-    let message = '';
-    let json = {};
     try {
         if (!req.authToken) {
-            message = 'You are not logged in.';
-            return response.sc400(message, json, res);
+            return response.sc400('You are not logged in.', {}, res);
         }
 
         let payload = req.body.payload || null;
         console.log('Payload:', payload);
         if (!payload) {
-            message = 'Payload is missing.';
-            return response.sc400(message, json, res);
+            return response.sc400('Payload is missing.', {}, res);
         }
 
         // Generate Token
@@ -419,9 +406,8 @@ Controller.refreshToken = async (req, res, next) => {
 }
 
 Controller.checkToken = async (req, res, next) => {
-    let json = {};
     try {
-        return response.sc200('Your token is still active', json, res);
+        return response.sc200('Your token is still active', {}, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -429,16 +415,12 @@ Controller.checkToken = async (req, res, next) => {
 }
 
 Controller.deleteToken = async (req, res, next) => {
-    let message = '';
-    let json = {};
     try {
         if (!req.authToken) {
-            message = 'You are not logged in.';
-            return response.sc400(message, json, res);
+            return response.sc400('You are not logged in.', {}, res);
         }
 
         let keterangan = req.body.keterangan || 'LOGOUT';
-
         if (process.env.SESSIONS === 'DATABASE') {
             // Check if the token exists
             let sqlCheck = {
@@ -447,8 +429,7 @@ Controller.deleteToken = async (req, res, next) => {
             }
             let checkToken = await helper.runSQL(sqlCheck);
             if (!checkToken.length) {
-                message = 'Token not found.';
-                return response.sc404(message, json, res);
+                return response.sc404('Token not found.', {}, res);
             }
 
             // SQL Update to mark the token as expired

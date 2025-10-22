@@ -33,13 +33,13 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-const redisPrefix = process.env.REDIS_PREFIX + "daftar:pembayaran:";
+const redisPrefix = process.env.REDIS_PREFIX + "formulir:penghargaan:bonsai:";
 
 // Helper function to check access rights
 const checkAccess = async (req, action) => {
     const sql = {
         sql: "SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?",
-        param: [req.authIdsLevel, 30, `%${action}%`]
+        param: [req.authIdsLevel, 28, `%${action}%`]
     };
     const result = await helper.runSQL(sql);
     return result.length > 0;
@@ -58,19 +58,16 @@ Controller.create = async (req, res) => {
             return response.sc401("Access denied.", {}, res);
         }
 
-        const pembayaran = (req.authIdsLevel === '5') ? "BELUM" : req.body.pembayaran;
+        const created_by = (req.authTingkat <= 5) ? req.body.created_by || req.authIdUser : req.authIdUser;
         const {
-            idd_kelulusan,
-            ids_bank,
-            va,
-            id_billing,
-            expire_at,
+            id_formulir,
+            id_juara,
         } = req.body;
 
         /* Check existing data */
         let checkData = await helper.runSQL({
-            sql: 'SELECT idd_kelulusan FROM `tbd_pembayaran` WHERE idd_kelulusan = ? AND pembayaran = ? LIMIT 1',
-            param: [idd_kelulusan, "BELUM"],
+            sql: 'SELECT id_penghargaan FROM `tbl_penghargaan` WHERE id_formulir = ? AND id_juara = ? LIMIT 1',
+            param: [id_formulir, id_juara],
         });
         if (checkData.length) {
             return response.sc400('Data already exists.', {}, res);
@@ -78,13 +75,13 @@ Controller.create = async (req, res) => {
 
         /* SQL Insert Data */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbd_pembayaran` (`idd_kelulusan`, `ids_bank`, `va`, `id_billing`, `expire_at`, `pembayaran`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            param: [idd_kelulusan, ids_bank, va, id_billing, expire_at, pembayaran, req.authIdUser]
+            sql: "INSERT INTO `tbl_penghargaan` (`id_formulir`, `id_juara`, `created_by`) VALUES (?, ?, ?)",
+            param: [id_formulir, id_juara, created_by]
         });
 
         json = {
-            idd_kelulusan: idd_kelulusan,
-            idd_pembayaran: result.insertId,
+            id_formulir: id_formulir,
+            id_penghargaan: result.insertId,
         }
 
         try {
@@ -113,7 +110,7 @@ Controller.read = async (req, res) => {
         const key = redisPrefix + "read:" + md5(req.authToken + req.originalUrl);
         const {
             idd_pembayaran,
-            idd_kelulusan,
+            id_penghargaan,
             nomor_peserta,
             ids_fakultas,
             fakultas,
@@ -121,7 +118,7 @@ Controller.read = async (req, res) => {
             jurusan,
             ids_jalur_masuk,
             jalur_masuk,
-            ids_bank,
+            id_formulir,
             bank,
             nama,
             pembayaran,
@@ -183,7 +180,7 @@ Controller.read = async (req, res) => {
         };
 
         addCondition('idd_pembayaran', idd_pembayaran);
-        addCondition('idd_kelulusan', idd_kelulusan);
+        addCondition('id_penghargaan', id_penghargaan);
         addCondition('nomor_peserta', nomor_peserta);
         addCondition('ids_fakultas', ids_fakultas);
         addCondition('fakultas', fakultas, 'LIKE');
@@ -191,7 +188,7 @@ Controller.read = async (req, res) => {
         addCondition('jurusan', jurusan, 'LIKE');
         addCondition('ids_jalur_masuk', ids_jalur_masuk);
         addCondition('jalur_masuk', jalur_masuk, 'LIKE');
-        addCondition('ids_bank', ids_bank);
+        addCondition('id_formulir', id_formulir);
         addCondition('bank', bank, 'LIKE');
         addCondition('nama', nama, 'LIKE');
         addCondition('pembayaran', pembayaran);
@@ -253,16 +250,16 @@ Controller.update = async (req, res) => {
         const id = req.params.id;
         const created_by = (req.authIdsLevel === '5') ? req.authIdUser : req.body.created_by;
         const {
-            idd_kelulusan,
-            ids_bank,
+            id_penghargaan,
+            id_formulir,
             va,
-            id_billing,
+            id_juara,
             expire_at,
             pembayaran,
         } = req.body;
 
         /* Check existing data */
-        let sql = 'SELECT idd_pembayaran FROM `tbd_pembayaran` WHERE idd_pembayaran = ?';
+        let sql = 'SELECT idd_pembayaran FROM `tbl_penghargaan` WHERE idd_pembayaran = ?';
         const param = [id];
         if (req.authIdsLevel == "5") {
             sql += ' AND created_by = ?';
@@ -288,10 +285,10 @@ Controller.update = async (req, res) => {
             }
         };
 
-        addUpdate('idd_kelulusan', idd_kelulusan);
-        addUpdate('ids_bank', ids_bank);
+        addUpdate('id_penghargaan', id_penghargaan);
+        addUpdate('id_formulir', id_formulir);
         addUpdate('va', va);
-        addUpdate('id_billing', id_billing);
+        addUpdate('id_juara', id_juara);
         addUpdate('expire_at', expire_at);
         addUpdate('pembayaran', pembayaran);
         addUpdate('created_by', created_by);
@@ -303,7 +300,7 @@ Controller.update = async (req, res) => {
 
         addUpdate('updated_by', req.authIdUser);
         await helper.runSQL({
-            sql: `UPDATE tbd_pembayaran SET ${updates.join(', ')} WHERE idd_pembayaran = ?`,
+            sql: `UPDATE tbl_penghargaan SET ${updates.join(', ')} WHERE idd_pembayaran = ?`,
             param: [...params, id],
         });
 
@@ -331,7 +328,7 @@ Controller.delete = async (req, res) => {
         const id = req.params.id;
 
         /* Check existing data */
-        let sql = 'SELECT idd_pembayaran FROM `tbd_pembayaran` WHERE idd_pembayaran = ?';
+        let sql = 'SELECT idd_pembayaran FROM `tbl_penghargaan` WHERE idd_pembayaran = ?';
         const param = [id];
         if (req.authIdsLevel == "5") {
             sql += ' AND created_by = ?';
@@ -348,7 +345,7 @@ Controller.delete = async (req, res) => {
 
         // SQL Delete Data
         await helper.runSQL({
-            sql: 'DELETE FROM `tbd_pembayaran` WHERE idd_pembayaran = ?',
+            sql: 'DELETE FROM `tbl_penghargaan` WHERE idd_pembayaran = ?',
             param: [id],
         });
 
@@ -376,7 +373,7 @@ Controller.single = async (req, res) => {
         const key = redisPrefix + "single:" + md5(req.authToken + req.originalUrl);
         const {
             idd_pembayaran,
-            idd_kelulusan,
+            id_penghargaan,
             nomor_peserta,
             ids_fakultas,
             fakultas,
@@ -384,7 +381,7 @@ Controller.single = async (req, res) => {
             jurusan,
             ids_jalur_masuk,
             jalur_masuk,
-            ids_bank,
+            id_formulir,
             bank,
             nama,
             pembayaran,
@@ -436,7 +433,7 @@ Controller.single = async (req, res) => {
         };
 
         addCondition('idd_pembayaran', idd_pembayaran);
-        addCondition('idd_kelulusan', idd_kelulusan);
+        addCondition('id_penghargaan', id_penghargaan);
         addCondition('nomor_peserta', nomor_peserta);
         addCondition('ids_fakultas', ids_fakultas);
         addCondition('fakultas', fakultas, 'LIKE');
@@ -444,7 +441,7 @@ Controller.single = async (req, res) => {
         addCondition('jurusan', jurusan, 'LIKE');
         addCondition('ids_jalur_masuk', ids_jalur_masuk);
         addCondition('jalur_masuk', jalur_masuk, 'LIKE');
-        addCondition('ids_bank', ids_bank);
+        addCondition('id_formulir', id_formulir);
         addCondition('bank', bank, 'LIKE');
         addCondition('nama', nama, 'LIKE');
         addCondition('pembayaran', pembayaran);
