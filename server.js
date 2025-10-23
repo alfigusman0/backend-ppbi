@@ -85,6 +85,10 @@ const fPendaftaranRoutes = require('./routes/formulir/pendaftaran');
 const fPenghargaanRoutes = require('./routes/formulir/penghargaan');
 const fPenilaianRoutes = require('./routes/formulir/penilaian');
 
+/* Notification */
+const notificationRoutes = require('./routes/notification/index');
+const whatsappRoutes = require('./routes/notification/whatsapp');
+
 /* Settings */
 const sCabangRoutes = require('./routes/settings/cabang');
 const sGrupRoutes = require('./routes/settings/grup');
@@ -122,6 +126,11 @@ router.use('/event/settings', esettingsRoutes);
 router.use('/formulir/pendaftaran', fPendaftaranRoutes);
 router.use('/formulir/penghargaan', fPenghargaanRoutes);
 router.use('/formulir/penilaian', fPenilaianRoutes);
+
+/* Notification Routes */
+router.use('/notification', notificationRoutes);
+router.use('/notification/whatsapp', whatsappRoutes);
+
 
 /* Settings */
 router.use('/settings/cabang', sCabangRoutes);
