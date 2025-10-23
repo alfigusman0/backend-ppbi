@@ -493,13 +493,13 @@ Controller.update = async (req, res) => {
 
         addUpdate('updated_by', req.authIdUser);
         const sqlUpdate = {
-            sql: `UPDATE \`tbl_formulir\` SET ${updates.join(', ')} WHERE \`id_event\` = ?`,
+            sql: `UPDATE \`tbl_formulir\` SET ${updates.join(', ')} WHERE \`id_formulir\` = ?`,
             param: [...params, id]
         };
 
         await helper.runSQL(sqlUpdate);
         const json = {
-            id_event: id
+            id_formulir: id,
         };
 
         // Hapus cache Redis
