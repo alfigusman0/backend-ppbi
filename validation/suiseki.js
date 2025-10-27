@@ -10,7 +10,28 @@ module.exports = function validateInput(method, path, data) {
     data.ids_jenis_suiseki = !isEmpty(data.ids_jenis_suiseki) ? data.ids_jenis_suiseki : '';
     data.ids_kelas = !isEmpty(data.ids_kelas) ? data.ids_kelas : '';
     data.ukuran = !isEmpty(data.ukuran) ? data.ukuran : '';
+    data.panjang = !isEmpty(data.panjang) ? data.panjang : '';
+    data.lebar = !isEmpty(data.lebar) ? data.lebar : '';
+    data.tinggi = !isEmpty(data.tinggi) ? data.tinggi : '';
     data.foto = !isEmpty(data.foto) ? data.foto : '';
+
+    // Helper function untuk validasi bilangan positif (>= 0)
+    const validatePositiveDecimal = (value, fieldName) => {
+        if (Validator.isEmpty(value)) {
+            return null; // Opsional, boleh kosong
+        }
+
+        if (!Validator.isDecimal(value)) {
+            return `${fieldName} harus berupa angka desimal.`;
+        }
+
+        const decimalValue = parseFloat(value);
+        if (decimalValue < 0) {
+            return `${fieldName} harus bilangan positif (>= 0).`;
+        }
+
+        return null; // Valid
+    };
 
     // Validasi untuk method POST (Create)
     if (method === 'POST') {
@@ -41,11 +62,28 @@ module.exports = function validateInput(method, path, data) {
             }
         }
 
-        // Validasi field ukuran (opsional, tapi jika diisi harus decimal)
-        if (!Validator.isEmpty(data.ukuran)) {
-            if (!Validator.isDecimal(data.ukuran)) {
-                errors.ukuran = 'ukuran harus berupa angka.';
-            }
+        // Validasi field ukuran (opsional, bilangan positif)
+        const ukuranError = validatePositiveDecimal(data.ukuran, 'ukuran');
+        if (ukuranError) {
+            errors.ukuran = ukuranError;
+        }
+
+        // Validasi field panjang (opsional, bilangan positif)
+        const panjangError = validatePositiveDecimal(data.panjang, 'panjang');
+        if (panjangError) {
+            errors.panjang = panjangError;
+        }
+
+        // Validasi field lebar (opsional, bilangan positif)
+        const lebarError = validatePositiveDecimal(data.lebar, 'lebar');
+        if (lebarError) {
+            errors.lebar = lebarError;
+        }
+
+        // Validasi field tinggi (opsional, bilangan positif)
+        const tinggiError = validatePositiveDecimal(data.tinggi, 'tinggi');
+        if (tinggiError) {
+            errors.tinggi = tinggiError;
         }
 
         // Validasi field foto (wajib diisi dan harus URL atau #)
@@ -86,11 +124,28 @@ module.exports = function validateInput(method, path, data) {
             }
         }
 
-        // Validasi ukuran jika diisi
-        if (!Validator.isEmpty(data.ukuran)) {
-            if (!Validator.isDecimal(data.ukuran)) {
-                errors.ukuran = 'ukuran harus berupa angka.';
-            }
+        // Validasi ukuran jika diisi (bilangan positif)
+        const ukuranError = validatePositiveDecimal(data.ukuran, 'ukuran');
+        if (ukuranError) {
+            errors.ukuran = ukuranError;
+        }
+
+        // Validasi panjang jika diisi (bilangan positif)
+        const panjangError = validatePositiveDecimal(data.panjang, 'panjang');
+        if (panjangError) {
+            errors.panjang = panjangError;
+        }
+
+        // Validasi lebar jika diisi (bilangan positif)
+        const lebarError = validatePositiveDecimal(data.lebar, 'lebar');
+        if (lebarError) {
+            errors.lebar = lebarError;
+        }
+
+        // Validasi tinggi jika diisi (bilangan positif)
+        const tinggiError = validatePositiveDecimal(data.tinggi, 'tinggi');
+        if (tinggiError) {
+            errors.tinggi = tinggiError;
         }
 
         // Validasi foto jika diisi

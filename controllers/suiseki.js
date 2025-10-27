@@ -62,12 +62,15 @@ Controller.create = async (req, res) => {
             ids_jenis_suiseki,
             ids_kelas,
             ukuran,
+            panjang,
+            lebar,
+            tinggi,
             foto,
         } = req.body;
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbl_suiseki`(`id_profile`, `ids_jenis_suiseki`, `ids_kelas`, `ukuran`,  `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?)",
-            param: [id_profile, ids_jenis_suiseki, ids_kelas, ukuran, foto, created_by]
+            sql: "INSERT INTO `tbl_suiseki`(`id_profile`, `ids_jenis_suiseki`, `ids_kelas`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [id_profile, ids_jenis_suiseki, ids_kelas, ukuran, panjang, lebar, tinggi, foto, created_by]
         };
 
         const result = await helper.runSQL(sqlInsert);
@@ -231,6 +234,9 @@ Controller.update = async (req, res) => {
             ids_jenis_suiseki,
             ids_kelas,
             ukuran,
+            panjang,
+            lebar,
+            tinggi,
             foto,
         } = req.body;
 
@@ -259,6 +265,9 @@ Controller.update = async (req, res) => {
         addUpdate('ids_jenis_suiseki', ids_jenis_suiseki);
         addUpdate('ids_kelas', ids_kelas);
         addUpdate('ukuran', ukuran);
+        addUpdate('panjang', panjang);
+        addUpdate('lebar', lebar);
+        addUpdate('tinggi', tinggi);
         addUpdate('foto', foto);
 
         // Check Data Update
