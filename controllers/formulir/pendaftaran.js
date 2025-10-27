@@ -57,9 +57,10 @@ Controller.create = async (req, res) => {
         }
 
         const created_by = (req.authTingkat <= 5) ? req.body.created_by || req.authIdUser : req.authIdUser;
-        const id_pengantar = (isEmpty(req.body.id_pengantar)) ? null : req.body.id_pengantar;
         const id_pohon = (isEmpty(req.body.id_pohon)) ? null : req.body.id_pohon;
         const id_suiseki = (isEmpty(req.body.id_suiseki)) ? null : req.body.id_suiseki;
+        const id_pengantar = (isEmpty(req.body.id_pengantar)) ? null : req.body.id_pengantar;
+        const keterangan = (isEmpty(req.body.keterangan)) ? null : req.body.keterangan;
         const {
             id_event,
             id_kategori,
@@ -82,8 +83,8 @@ Controller.create = async (req, res) => {
         }
 
         const sqlInsert = {
-            sql: "INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `foto`, `id_pengantar`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [id_event, no_registrasi, id_pohon, id_suiseki, id_kategori, ukuran, foto, id_pengantar, created_by]
+            sql: "INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `foto`, `id_pengantar`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [id_event, no_registrasi, id_pohon, id_suiseki, id_kategori, ukuran, foto, id_pengantar, keterangan, created_by]
         };
 
         const result = await helper.runSQL(sqlInsert);
@@ -439,6 +440,8 @@ Controller.update = async (req, res) => {
             arena,
             meja,
             foto,
+            id_pengantar,
+            keterangan,
         } = req.body;
 
         /* Check existing data */
@@ -476,6 +479,8 @@ Controller.update = async (req, res) => {
             addUpdate('bayar', bayar);
             addUpdate('arena', arena);
             addUpdate('meja', meja);
+            addUpdate('id_pengantar', id_pengantar);
+            addUpdate('keterangan', keterangan);
         }
 
         addUpdate('id_pohon', id_pohon);

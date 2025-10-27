@@ -65,6 +65,8 @@ Controller.create = async (req, res) => {
             keserasian,
             kematangan,
             total,
+            kriteria,
+            keterangan,
         } = req.body;
 
         /* Check existing data - juri tidak boleh menilai formulir yang sama dua kali */
@@ -79,8 +81,8 @@ Controller.create = async (req, res) => {
 
         /* SQL Insert Data */
         const result = await helper.runSQL({
-            sql: "INSERT INTO `tbl_penilaian` (`id_formulir`, `id_profile`, `penampilan`, `gerak_dasar`, `keserasian`, `kematangan`, `total`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            param: [id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, total, created_by]
+            sql: "INSERT INTO `tbl_penilaian` (`id_formulir`, `id_profile`, `penampilan`, `gerak_dasar`, `keserasian`, `kematangan`, `total`, `kriteria`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            param: [id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, total, kriteria, keterangan, created_by]
         });
 
         const json = {
@@ -137,6 +139,7 @@ Controller.read_bonsai = async (req, res) => {
             keserasian,
             kematangan,
             total,
+            kriteria,
         } = req.query;
 
         // Check Redis cache
@@ -219,6 +222,7 @@ Controller.read_bonsai = async (req, res) => {
         addCondition('keserasian', keserasian);
         addCondition('kematangan', kematangan);
         addCondition('total', total);
+        addCondition('kriteria', kriteria);
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -300,6 +304,7 @@ Controller.read_suiseki = async (req, res) => {
             keserasian,
             kematangan,
             total,
+            kriteria,
         } = req.query;
 
         // Check Redis cache
@@ -382,6 +387,7 @@ Controller.read_suiseki = async (req, res) => {
         addCondition('keserasian', keserasian);
         addCondition('kematangan', kematangan);
         addCondition('total', total);
+        addCondition('kriteria', kriteria);
         addCondition('created_by', created_by);
 
         sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -444,6 +450,8 @@ Controller.update = async (req, res) => {
             keserasian,
             kematangan,
             total,
+            kriteria,
+            keterangan,
         } = req.body;
 
         /* Check existing data */
@@ -484,6 +492,8 @@ Controller.update = async (req, res) => {
         addUpdate('keserasian', keserasian);
         addUpdate('kematangan', kematangan);
         addUpdate('total', total);
+        addUpdate('kriteria', kriteria);
+        addUpdate('keterangan', keterangan);
 
         // Check Data Update
         if (isEmpty(params)) {
@@ -601,6 +611,7 @@ Controller.single_bonsai = async (req, res) => {
             keserasian,
             kematangan,
             total,
+            kriteria,
         } = req.query;
 
         // Check Redis cache
@@ -672,6 +683,7 @@ Controller.single_bonsai = async (req, res) => {
         addCondition('keserasian', keserasian);
         addCondition('kematangan', kematangan);
         addCondition('total', total);
+        addCondition('kriteria', kriteria);
         addCondition('created_by', created_by);
 
         // Limit to 1 row
@@ -741,6 +753,7 @@ Controller.single_suiseki = async (req, res) => {
             keserasian,
             kematangan,
             total,
+            kriteria,
         } = req.query;
 
         // Check Redis cache
@@ -812,6 +825,7 @@ Controller.single_suiseki = async (req, res) => {
         addCondition('keserasian', keserasian);
         addCondition('kematangan', kematangan);
         addCondition('total', total);
+        addCondition('kriteria', kriteria);
         addCondition('created_by', created_by);
 
         // Limit to 1 row

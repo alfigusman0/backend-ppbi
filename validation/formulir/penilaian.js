@@ -13,6 +13,8 @@ module.exports = function validateInput(method, path, data) {
     data.keserasian = !isEmpty(data.keserasian) ? data.keserasian : '';
     data.kematangan = !isEmpty(data.kematangan) ? data.kematangan : '';
     data.total = !isEmpty(data.total) ? data.total : '';
+    data.kriteria = !isEmpty(data.kriteria) ? data.kriteria : '';
+    data.keterangan = !isEmpty(data.keterangan) ? data.keterangan : '';
 
     // Helper function untuk validasi nilai penilaian (0-100)
     const validateScore = (value, fieldName) => {
@@ -98,6 +100,14 @@ module.exports = function validateInput(method, path, data) {
                 }
             }
         }
+
+        if (Validator.isEmpty(data.kriteria)) {
+            errors.kriteria = 'kriteria tidak boleh kosong.';
+        } else {
+            if (!Validator.isIn(data.kriteria, ['A', 'B', 'C', 'D'])) {
+                errors.kriteria = 'kriteria tidak valid. harus A, B, C, atau D.';
+            }
+        }
     } else {
         // Validasi untuk method lain (PUT/PATCH untuk Update)
         // Field bersifat opsional, tapi jika diisi harus valid
@@ -153,6 +163,12 @@ module.exports = function validateInput(method, path, data) {
             const totalError = validateScore(data.total, 'total');
             if (totalError) {
                 errors.total = totalError;
+            }
+        }
+
+        if (!Validator.isEmpty(data.kriteria)) {
+            if (!Validator.isIn(data.kriteria, ['A', 'B', 'C', 'D'])) {
+                errors.kriteria = 'kriteria tidak valid. harus A, B, C, atau D.';
             }
         }
     }
