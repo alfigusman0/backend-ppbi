@@ -43,6 +43,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+              examples:
+                success:
+                  summary: Successful login example
+                  value:
+                    token: "eyJhbGciOiJI...exampletoken"
+                    user:
+                      id_user: 1
+                      username: "admin"
+                      nama_lengkap: "Admin User"
 
   /auth/register:
     post:
@@ -61,6 +70,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+              examples:
+                created:
+                  summary: User created
+                  value:
+                    id_user: 123
+                    username: "newuser"
+                    nama_lengkap: "New User"
 
   /users:
     get:
@@ -91,6 +107,24 @@ paths:
                       $ref: '#/components/schemas/User'
                   pagination:
                     $ref: '#/components/schemas/Pagination'
+              examples:
+                sample:
+                  summary: User list sample
+                  value:
+                    data:
+                      - id_user: 1
+                        username: "admin"
+                        nama_lengkap: "Admin User"
+                        nmr_tlpn: "+62812345678"
+                      - id_user: 2
+                        username: "joko"
+                        nama_lengkap: "Joko"
+                        nmr_tlpn: "+62887654321"
+                    pagination:
+                      total: 2
+                      page: 1
+                      limit: 20
+                      pages: 1
 
   /users/{id}:
     get:
@@ -217,6 +251,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationResponse'
+              examples:
+                sent:
+                  summary: WhatsApp send example
+                  value:
+                    success: true
+                    message: "Pesan WhatsApp berhasil dikirim"
+                    data:
+                      requestid: "abc123"
+                      status: "SENT"
 
   /notification/whatsapp/bulk:
     post:

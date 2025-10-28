@@ -1,0 +1,63 @@
+{
+    "info": {
+        "name": "API-PPBI - Quick",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": "Minimal Postman collection for local testing of auth, users and notification endpoints. Update host/port variables before use."
+    },
+    "variable": [{
+            "key": "baseUrl",
+            "value": "http://localhost:5000/api"
+        },
+        {
+            "key": "token",
+            "value": ""
+        }
+    ],
+    "item": [{
+            "name": "Auth - Login",
+            "request": {
+                "method": "POST",
+                "header": [{
+                    "key": "Content-Type",
+                    "value": "application/json"
+                }],
+                "url": "{{baseUrl}}/auth/login",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"secret\"\n}"
+                }
+            }
+        },
+        {
+            "name": "Users - List",
+            "request": {
+                "method": "GET",
+                "header": [{
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                }],
+                "url": "{{baseUrl}}/users"
+            }
+        },
+        {
+            "name": "Notification - Send WhatsApp",
+            "request": {
+                "method": "POST",
+                "header": [{
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "{{baseUrl}}/notification/whatsapp",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"id_event\": 1,\n  \"target\": \"+62812345678\",\n  \"message\": \"Test message\"\n}"
+                }
+            }
+        }
+    ]
+}
