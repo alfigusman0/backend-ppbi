@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  title: API PPBI
+  version: 2.3.0
+  description: "High-level OpenAPI specification for the API PPBI backend. This file contains top-level tags and example endpoints. It's a living document — expand with full request/response schemas as needed."
+servers:
+  - url: http://localhost:{port}/api
+    variables:
+      port:
+        default: '5000'
+        description: Local server port
+tags:
+  - name: auth
+    description: Authentication and token management
+  - name: users
+    description: User management
+  - name: event
+    description: Event-related endpoints (acara, juara, juri, kategori, settings)
+  - name: formulir
+    description: Forms (pendaftaran, penghargaan, penilaian)
+  - name: notification
+    description: Notification and WhatsApp
+  - name: settings
+    description: Application settings
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login and obtain JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: JWT token and user data
+  /users:
+    get:
+      tags: [users]
+      summary: List users (requires auth)
+      responses:
+        '200':
+          description: Array of users
+  /users/{id}:
+    get:
+      tags: [users]
+      summary: Get user by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User object
+  /event/acara:
+    get:
+      tags: [event]
+      summary: List acara (events)
+      responses:
+        '200':
+          description: Array of events
+  /formulir/pendaftaran:
+    post:
+      tags: [formulir]
+      summary: Submit pendaftaran form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Submission result
+  /notification/whatsapp:
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+
+  /event/acara/{id}:
+    get:
+      tags: [event]
+      summary: Get event by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Event object
+    post:
+      tags: [notification]
+      summary: Send WhatsApp notification via configured provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Send result
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
+
+# Notes:
+# - This is a lightweight /starter/ OpenAPI file. For a full spec, expand each path with
+#   detailed request/response schemas, parameters, and examples.
+# - If you'd like, I can iterate and generate detailed schemas by scanning controllers.

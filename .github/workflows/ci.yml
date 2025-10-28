@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test-install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: |
+          # Run ESLint to check code quality. If ESLint is not present yet, this will fail in CI
+          # until package-lock.json is updated in the repo. Lint errors should be fixed before merging.
+          npm run lint
+
+      - name: CI smoke check
+        run: |
+          # Basic smoke check to ensure Node runs in the action environment.
+          # We avoid starting the app (which requires DB/Redis env vars) to keep CI safe.
+          node -e "console.log('CI smoke check - installed dependencies OK')"
