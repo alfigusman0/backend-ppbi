@@ -1,6 +1,6 @@
 # API PPBI (api-ppbi) — Backend
 
-![Version](https://img.shields.io/github/v/tag/alfigusman0/backend-ppbi?label=version)
+![Version](https://img.shields.io/github/v/tag/alfigusman0/backend-ppbi?label=version&sort=semver)
 ![License](https://img.shields.io/github/license/alfigusman0/backend-ppbi)
 ![Issues](https://img.shields.io/github/issues/alfigusman0/backend-ppbi)
 
