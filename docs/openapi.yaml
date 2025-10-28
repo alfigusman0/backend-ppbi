@@ -34,7 +34,7 @@ x-api-info:
         ipWhitelist: true
         description: In production, requests are restricted to whitelisted IP addresses
   requestLimits:
-    bodyLimit: "500mb"
+    bodyLimit: '500mb'
     parameterLimit: 50000
 tags:
   - name: auth
@@ -123,11 +123,11 @@ paths:
                 success:
                   summary: Successful login example
                   value:
-                    token: "eyJhbGciOiJI...exampletoken"
+                    token: 'eyJhbGciOiJI...exampletoken'
                     user:
                       id_user: 1
-                      username: "admin"
-                      nama_lengkap: "Admin User"
+                      username: 'admin'
+                      nama_lengkap: 'Admin User'
 
   /aws/upload:
     post:
@@ -149,7 +149,7 @@ paths:
                 folder:
                   type: string
                   description: Target folder in bucket
-                  example: "photos/users"
+                  example: 'photos/users'
               required:
                 - file
       responses:
@@ -165,20 +165,20 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "File berhasil diupload"
+                    example: 'File berhasil diupload'
                   data:
                     type: object
                     properties:
                       url:
                         type: string
                         format: uri
-                        example: "https://bucket.s3.region.amazonaws.com/photos/users/image.jpg"
+                        example: 'https://bucket.s3.region.amazonaws.com/photos/users/image.jpg'
                       key:
                         type: string
-                        example: "photos/users/image.jpg"
+                        example: 'photos/users/image.jpg'
 
   /aws/delete:
     delete:
@@ -197,7 +197,7 @@ paths:
                 url:
                   type: string
                   format: uri
-                  example: "https://bucket.s3.region.amazonaws.com/photos/users/image.jpg"
+                  example: 'https://bucket.s3.region.amazonaws.com/photos/users/image.jpg'
               required:
                 - url
       responses:
@@ -213,10 +213,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "File berhasil dihapus"
+                    example: 'File berhasil dihapus'
                   data:
                     type: object
                     example: {}
@@ -256,13 +256,13 @@ paths:
                   value:
                     data:
                       - id_user: 1
-                        username: "admin"
-                        nama_lengkap: "Admin User"
-                        nmr_tlpn: "+62812345678"
+                        username: 'admin'
+                        nama_lengkap: 'Admin User'
+                        nmr_tlpn: '+62812345678'
                       - id_user: 2
-                        username: "joko"
-                        nama_lengkap: "Joko"
-                        nmr_tlpn: "+62887654321"
+                        username: 'joko'
+                        nama_lengkap: 'Joko'
+                        nmr_tlpn: '+62887654321'
                     pagination:
                       total: 2
                       page: 1
@@ -306,10 +306,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data KTA berhasil ditemukan"
+                    example: 'Data KTA berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -332,7 +332,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/KTAResponse'
-              
+
   /kta/{id}:
     put:
       tags: [kta]
@@ -421,10 +421,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data acara berhasil ditemukan"
+                    example: 'Data acara berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -487,10 +487,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data juri berhasil ditemukan"
+                    example: 'Data juri berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -591,10 +591,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data kategori berhasil ditemukan"
+                    example: 'Data kategori berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -695,10 +695,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data juara berhasil ditemukan"
+                    example: 'Data juara berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -799,10 +799,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data pendaftaran berhasil ditemukan"
+                    example: 'Data pendaftaran berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -903,10 +903,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data penghargaan berhasil ditemukan"
+                    example: 'Data penghargaan berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -1007,10 +1007,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data penilaian berhasil ditemukan"
+                    example: 'Data penilaian berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -1128,7 +1128,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-          
+
     post:
       tags:
         - settings-cabang
@@ -1319,7 +1319,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-          
+
     post:
       tags:
         - settings-grup
@@ -1510,7 +1510,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-          
+
     post:
       tags:
         - settings-hak-akses
@@ -1701,7 +1701,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-          
+
     post:
       tags:
         - settings-modul
@@ -1876,19 +1876,19 @@ paths:
                 target:
                   type: string
                   description: Phone number with country code
-                  example: "6285156157684"
+                  example: '6285156157684'
                 message:
                   type: string
-                  example: "Hello World!"
+                  example: 'Hello World!'
                 url:
                   type: string
                   format: uri
                   description: Optional media URL
-                  example: "https://example.com/doc.pdf"
+                  example: 'https://example.com/doc.pdf'
                 filename:
                   type: string
                   description: Optional filename for media
-                  example: "document.pdf"
+                  example: 'document.pdf'
                 typing:
                   type: boolean
                   description: Show typing indicator
@@ -1909,28 +1909,28 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Pesan WhatsApp berhasil dikirim"
+                    example: 'Pesan WhatsApp berhasil dikirim'
                   data:
                     type: object
                     properties:
                       detail:
                         type: string
-                        example: "success! message in queue"
+                        example: 'success! message in queue'
                       id:
                         type: array
                         items:
                           type: string
-                        example: ["127331075"]
+                        example: ['127331075']
                       process:
                         type: string
-                        example: "pending"
+                        example: 'pending'
                       quota:
                         type: object
                         properties:
-                          "085117343518":
+                          '085117343518':
                             type: object
                             properties:
                               details:
@@ -1969,22 +1969,22 @@ paths:
                   description: List of phone numbers with country code
                   items:
                     type: string
-                    example: "6285156157684"
+                    example: '6285156157684'
                 id_event:
                   type: integer
                   example: 1
                 message:
                   type: string
-                  example: "Bulk message content"
+                  example: 'Bulk message content'
                 url:
                   type: string
                   format: uri
                   description: Optional media URL
-                  example: "https://example.com/doc.pdf"
+                  example: 'https://example.com/doc.pdf'
                 filename:
                   type: string
                   description: Optional filename for media
-                  example: "document.pdf"
+                  example: 'document.pdf'
               required:
                 - targets
                 - message
@@ -2008,10 +2008,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Data notifikasi berhasil ditemukan"
+                    example: 'Data notifikasi berhasil ditemukan'
                   data:
                     type: array
                     items:
@@ -2098,10 +2098,10 @@ paths:
                     example: 200
                   status:
                     type: string
-                    example: "success"
+                    example: 'success'
                   message:
                     type: string
-                    example: "Pesan WhatsApp berhasil dikirim ke semua target"
+                    example: 'Pesan WhatsApp berhasil dikirim ke semua target'
                   data:
                     type: object
                     properties:
@@ -2141,12 +2141,12 @@ components:
       properties:
         username:
           type: string
-          example: "admin"
+          example: 'admin'
           minLength: 3
         password:
           type: string
           format: password
-          example: "secret123"
+          example: 'secret123'
           minLength: 6
       required: [username, password]
 
@@ -2177,35 +2177,35 @@ components:
           example: 1
         username:
           type: string
-          example: "johndoe"
+          example: 'johndoe'
         nama_lengkap:
           type: string
-          example: "John Doe"
+          example: 'John Doe'
         nmr_tlpn:
           type: string
-          example: "+628123456789"
+          example: '+628123456789'
         email:
           type: string
           format: email
-          example: "john@example.com"
+          example: 'john@example.com'
         level:
           type: string
           enum: [Admin, User, Judge]
-          example: "User"
+          example: 'User'
         grup:
           type: string
-          example: "Anggota"
+          example: 'Anggota'
         cabang:
           type: string
-          example: "Jakarta"
+          example: 'Jakarta'
         foto:
           type: string
           format: uri
-          example: "https://example.com/photos/john.jpg"
+          example: 'https://example.com/photos/john.jpg'
         status:
           type: string
           enum: [active, inactive]
-          example: "active"
+          example: 'active'
         created_at:
           type: string
           format: date-time
@@ -2233,57 +2233,57 @@ components:
           example: 1
         ids_cabang:
           type: string
-          example: "1"
+          example: '1'
         nama_acara:
           type: string
           maxLength: 255
-          example: "Kontes Bonsai Nasional 2025"
+          example: 'Kontes Bonsai Nasional 2025'
         slug_event:
           type: string
           maxLength: 255
-          example: "kontes-bonsai-nasional-2025"
+          example: 'kontes-bonsai-nasional-2025'
         proposal:
           type: string
           format: uri
-          example: "https://example.com/proposal.pdf"
+          example: 'https://example.com/proposal.pdf'
         tgl_awal_acara:
           type: string
           format: date
-          example: "2025-12-01"
+          example: '2025-12-01'
         tgl_akhir_acara:
           type: string
           format: date
-          example: "2025-12-03"
+          example: '2025-12-03'
         ids_kelurahan:
           type: string
-          example: "1"
+          example: '1'
         rw:
           type: string
           maxLength: 3
-          example: "001"
+          example: '001'
         rt:
           type: string
           maxLength: 3
-          example: "002"
+          example: '002'
         alamat:
           type: string
-          example: "Jl. Contoh No. 123"
+          example: 'Jl. Contoh No. 123'
         poster:
           type: string
           format: uri
-          example: "https://example.com/poster.jpg"
+          example: 'https://example.com/poster.jpg'
         bukti_bayar:
           type: string
           format: uri
-          example: "https://example.com/bukti.jpg"
+          example: 'https://example.com/bukti.jpg'
         jenis:
           type: string
           enum: [OFFLINE, ONLINE]
-          example: "OFFLINE"
+          example: 'OFFLINE'
         status:
           type: string
           enum: [PENDING, APPROVED, REJECTED]
-          example: "PENDING"
+          example: 'PENDING'
         created_at:
           type: string
           format: date-time
@@ -2398,11 +2398,11 @@ components:
           example: 1
         ids_kelas:
           type: string
-          example: "1"
+          example: '1'
         nama_kategori:
           type: string
           maxLength: 50
-          example: "Bonsai Mini"
+          example: 'Bonsai Mini'
         ukuran_min:
           type: number
           format: float
@@ -2418,7 +2418,7 @@ components:
         status:
           type: string
           enum: [active, inactive]
-          example: "active"
+          example: 'active'
         created_at:
           type: string
           format: date-time
@@ -2457,7 +2457,7 @@ components:
         status:
           type: string
           enum: [active, inactive]
-          default: "active"
+          default: 'active'
 
     EventCategoryUpdate:
       type: object
@@ -2490,10 +2490,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data kategori berhasil ditemukan"
+          example: 'Data kategori berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/EventCategory'
@@ -2509,10 +2509,10 @@ components:
           example: 1
         nama_kelas:
           type: string
-          example: "Kelas A"
+          example: 'Kelas A'
         keterangan:
           type: string
-          example: "Kelas untuk bonsai mini"
+          example: 'Kelas untuk bonsai mini'
 
     EventWinner:
       type: object
@@ -2526,11 +2526,11 @@ components:
         nama_juara:
           type: string
           maxLength: 100
-          example: "Juara 1"
+          example: 'Juara 1'
         status:
           type: string
           enum: [YA, TIDAK]
-          example: "YA"
+          example: 'YA'
         created_at:
           type: string
           format: date-time
@@ -2551,11 +2551,11 @@ components:
         nama_juara:
           type: string
           maxLength: 100
-          example: "Juara 1"
+          example: 'Juara 1'
         status:
           type: string
           enum: [YA, TIDAK]
-          default: "YA"
+          default: 'YA'
 
     EventWinnerUpdate:
       type: object
@@ -2577,10 +2577,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data juara berhasil ditemukan"
+          example: 'Data juara berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/EventWinner'
@@ -2596,10 +2596,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data acara berhasil ditemukan"
+          example: 'Data acara berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/Event'
@@ -2619,15 +2619,15 @@ components:
         nomor_sertifikat:
           type: string
           maxLength: 50
-          example: "CERT-2025-001"
+          example: 'CERT-2025-001'
         no_registrasi:
           type: string
           maxLength: 50
-          example: "REG-2025-001"
+          example: 'REG-2025-001'
         no_juri:
           type: string
           maxLength: 50
-          example: "JURI-001"
+          example: 'JURI-001'
         id_pohon:
           type: integer
           example: 1
@@ -2644,27 +2644,27 @@ components:
         bukti_bayar:
           type: string
           format: uri
-          example: "https://example.com/bukti.jpg"
+          example: 'https://example.com/bukti.jpg'
         bayar:
           type: string
           enum: [YA, TIDAK]
-          example: "YA"
+          example: 'YA'
         cetak:
           type: string
           enum: [YA, TIDAK]
-          example: "TIDAK"
+          example: 'TIDAK'
         arena:
           type: string
           maxLength: 50
-          example: "A"
+          example: 'A'
         meja:
           type: string
           maxLength: 50
-          example: "1"
+          example: '1'
         foto:
           type: string
           format: uri
-          example: "https://example.com/foto.jpg"
+          example: 'https://example.com/foto.jpg'
         id_pengantar:
           type: integer
           example: 1
@@ -2708,11 +2708,11 @@ components:
         bayar:
           type: string
           enum: [YA, TIDAK]
-          default: "TIDAK"
+          default: 'TIDAK'
         cetak:
           type: string
           enum: [YA, TIDAK]
-          default: "TIDAK"
+          default: 'TIDAK'
         arena:
           type: string
           maxLength: 50
@@ -2777,10 +2777,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data pendaftaran berhasil ditemukan"
+          example: 'Data pendaftaran berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/FormRegistration'
@@ -2840,10 +2840,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data penghargaan berhasil ditemukan"
+          example: 'Data penghargaan berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/FormAward'
@@ -2894,10 +2894,10 @@ components:
         kriteria:
           type: string
           maxLength: 50
-          example: "A"
+          example: 'A'
         keterangan:
           type: string
-          example: "Penilaian sangat baik"
+          example: 'Penilaian sangat baik'
         created_at:
           type: string
           format: date-time
@@ -2990,10 +2990,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data penilaian berhasil ditemukan"
+          example: 'Data penilaian berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/FormAssessment'
@@ -3013,18 +3013,18 @@ components:
         judul:
           type: string
           maxLength: 255
-          example: "Pemberitahuan Baru"
+          example: 'Pemberitahuan Baru'
         isi:
           type: string
-          example: "Isi notifikasi yang detail"
+          example: 'Isi notifikasi yang detail'
         dibaca:
           type: string
           enum: [YA, TIDAK]
-          example: "TIDAK"
+          example: 'TIDAK'
         whatsapp:
           type: string
           enum: [YA, TIDAK]
-          example: "TIDAK"
+          example: 'TIDAK'
         created_at:
           type: string
           format: date-time
@@ -3046,18 +3046,18 @@ components:
         judul:
           type: string
           maxLength: 255
-          example: "Pemberitahuan Baru"
+          example: 'Pemberitahuan Baru'
         isi:
           type: string
-          example: "Isi notifikasi yang detail"
+          example: 'Isi notifikasi yang detail'
         dibaca:
           type: string
           enum: [YA, TIDAK]
-          default: "TIDAK"
+          default: 'TIDAK'
         whatsapp:
           type: string
           enum: [YA, TIDAK]
-          default: "TIDAK"
+          default: 'TIDAK'
 
     NotificationUpdate:
       type: object
@@ -3084,10 +3084,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data notifikasi berhasil ditemukan"
+          example: 'Data notifikasi berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/Notification'
@@ -3103,17 +3103,17 @@ components:
           example: 1
         target:
           type: string
-          example: "6285156157684"
+          example: '6285156157684'
         message:
           type: string
-          example: "Pesan notifikasi"
+          example: 'Pesan notifikasi'
         url:
           type: string
           format: uri
-          example: "https://example.com/file.pdf"
+          example: 'https://example.com/file.pdf'
         filename:
           type: string
-          example: "dokumen.pdf"
+          example: 'dokumen.pdf'
         schedule:
           type: string
           format: date-time
@@ -3130,7 +3130,7 @@ components:
           type: string
         error:
           type: object
-    
+
     BranchSettings:
       type: object
       properties:
@@ -3146,38 +3146,38 @@ components:
         kode_cabang:
           type: string
           maxLength: 10
-          example: "CBG001"
+          example: 'CBG001'
         nama_cabang:
           type: string
           maxLength: 100
-          example: "Cabang Jakarta Selatan"
+          example: 'Cabang Jakarta Selatan'
         alamat:
           type: string
-          example: "Jl. Raya No. 123"
+          example: 'Jl. Raya No. 123'
         telepon:
           type: string
           maxLength: 15
-          example: "0211234567"
+          example: '0211234567'
         email:
           type: string
           format: email
-          example: "jakarta.selatan@ppbi.or.id"
+          example: 'jakarta.selatan@ppbi.or.id'
         logo:
           type: string
           format: uri
-          example: "https://storage.ppbi.or.id/cabang/logo1.png"
+          example: 'https://storage.ppbi.or.id/cabang/logo1.png'
         ttd_ketua:
           type: string
           format: uri
-          example: "https://storage.ppbi.or.id/cabang/ttd1.png"
+          example: 'https://storage.ppbi.or.id/cabang/ttd1.png'
         ttd_sekretaris:
           type: string
           format: uri
-          example: "https://storage.ppbi.or.id/cabang/ttd2.png"
+          example: 'https://storage.ppbi.or.id/cabang/ttd2.png'
         stempel:
           type: string
           format: uri
-          example: "https://storage.ppbi.or.id/cabang/stempel1.png"
+          example: 'https://storage.ppbi.or.id/cabang/stempel1.png'
         created_at:
           type: string
           format: date-time
@@ -3271,10 +3271,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data cabang berhasil ditemukan"
+          example: 'Data cabang berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/BranchSettings'
@@ -3290,7 +3290,7 @@ components:
           example: 1
         nama_provinsi:
           type: string
-          example: "DKI Jakarta"
+          example: 'DKI Jakarta'
         created_at:
           type: string
           format: date-time
@@ -3309,7 +3309,7 @@ components:
           example: 1
         nama_kab_kota:
           type: string
-          example: "Jakarta Selatan"
+          example: 'Jakarta Selatan'
         created_at:
           type: string
           format: date-time
@@ -3331,14 +3331,14 @@ components:
         kode_grup:
           type: string
           maxLength: 10
-          example: "GRP001"
+          example: 'GRP001'
         nama_grup:
           type: string
           maxLength: 100
-          example: "Grup Bonsai A"
+          example: 'Grup Bonsai A'
         keterangan:
           type: string
-          example: "Grup untuk penggemar bonsai tingkat lanjut"
+          example: 'Grup untuk penggemar bonsai tingkat lanjut'
         created_at:
           type: string
           format: date-time
@@ -3388,10 +3388,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data grup berhasil ditemukan"
+          example: 'Data grup berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/GroupSettings'
@@ -3414,19 +3414,19 @@ components:
         tambah:
           type: string
           enum: [YA, TIDAK]
-          example: "YA"
+          example: 'YA'
         ubah:
           type: string
           enum: [YA, TIDAK]
-          example: "YA"
+          example: 'YA'
         hapus:
           type: string
           enum: [YA, TIDAK]
-          example: "YA"
+          example: 'YA'
         lihat:
           type: string
           enum: [YA, TIDAK]
-          example: "YA"
+          example: 'YA'
         created_at:
           type: string
           format: date-time
@@ -3451,19 +3451,19 @@ components:
         tambah:
           type: string
           enum: [YA, TIDAK]
-          default: "TIDAK"
+          default: 'TIDAK'
         ubah:
           type: string
           enum: [YA, TIDAK]
-          default: "TIDAK"
+          default: 'TIDAK'
         hapus:
           type: string
           enum: [YA, TIDAK]
-          default: "TIDAK"
+          default: 'TIDAK'
         lihat:
           type: string
           enum: [YA, TIDAK]
-          default: "YA"
+          default: 'YA'
 
     AccessRightsUpdate:
       type: object
@@ -3493,10 +3493,10 @@ components:
           example: 200
         status:
           type: string
-          example: "success"
+          example: 'success'
         message:
           type: string
-          example: "Data hak akses berhasil ditemukan"
+          example: 'Data hak akses berhasil ditemukan'
         data:
           oneOf:
             - $ref: '#/components/schemas/AccessRights'
@@ -3512,7 +3512,7 @@ components:
           example: 1
         nama_level:
           type: string
-          example: "Administrator"
+          example: 'Administrator'
         created_at:
           type: string
           format: date-time
@@ -3528,27 +3528,26 @@ components:
           example: 1
         nama_modul:
           type: string
-          example: "User Management"
+          example: 'User Management'
         icon:
           type: string
-          example: "users"
+          example: 'users'
         url:
           type: string
-          example: "/users"
+          example: '/users'
         urutan:
           type: integer
           example: 1
         aktif:
           type: string
           enum: [YA, TIDAK]
-          example: "YA"
+          example: 'YA'
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
-
 # Notes:
 # - This is a starter OpenAPI file. For a full spec, expand each path with
 #   detailed request/response schemas, examples, and error responses.
