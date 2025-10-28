@@ -2,6 +2,8 @@
 .idea/
 .idea/*
 .vscode
+.github*
+.github/prompts/create-readme.prompt.md
 
 # Logs
 logs/
@@ -139,3 +141,4 @@ package-lock.json
 uploads/*/*/*
 
 !./controllers/logs/*
+.github/prompts/create-readme.prompt.md
