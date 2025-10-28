@@ -1,8 +1,11 @@
 openapi: 3.0.3
 info:
   title: API PPBI
-  version: 2.3.0
-  description: "High-level OpenAPI specification for the API PPBI backend. This file contains top-level tags and example endpoints. It's a living document — expand with full request/response schemas as needed."
+  version: 1.1.0
+  description: |
+    High-level OpenAPI specification for the API PPBI backend. This file contains
+    top-level tags and example endpoints. It's a living document — expand with
+    full request/response schemas as needed.
 servers:
   - url: http://localhost:{port}/api
     variables:
@@ -32,22 +35,63 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                password:
-                  type: string
+              $ref: '#/components/schemas/Credentials'
       responses:
         '200':
           description: JWT token and user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
   /users:
     get:
       tags: [users]
       summary: List users (requires auth)
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
-          description: Array of users
+          description: Array of users with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
   /users/{id}:
     get:
       tags: [users]
@@ -61,40 +105,40 @@ paths:
       responses:
         '200':
           description: User object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
   /event/acara:
     get:
       tags: [event]
       summary: List acara (events)
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: Array of events
-  /formulir/pendaftaran:
-    post:
-      tags: [formulir]
-      summary: Submit pendaftaran form
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Submission result
-  /notification/whatsapp:
-  /auth/register:
-    post:
-      tags: [auth]
-      summary: Register a new user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
 
   /event/acara/{id}:
     get:
@@ -109,18 +153,100 @@ paths:
       responses:
         '200':
           description: Event object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+
+  /event/acara/{id}/notify:
     post:
       tags: [notification]
-      summary: Send WhatsApp notification via configured provider
+      summary: Send WhatsApp notification for an event (convenience endpoint)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      responses:
+        '200':
+          description: Notification send result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+
+  /formulir/pendaftaran:
+    post:
+      tags: [formulir]
+      summary: Submit pendaftaran form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PendaftaranRequest'
+      responses:
+        '200':
+          description: Submission result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendaftaranResponse'
+
+  /notification/whatsapp:
+    post:
+      tags: [notification]
+      summary: Send a WhatsApp message via configured provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      responses:
+        '200':
+          description: Send result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+
+  /notification/whatsapp/bulk:
+    post:
+      tags: [notification]
+      summary: Send bulk WhatsApp messages
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              properties:
+                id_event:
+                  type: integer
+                messages:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NotificationRequest'
       responses:
         '200':
-          description: Send result
+          description: Bulk send result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  sent:
+                    type: integer
 
 components:
   securitySchemes:
@@ -128,10 +254,132 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    Credentials:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserCreate:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        nama_lengkap:
+          type: string
+      required: [username, password]
+
+    User:
+      type: object
+      properties:
+        id_user:
+          type: integer
+        username:
+          type: string
+        nama_lengkap:
+          type: string
+        nmr_tlpn:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        pages:
+          type: integer
+
+    Event:
+      type: object
+      properties:
+        id_event:
+          type: integer
+        nama_event:
+          type: string
+        tanggal_mulai:
+          type: string
+          format: date
+        tanggal_selesai:
+          type: string
+          format: date
+
+    PendaftaranRequest:
+      type: object
+      properties:
+        id_event:
+          type: integer
+        peserta:
+          type: object
+      required: [id_event, peserta]
+
+    PendaftaranResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        id_submission:
+          type: integer
+
+    NotificationRequest:
+      type: object
+      properties:
+        id_event:
+          type: integer
+        target:
+          type: string
+        message:
+          type: string
+        url:
+          type: string
+        filename:
+          type: string
+        schedule:
+          type: string
+        typing:
+          type: boolean
+
+    NotificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        error:
+          type: object
+
 security:
   - bearerAuth: []
 
 # Notes:
-# - This is a lightweight /starter/ OpenAPI file. For a full spec, expand each path with
-#   detailed request/response schemas, parameters, and examples.
-# - If you'd like, I can iterate and generate detailed schemas by scanning controllers.
+# - This is a starter OpenAPI file. For a full spec, expand each path with
+#   detailed request/response schemas, examples, and error responses.
+# - I can iterate and generate more detailed schemas by scanning `routes/` and `controllers/`.
