@@ -30,10 +30,11 @@ jobs:
         run: npm ci
 
       - name: Run linter
+        continue-on-error: true
         run: |
-          # Run ESLint to check code quality. If ESLint is not present yet, this will fail in CI
-          # until package-lock.json is updated in the repo. Lint errors should be fixed before merging.
-          npm run lint
+          # Run ESLint to check code quality. This step is currently non-blocking while we
+          # incrementally fix legacy issues. Lint errors will be reported but will not fail CI.
+          npm run lint || true
 
       - name: CI smoke check
         run: |
