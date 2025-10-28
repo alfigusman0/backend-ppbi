@@ -6,8 +6,6 @@
 
 A RESTful API backend for the PPBI application. Built with Express.js and designed to power user management, events, forms, notifications and integrations (AWS S3, Redis, Gmail OAuth).
 
-Version: 2.3.0
-
 ## Why this project is useful
 
 - Provides a ready-made backend for event registration, user authentication, and admin settings.
