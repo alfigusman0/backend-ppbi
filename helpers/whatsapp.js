@@ -1,5 +1,3 @@
-/* Config */
-const database = require('../config/database');
 const redis = require('../config/redis');
 
 /* Libraries */
@@ -38,9 +36,11 @@ const redisPrefix = process.env.REDIS_PREFIX + "whatsapp:";
 const validateEnvVariables = () => {
     const requiredEnv = ['FONNTE_API_HOST', 'FONNTE_API_ENDPOINT'];
     const missing = requiredEnv.filter(env => !process.env[env]);
-    
+
     if (missing.length > 0) {
-        logger.warn('Environment variables yang hilang:', { missing });
+        logger.warn('Environment variables yang hilang:', {
+            missing
+        });
     }
 
     return {
@@ -66,11 +66,15 @@ whatsapp.getTokenByEvent = async (idEvent) => {
             try {
                 const cachedToken = await redis.get(cacheKey);
                 if (cachedToken) {
-                    logger.info('Token WhatsApp dari cache', { idEvent });
+                    logger.info('Token WhatsApp dari cache', {
+                        idEvent
+                    });
                     return cachedToken;
                 }
             } catch (redisError) {
-                logger.warn('Redis get error:', { error: redisError.message });
+                logger.warn('Redis get error:', {
+                    error: redisError.message
+                });
             }
         }
 
@@ -94,13 +98,15 @@ whatsapp.getTokenByEvent = async (idEvent) => {
         if (process.env.REDIS_ACTIVE === 'ON') {
             try {
                 await redis.set(
-                    cacheKey, 
-                    token, 
-                    'EX', 
+                    cacheKey,
+                    token,
+                    'EX',
                     60 * 60 * 24 * (process.env.REDIS_DAY || 1)
                 );
             } catch (redisError) {
-                logger.warn('Redis set error:', { error: redisError.message });
+                logger.warn('Redis set error:', {
+                    error: redisError.message
+                });
             }
         }
 
@@ -162,7 +168,9 @@ whatsapp.sendMessage = async (idEvent, params) => {
                 success: false,
                 message: tokenError.message,
                 data: null,
-                error: { message: tokenError.message },
+                error: {
+                    message: tokenError.message
+                },
                 errorType: 'TOKEN_ERROR'
             };
         }
@@ -220,7 +228,7 @@ whatsapp.sendMessage = async (idEvent, params) => {
                 target: params.target,
                 apiUrl
             });
-            
+
             return {
                 success: false,
                 message: `Gagal mengirim pesan: ${response.data.reason}`,
@@ -341,7 +349,9 @@ whatsapp.sendBulkMessages = async (idEvent, messages) => {
             success: false,
             message: error.message,
             data: null,
-            error: { message: error.message },
+            error: {
+                message: error.message
+            },
             errorType: 'BULK_MESSAGE_ERROR'
         };
     }
@@ -371,7 +381,7 @@ whatsapp.formatMultipleTargets = (targets) => {
         throw new Error('Parameter targets harus berupa array');
     }
 
-    return targets.map(t => 
+    return targets.map(t =>
         whatsapp.formatTargetWithVariable(t.phone, t.name, t.role)
     ).join(',');
 };
@@ -385,12 +395,14 @@ whatsapp.invalidateTokenCache = async (idEvent) => {
         if (process.env.REDIS_ACTIVE === 'ON') {
             const cacheKey = redisPrefix + `token:${idEvent}`;
             await redis.del(cacheKey);
-            logger.info('Token cache dihapus', { idEvent });
+            logger.info('Token cache dihapus', {
+                idEvent
+            });
         }
     } catch (error) {
-        logger.warn('Error invalidating token cache', { 
-            idEvent, 
-            error: error.message 
+        logger.warn('Error invalidating token cache', {
+            idEvent,
+            error: error.message
         });
     }
 };

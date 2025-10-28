@@ -1,5 +1,4 @@
 /* Config */
-const redis = require('../../config/redis');
 
 /* Libraries */
 const winston = require('winston');
@@ -124,7 +123,9 @@ Controller.create = async (req, res) => {
                         status: newWhatsappStatus
                     });
                 } else {
-                    logger.warn('User tidak punya nomor telepon', { id_user });
+                    logger.warn('User tidak punya nomor telepon', {
+                        id_user
+                    });
                     whatsappResult = {
                         success: false,
                         message: 'User tidak memiliki nomor telepon yang valid'
@@ -154,14 +155,16 @@ Controller.create = async (req, res) => {
             whatsapp_result: whatsappResult
         };
 
-        const statusMsg = send_whatsapp_now ? 
-            'Notifikasi berhasil dibuat dan WhatsApp dikirim' : 
+        const statusMsg = send_whatsapp_now ?
+            'Notifikasi berhasil dibuat dan WhatsApp dikirim' :
             'Notifikasi berhasil dibuat (akan dikirim WhatsApp via cron job)';
 
         return response.sc200(statusMsg, responseData, res);
 
     } catch (error) {
-        logger.error('Error di controller create notification', { error: error.message });
+        logger.error('Error di controller create notification', {
+            error: error.message
+        });
         return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi', {}, res);
     }
 };
@@ -226,12 +229,17 @@ Controller.createBulk = async (req, res) => {
                     });
                 } else {
                     failedCount++;
-                    logger.error('Gagal create notifikasi untuk user', { userId });
+                    logger.error('Gagal create notifikasi untuk user', {
+                        userId
+                    });
                 }
 
             } catch (error) {
                 failedCount++;
-                logger.error('Error saat create notifikasi untuk user', { userId, error: error.message });
+                logger.error('Error saat create notifikasi untuk user', {
+                    userId,
+                    error: error.message
+                });
             }
         }
 
@@ -256,7 +264,9 @@ Controller.createBulk = async (req, res) => {
         }, res);
 
     } catch (error) {
-        logger.error('Error di controller createBulk notification', { error: error.message });
+        logger.error('Error di controller createBulk notification', {
+            error: error.message
+        });
         return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi', {}, res);
     }
 };
@@ -276,7 +286,9 @@ Controller._sendWhatsappForNotifications = async (notifications, idEvent, create
                 const notifDetail = await notification.getById(notif.id_notif);
 
                 if (!notifDetail) {
-                    logger.warn('Notifikasi tidak ditemukan', { id_notif: notif.id_notif });
+                    logger.warn('Notifikasi tidak ditemukan', {
+                        id_notif: notif.id_notif
+                    });
                     continue;
                 }
 
@@ -289,7 +301,9 @@ Controller._sendWhatsappForNotifications = async (notifications, idEvent, create
                 const userData = await helper.runSQL(userSql);
 
                 if (!userData || userData.length === 0) {
-                    logger.warn('User tidak punya nomor telepon', { id_user: notifDetail.id_user });
+                    logger.warn('User tidak punya nomor telepon', {
+                        id_user: notifDetail.id_user
+                    });
                     await notification.updateWhatsappStatus(notif.id_notif, 'ERROR', createdBy);
                     continue;
                 }
@@ -327,7 +341,9 @@ Controller._sendWhatsappForNotifications = async (notifications, idEvent, create
         logger.info('Background process selesai untuk bulk notifikasi WhatsApp');
 
     } catch (error) {
-        logger.error('Error di background process WhatsApp notifikasi', { error: error.message });
+        logger.error('Error di background process WhatsApp notifikasi', {
+            error: error.message
+        });
     }
 };
 
@@ -350,7 +366,9 @@ Controller.getUserNotifications = async (req, res) => {
         return response.sc200('Notifikasi user berhasil diambil', result, res);
 
     } catch (error) {
-        logger.error('Error di controller getUserNotifications', { error: error.message });
+        logger.error('Error di controller getUserNotifications', {
+            error: error.message
+        });
         return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi', {}, res);
     }
 };
@@ -361,7 +379,9 @@ Controller.getUserNotifications = async (req, res) => {
  */
 Controller.markAsRead = async (req, res) => {
     try {
-        const { id } = req.params;
+        const {
+            id
+        } = req.params;
 
         if (!id) {
             return response.sc400('ID Notifikasi tidak ditemukan', {}, res);
@@ -376,7 +396,9 @@ Controller.markAsRead = async (req, res) => {
         return response.sc200(result.message, {}, res);
 
     } catch (error) {
-        logger.error('Error di controller markAsRead', { error: error.message });
+        logger.error('Error di controller markAsRead', {
+            error: error.message
+        });
         return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi', {}, res);
     }
 };
@@ -387,7 +409,9 @@ Controller.markAsRead = async (req, res) => {
  */
 Controller.markMultipleAsRead = async (req, res) => {
     try {
-        const { notif_ids } = req.body;
+        const {
+            notif_ids
+        } = req.body;
 
         if (!Array.isArray(notif_ids) || notif_ids.length === 0) {
             return response.sc400('Parameter notif_ids harus berupa array', {}, res);
@@ -399,10 +423,14 @@ Controller.markMultipleAsRead = async (req, res) => {
             return response.sc500(result.message, result.error, res);
         }
 
-        return response.sc200(result.message, { affected_rows: result.affectedRows }, res);
+        return response.sc200(result.message, {
+            affected_rows: result.affectedRows
+        }, res);
 
     } catch (error) {
-        logger.error('Error di controller markMultipleAsRead', { error: error.message });
+        logger.error('Error di controller markMultipleAsRead', {
+            error: error.message
+        });
         return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi', {}, res);
     }
 };

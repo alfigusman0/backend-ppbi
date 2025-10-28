@@ -1,5 +1,4 @@
 /* Config */
-const redis = require('../../config/redis');
 
 /* Libraries */
 const winston = require('winston');
@@ -287,7 +286,9 @@ Controller.sendNotificationToUser = async (userId, idEvent, messageText, options
                 success: false,
                 message: 'User tidak ditemukan atau nomor telepon tidak tersedia',
                 data: null,
-                error: { message: 'User not found' },
+                error: {
+                    message: 'User not found'
+                },
                 errorType: 'USER_NOT_FOUND'
             };
         }
@@ -341,7 +342,9 @@ Controller.sendNotificationToUser = async (userId, idEvent, messageText, options
             success: false,
             message: error.message,
             data: null,
-            error: { message: error.message },
+            error: {
+                message: error.message
+            },
             errorType: 'SYSTEM_ERROR'
         };
     }
@@ -402,11 +405,13 @@ Controller.sendNotificationToUsers = async (userIds, idEvent, messageText, optio
             return {
                 success: false,
                 message: 'Tidak ada user dengan nomor telepon yang valid',
-                data: { 
-                    requested: userIds.length, 
-                    found: 0 
+                data: {
+                    requested: userIds.length,
+                    found: 0
                 },
-                error: { message: 'No valid users found' },
+                error: {
+                    message: 'No valid users found'
+                },
                 errorType: 'NO_USERS_FOUND'
             };
         }
@@ -457,7 +462,9 @@ Controller.sendNotificationToUsers = async (userIds, idEvent, messageText, optio
             success: false,
             message: error.message,
             data: null,
-            error: { message: error.message },
+            error: {
+                message: error.message
+            },
             errorType: 'SYSTEM_ERROR'
         };
     }
@@ -494,8 +501,7 @@ Controller.sendToUser = async (req, res) => {
         const result = await Controller.sendNotificationToUser(
             user_id,
             id_event,
-            message,
-            {
+            message, {
                 url,
                 schedule,
                 delay,
@@ -504,15 +510,17 @@ Controller.sendToUser = async (req, res) => {
         );
 
         if (!result.success) {
-            const statusCode = result.errorType === 'TOKEN_ERROR' ? 401 : 
-                             result.errorType === 'USER_NOT_FOUND' ? 404 : 500;
+            const statusCode = result.errorType === 'TOKEN_ERROR' ? 401 :
+                result.errorType === 'USER_NOT_FOUND' ? 404 : 500;
             return response[`sc${statusCode}`](result.message, result.error || {}, res);
         }
 
         return response.sc200('Pesan WhatsApp berhasil dikirim ke user', result.data, res);
 
     } catch (error) {
-        logger.error('Error di endpoint sendToUser', { error: error.message });
+        logger.error('Error di endpoint sendToUser', {
+            error: error.message
+        });
         return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi', {}, res);
     }
 };
@@ -546,23 +554,24 @@ Controller.sendToUsers = async (req, res) => {
         const result = await Controller.sendNotificationToUsers(
             user_ids,
             id_event,
-            message,
-            {
+            message, {
                 delay,
                 url
             }
         );
 
         if (!result.success) {
-            const statusCode = result.errorType === 'TOKEN_ERROR' ? 401 : 
-                             result.errorType === 'NO_USERS_FOUND' ? 404 : 500;
+            const statusCode = result.errorType === 'TOKEN_ERROR' ? 401 :
+                result.errorType === 'NO_USERS_FOUND' ? 404 : 500;
             return response[`sc${statusCode}`](result.message, result.error || {}, res);
         }
 
         return response.sc200('Pesan WhatsApp berhasil dikirim ke multiple users', result.data, res);
 
     } catch (error) {
-        logger.error('Error di endpoint sendToUsers', { error: error.message });
+        logger.error('Error di endpoint sendToUsers', {
+            error: error.message
+        });
         return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi', {}, res);
     }
 };

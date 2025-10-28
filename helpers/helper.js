@@ -14,7 +14,6 @@ const winston = require('winston');
 const axios = require('axios');
 const DailyRotateFile = require('winston-daily-rotate-file');
 const {
-  PutObjectCommand,
   DeleteObjectCommand
 } = require("@aws-sdk/client-s3");
 
@@ -44,7 +43,7 @@ const helper = {};
 helper.runSQL = async function (value) {
   return new Promise(function (resolve, reject) {
     try {
-      database.query(value.sql, value.param, function (error, rows, fields) {
+      database.query(value.sql, value.param, function (error, rows, _fields) {
         if (error) {
           reject(error);
         } else {
@@ -234,7 +233,7 @@ helper.deleteKeysByPattern = async (patterns) => {
           if (keys.length > 0) {
             const pipeline = node.pipeline();
             keys.forEach(key => pipeline.del(key));
-            const result = await pipeline.exec();
+            await pipeline.exec();
             deletedCount += keys.length;
             console.log(`Deleted ${keys.length} keys from node ${node.options.host}:${node.options.port}`);
           }
@@ -257,7 +256,7 @@ helper.deleteKeysByPattern = async (patterns) => {
         if (keys.length > 0) {
           const pipeline = redis.pipeline();
           keys.forEach(key => pipeline.del(key));
-          const result = await pipeline.exec();
+          await pipeline.exec();
           deletedCount += keys.length;
           console.log(`Deleted ${keys.length} keys from standalone Redis`);
         }
@@ -331,7 +330,7 @@ helper.httpRequest = async function (options) {
       params: options.params || {},
       data: options.data || {},
       timeout: options.timeout || 15000,
-      validateStatus: function (status) {
+      validateStatus: function (_status) {
         // Jangan langsung throw error, biar bisa handle status code manual
         return true;
       },

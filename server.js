@@ -147,7 +147,7 @@ router.use('/settings/profile-cabang', sProfileCabangRoutes);
 router.use('/settings/provinsi', sProvinsiRoutes);
 
 app.use('/api', router);
-app.use('/api', (req, res, next) => {
+app.use('/api', (req, res) => {
     res.status(200).json({
         status: "OK",
         message: "Server is healthy",
