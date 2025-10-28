@@ -117,7 +117,23 @@ Expected response:
 ## Scripts
 
 - `npm run start` — development (nodemon)
+- `npm run lint` — run ESLint to check code quality
 - `npm test` — placeholder (no tests configured)
+
+## Code Quality
+
+This project uses ESLint to maintain code quality and consistency. The configuration is in `.eslintrc.json` and includes:
+
+- Node.js environment and ES2021 features
+- Recommended ESLint rules
+- Custom configurations for unused variables and parameters
+- No strict mode requirement (legacy code support)
+
+To check code quality:
+
+```powershell
+npm run lint
+```
 
 ## Environment examples & safety
 
@@ -148,10 +164,17 @@ This project is licensed under the ISC License — see `LICENSE` for details.
 
 ## Next steps / suggestions
 
-- Add unit/integration tests and a CI workflow (GitHub Actions)
-- Add a `CONTRIBUTING.md` and issue templates to streamline contributions
-- Add example Postman collection or OpenAPI spec for the public endpoints
+- Add unit/integration tests
+- Expand test coverage in CI workflow
+- Add example Postman collection
+- Expand the OpenAPI specification with more detailed schemas
+
+## Project Status
+
+- ✅ ESLint integration and code quality checks
+- ✅ Basic CI workflow with dependency and lint checks
+- ✅ Contributing guidelines (`CONTRIBUTING.md`)
+- ✅ Initial OpenAPI specification (`docs/openapi.yaml`)
+- ✅ Code of Conduct
 
 ---
-
-If you'd like, I can also add a minimal `CONTRIBUTING.md` or generate an OpenAPI spec based on the `routes/` directory. Which would you prefer next?
