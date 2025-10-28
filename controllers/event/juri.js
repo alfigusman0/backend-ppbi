@@ -70,7 +70,7 @@ Controller.create = async (req, res) => {
             param: [id_event, id_profile, penilaian, created_by]
         });
 
-        json = {
+        const json = {
             id_juri: result.insertId,
         }
 

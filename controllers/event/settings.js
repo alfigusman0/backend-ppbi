@@ -70,8 +70,8 @@ Controller.create = async (req, res) => {
             param: [id_event, nama_setting, setting, created_by]
         });
 
-        json = {
-            id_setting: result.insertId,
+        const json = {
+            id_settings: result.insertId,
         }
 
         try {

@@ -84,7 +84,7 @@ Controller.create = async (req, res) => {
             param: [ids_grup, username, hashedPassword, reset, created_by]
         });
 
-        json = {
+        const json = {
             id_user: result.insertId,
         }
 

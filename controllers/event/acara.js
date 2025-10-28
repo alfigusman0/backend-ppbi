@@ -91,7 +91,7 @@ Controller.create = async (req, res) => {
             param: [ids_cabang, nama_acara, slug_event, proposal, tgl_awal_acara, tgl_akhir_acara, ids_kelurahan, rw, rt, alamat, poster, bukti_bayar, jenis, status, created_by]
         });
 
-        json = {
+        const json = {
             id_event: result.insertId,
         }
 

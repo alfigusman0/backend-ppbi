@@ -74,7 +74,7 @@ Controller.create = async (req, res) => {
             param: [id_event, ids_kelas, nama_kategori, ukuran_min, ukuran_maks, uang, status, created_by]
         });
 
-        json = {
+        const json = {
             id_kategori: result.insertId,
         }
 
