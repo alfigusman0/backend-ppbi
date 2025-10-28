@@ -23,8 +23,7 @@ module.exports = async (req, res, next) => {
 
   token = token.split(" ");
   if (token.length < 2 || isEmpty(token[1])) {
-    message = 'invalid token format.';
-    return response.sc401(message, json, res);
+    return response.sc401('invalid token format.', json, res);
   }
 
   try {

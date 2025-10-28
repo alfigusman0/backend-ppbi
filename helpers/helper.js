@@ -11,6 +11,7 @@ const multerS3 = require("multer-s3");
 const s3Client = require("../config/aws");
 const path = require("path");
 const winston = require('winston');
+const axios = require('axios');
 const DailyRotateFile = require('winston-daily-rotate-file');
 const {
   PutObjectCommand,
