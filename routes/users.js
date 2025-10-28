@@ -2,6 +2,8 @@
 const router = require('express').Router();
 /* Controller */
 const Controller = require('../controllers/users');
+/* Sub Routes */
+const importRoutes = require('./import/users');
 /* Middleware */
 const isAuth = require('../middleware/isAuth');
 const validation = require('../middleware/users');
@@ -12,5 +14,7 @@ router.post('/', isAuth, validation, Controller.create);
 router.put('/:id', isAuth, paramsid, validation, Controller.update);
 router.delete('/:id', isAuth, paramsid, Controller.delete);
 router.get('/single', isAuth, Controller.single);
+
+router.use('/import', importRoutes);
 
 module.exports = router;
