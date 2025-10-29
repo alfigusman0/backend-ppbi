@@ -1,14 +1,23 @@
 openapi: 3.0.3
 info:
-  title: API PPBI - Authentication Service
-  version: 1.1.0
+  title: API PPBI - Authentication & Users Management Service
+  version: 1.2.0
   description: |
-    Authentication API untuk PPBI (Persatuan Penggemar Bonsai Indonesia).
-    Sistem autentikasi mendukung login tradisional, Google OAuth, dan manajemen token JWT.
+    Dokumentasi lengkap Authentication & Users Management API untuk PPBI (Persatuan Penggemar Bonsai Indonesia).
+    Sistem mencakup autentikasi pengguna, manajemen token JWT, dan bulk user management via Excel import.
   contact:
     name: API Support
     email: support@ppbi.local
   x-changelog:
+    - version: 1.2.0
+      date: 2025-10-29
+      changes:
+        - Added complete Users CRUD endpoints (Create, Read, Update, Delete, Single)
+        - Added Excel import functionality with preview and validation
+        - Added advanced filtering and pagination for user listing
+        - Added Redis caching for improved performance
+        - Non-destructive merge with auth.js (1.1.0)
+        - New fields: jenis_kelamin, ids_kelurahan, rw, rt, alamat, nmr_tlpn
     - version: 1.1.0
       date: 2025-10-29
       changes:
@@ -33,6 +42,10 @@ tags:
     description: Endpoints untuk manajemen token JWT
   - name: OAuth
     description: Endpoints untuk autentikasi OAuth (Google)
+  - name: Users
+    description: Endpoints untuk manajemen data pengguna (CRUD)
+  - name: Users Import
+    description: Endpoints untuk import bulk users dari Excel
 
 paths:
   /auth/google:
@@ -377,6 +390,556 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Daftar pengguna dengan filter dan pagination
+      description: Mengambil daftar pengguna dengan dukungan filter advanced, pagination, dan Redis cache
+      operationId: listUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Nomor halaman (default 1)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Jumlah data per halaman (default 10)
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: created_at DESC
+          description: Urutan sorting (field ASC/DESC)
+        - name: id_user
+          in: query
+          schema:
+            type: integer
+          description: Filter by user ID
+        - name: username
+          in: query
+          schema:
+            type: string
+          description: Filter by username (LIKE query)
+        - name: ids_level
+          in: query
+          schema:
+            type: string
+          description: Filter by user levels (comma-separated IDs untuk IN query)
+        - name: level
+          in: query
+          schema:
+            type: string
+          description: Filter by level name (LIKE query)
+        - name: tingkat
+          in: query
+          schema:
+            type: integer
+          description: Filter by user tier/level (greater than or equal)
+        - name: ids_grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group IDs (comma-separated untuk IN query)
+        - name: grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group name (LIKE query)
+        - name: keterangan
+          in: query
+          schema:
+            type: string
+          description: Filter by description (LIKE query)
+        - name: reset
+          in: query
+          schema:
+            type: string
+            enum: [YA, TIDAK]
+          description: Filter by reset status
+      responses:
+        '200':
+          description: Daftar pengguna berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+              example:
+                code: 200
+                status: success
+                message: ''
+                data:
+                  data:
+                    - id_user: 1
+                      username: john_doe
+                      nama: John Doe
+                      jenis_kelamin: LAKI-LAKI
+                      ids_level: 1
+                      level: Admin
+                      ids_grup: 1
+                      grup: Administrator
+                      reset: TIDAK
+                      created_at: '2025-10-29T00:00:00Z'
+                  pagination:
+                    current_page: 1
+                    per_page: 10
+                    total: 50
+                    last_page: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Data tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 404
+                status: error
+                message: Data not found.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Users
+      summary: Buat pengguna baru
+      description: Membuat pengguna baru dengan validasi lengkap
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            example:
+              ids_grup: 1
+              username: newuser
+              password: SecurePass@123
+              confirm_password: SecurePass@123
+              reset: TIDAK
+      responses:
+        '200':
+          description: User berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+              example:
+                code: 200
+                status: success
+                message: Data added successfully.
+                data:
+                  id_user: 123
+        '400':
+          description: Validasi gagal atau user sudah ada
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  value:
+                    code: 400
+                    status: error
+                    message:
+                      ids_grup: ids grup tidak boleh kosong.
+                      username: username harus 3-50 karakter.
+                user_exists:
+                  value:
+                    code: 400
+                    status: error
+                    message: Data already exists.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{id}:
+    put:
+      tags:
+        - Users
+      summary: Update pengguna
+      description: Mengubah data pengguna yang ada
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID pengguna yang akan diupdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+            example:
+              ids_grup: 2
+              username: updated_username
+              password: NewSecurePass@456
+              confirm_password: NewSecurePass@456
+              reset: TIDAK
+      responses:
+        '200':
+          description: User berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 200
+                status: success
+                message: Data changed successfully.
+                data: {}
+        '400':
+          description: Validasi gagal atau tidak ada perubahan
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  value:
+                    code: 400
+                    status: error
+                    message:
+                      username: username harus 3-50 karakter.
+                no_changes:
+                  value:
+                    code: 400
+                    status: error
+                    message: No data has been changed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 404
+                status: error
+                message: Data not found.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Users
+      summary: Hapus pengguna
+      description: Menghapus pengguna dari sistem
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID pengguna yang akan dihapus
+      responses:
+        '200':
+          description: User berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 200
+                status: success
+                message: Data deleted successfully.
+                data: {}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 404
+                status: error
+                message: Data not found.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/single:
+    get:
+      tags:
+        - Users
+      summary: Ambil data pengguna single
+      description: Mengambil data satu pengguna dengan filter spesifik
+      operationId: getSingleUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id_user
+          in: query
+          schema:
+            type: integer
+          description: Filter by user ID
+        - name: username
+          in: query
+          schema:
+            type: string
+          description: Filter by username
+        - name: ids_level
+          in: query
+          schema:
+            type: string
+          description: Filter by user levels
+        - name: level
+          in: query
+          schema:
+            type: string
+          description: Filter by level name
+        - name: tingkat
+          in: query
+          schema:
+            type: integer
+          description: Filter by user tier
+        - name: ids_grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group IDs
+        - name: grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group name
+        - name: keterangan
+          in: query
+          schema:
+            type: string
+          description: Filter by description
+        - name: reset
+          in: query
+          schema:
+            type: string
+            enum: [YA, TIDAK]
+          description: Filter by reset status
+      responses:
+        '200':
+          description: Data pengguna berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleUserResponse'
+              example:
+                code: 200
+                status: success
+                message: ''
+                data:
+                  id_user: 1
+                  username: john_doe
+                  nama: John Doe
+                  jenis_kelamin: LAKI-LAKI
+                  ids_level: 1
+                  level: Admin
+                  ids_grup: 1
+                  grup: Administrator
+                  reset: TIDAK
+                  created_at: '2025-10-29T00:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Data tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 404
+                status: error
+                message: Data not found.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/import/preview:
+    post:
+      tags:
+        - Users Import
+      summary: Preview Excel sebelum import
+      description: Membaca dan memvalidasi file Excel sebelum melakukan import ke database
+      operationId: previewExcelImport
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File Excel (.xlsx/.xls) dengan data users
+      responses:
+        '200':
+          description: Preview file berhasil dibaca
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewExcelResponse'
+              example:
+                code: 200
+                status: success
+                message: Preview file Excel berhasil.
+                data:
+                  file_info:
+                    total_rows: 100
+                    valid_rows: 95
+                    invalid_rows: 3
+                    duplicate_rows: 2
+                    ready_to_import: true
+                  column_mapping:
+                    mapped:
+                      username: 0
+                      password: 1
+                      nama_lengkap: 2
+                      jenis_kelamin: 3
+                    optional_columns:
+                      ids_grup: true
+                      ids_kelurahan: false
+                  preview_data:
+                    - row_number: 1
+                      is_header: true
+                      data:
+                        - Username
+                        - Password
+                        - Nama Lengkap
+                        - Jenis Kelamin
+                  validation_summary:
+                    is_valid: true
+                    structure_valid: true
+                    no_duplicates: true
+                    has_valid_data: true
+        '400':
+          description: Validasi file gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 400
+                status: error
+                message: Struktur kolom Excel tidak sesuai. Pastikan semua kolom wajib ada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/import/excel:
+    post:
+      tags:
+        - Users Import
+      summary: Import users dari Excel
+      description: Melakukan bulk import data pengguna dari file Excel ke database
+      operationId: importExcelUsers
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File Excel (.xlsx/.xls) dengan data users yang sudah divalidasi
+      responses:
+        '200':
+          description: Import berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportExcelResponse'
+              example:
+                code: 200
+                status: success
+                message: Data berhasil diimport.
+                data:
+                  summary:
+                    total_rows: 100
+                    valid_rows: 95
+                    duplicate_rows: 3
+                    import_success: 92
+                    import_failure: 3
+                    success_rate: '96%'
+                  details:
+                    - row: 1
+                      username: user1
+                      status: success
+                    - row: 2
+                      username: user2
+                      status: success
+                    - row: 50
+                      username: user50
+                      status: failed
+                      error: Username already exists
+                  timestamp: '2025-10-29T09:20:00Z'
+        '400':
+          description: Validasi atau error import
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 400
+                status: error
+                message: Data duplikasi ditemukan.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/import/download-template:
+    get:
+      tags:
+        - Users Import
+      summary: Download template Excel
+      description: Download template file Excel untuk import users
+      operationId: downloadExcelTemplate
+      responses:
+        '200':
+          description: Template file berhasil didownload
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+                description: Excel template file
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   schemas:
     RegisterRequest:
@@ -448,6 +1011,157 @@ components:
           description: Keterangan alasan penghapusan token
           example: LOGOUT
 
+    CreateUserRequest:
+      type: object
+      required:
+        - ids_grup
+        - username
+        - password
+        - confirm_password
+      properties:
+        ids_grup:
+          type: integer
+          description: ID grup pengguna (harus integer positif)
+          example: 1
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9._]+$'
+          description: Username pengguna (3-50 karakter, alphanumeric, underscore, titik)
+          example: newuser
+        password:
+          type: string
+          minLength: 8
+          description: Password dengan kombinasi huruf kecil, besar, angka, dan simbol (minimal 8 karakter)
+          example: SecurePass@123
+        confirm_password:
+          type: string
+          description: Konfirmasi password
+          example: SecurePass@123
+        reset:
+          type: string
+          enum: [YA, TIDAK]
+          default: TIDAK
+          description: Flag untuk bypass password validation
+          example: TIDAK
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        ids_grup:
+          type: integer
+          description: ID grup pengguna
+          example: 2
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9._]+$'
+          description: Username pengguna (3-50 karakter)
+          example: updated_username
+        password:
+          type: string
+          minLength: 8
+          description: Password baru (opsional)
+          example: NewSecurePass@456
+        confirm_password:
+          type: string
+          description: Konfirmasi password baru
+          example: NewSecurePass@456
+        reset:
+          type: string
+          enum: [YA, TIDAK]
+          description: Flag untuk bypass password validation
+          example: TIDAK
+
+    UserData:
+      type: object
+      properties:
+        id_user:
+          type: integer
+          description: ID pengguna
+          example: 1
+        username:
+          type: string
+          description: Username
+          example: john_doe
+        nama:
+          type: string
+          description: Nama lengkap
+          example: John Doe
+        jenis_kelamin:
+          type: string
+          enum: [LAKI-LAKI, PEREMPUAN]
+          description: Jenis kelamin
+          example: LAKI-LAKI
+        ids_level:
+          type: integer
+          description: ID level/role
+          example: 1
+        level:
+          type: string
+          description: Nama level/role
+          example: Admin
+        tingkat:
+          type: integer
+          description: Tier/level pengguna
+          example: 1
+        ids_grup:
+          type: integer
+          description: ID grup
+          example: 1
+        grup:
+          type: string
+          description: Nama grup
+          example: Administrator
+        ids_kelurahan:
+          type: integer
+          nullable: true
+          description: ID kelurahan (opsional)
+          example: 5
+        rw:
+          type: string
+          nullable: true
+          description: RW (opsional)
+          example: '02'
+        rt:
+          type: string
+          nullable: true
+          description: RT (opsional)
+          example: '03'
+        alamat:
+          type: string
+          nullable: true
+          description: Alamat lengkap (opsional)
+          example: Jl. Merdeka No. 1, Kota
+        nmr_tlpn:
+          type: string
+          nullable: true
+          description: Nomor telepon (opsional)
+          example: '081234567890'
+        reset:
+          type: string
+          enum: [YA, TIDAK]
+          description: Flag reset password
+          example: TIDAK
+        keterangan:
+          type: string
+          nullable: true
+          description: Keterangan tambahan
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          description: Waktu pembuatan
+          example: '2025-10-29T00:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Waktu update terakhir
+          example: null
+
     RegisterResponse:
       type: object
       properties:
@@ -508,6 +1222,223 @@ components:
               description: JWT token baru
               example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
+    CreateUserResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Data added successfully.
+        data:
+          type: object
+          properties:
+            id_user:
+              type: integer
+              description: ID pengguna yang baru dibuat
+              example: 123
+
+    UserListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: ''
+        data:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserData'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    SingleUserResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: ''
+        data:
+          $ref: '#/components/schemas/UserData'
+
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          description: Halaman saat ini
+          example: 1
+        per_page:
+          type: integer
+          description: Data per halaman
+          example: 10
+        total:
+          type: integer
+          description: Total semua data
+          example: 50
+        last_page:
+          type: integer
+          description: Halaman terakhir
+          example: 5
+
+    PreviewExcelResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Preview file Excel berhasil.
+        data:
+          type: object
+          properties:
+            file_info:
+              type: object
+              properties:
+                total_rows:
+                  type: integer
+                  example: 100
+                valid_rows:
+                  type: integer
+                  example: 95
+                invalid_rows:
+                  type: integer
+                  example: 3
+                duplicate_rows:
+                  type: integer
+                  example: 2
+                ready_to_import:
+                  type: boolean
+                  example: true
+            column_mapping:
+              type: object
+              properties:
+                mapped:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                optional_columns:
+                  type: object
+                  additionalProperties:
+                    type: boolean
+            preview_data:
+              type: array
+              items:
+                type: object
+                properties:
+                  row_number:
+                    type: integer
+                  is_header:
+                    type: boolean
+                  data:
+                    type: array
+                  validation_message:
+                    type: string
+                    nullable: true
+            validation_summary:
+              type: object
+              properties:
+                is_valid:
+                  type: boolean
+                structure_valid:
+                  type: boolean
+                no_duplicates:
+                  type: boolean
+                has_valid_data:
+                  type: boolean
+            errors:
+              type: object
+              properties:
+                structure_errors:
+                  type: array
+                  items:
+                    type: string
+                duplicate_errors:
+                  type: array
+                  items:
+                    type: string
+                total_structure_errors:
+                  type: integer
+                total_duplicate_errors:
+                  type: integer
+
+    ImportExcelResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Data berhasil diimport.
+        data:
+          type: object
+          properties:
+            summary:
+              type: object
+              properties:
+                total_rows:
+                  type: integer
+                  example: 100
+                valid_rows:
+                  type: integer
+                  example: 95
+                duplicate_rows:
+                  type: integer
+                  example: 3
+                import_success:
+                  type: integer
+                  example: 92
+                import_failure:
+                  type: integer
+                  example: 3
+                success_rate:
+                  type: string
+                  example: '96%'
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  row:
+                    type: integer
+                  username:
+                    type: string
+                  status:
+                    type: string
+                    enum: [success, failed]
+                  error:
+                    type: string
+                    nullable: true
+            timestamp:
+              type: string
+              format: date-time
+
     SuccessResponse:
       type: object
       properties:
@@ -551,7 +1482,7 @@ components:
           additionalProperties:
             type: string
           example:
-            username: username harus 4-20 karakter.
+            username: username harus 3-50 karakter.
             password: password harus minimal 8 karakter dengan kombinasi huruf kecil, huruf besar, angka, dan simbol.
             confirm_password: password dan konfirmasi password tidak cocok.
 
