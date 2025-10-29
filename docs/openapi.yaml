@@ -1,32 +1,36 @@
 openapi: 3.0.3
 info:
-  title: API PPBI - Complete Service (Auth, Users, Profile, Cabang, Profile_Cabang)
-  version: 1.5.0
+  title: API PPBI - Complete Service (All Modules)
+  version: 1.6.0
   description: |
     Dokumentasi lengkap Complete API Service untuk PPBI (Persatuan Penggemar Bonsai Indonesia).
-    Sistem mencakup autentikasi, manajemen users, profil user, cabang, dan profil detil per cabang termasuk struktur organisasi, visi-misi, dan dokumen SK.
+    Sistem mencakup autentikasi, manajemen users, profil user, cabang, profil cabang, dan manajemen data geografis (provinsi, kabupaten/kota).
   contact:
     name: API Support
     email: support@ppbi.local
   x-changelog:
+    - version: 1.6.0
+      date: 2025-10-29
+      changes:
+        - Added complete Geographic Management CRUD endpoints (Provinsi & Kabupaten/Kota)
+        - Added provinsi read with filtering, sorting, pagination, and Redis cache
+        - Added provinsi single retrieval with multiple filter options
+        - Added provinsi validation with enum support for pulau (10 major islands)
+        - Added kabupaten/kota read with geographic hierarchy support and view-based queries
+        - Added kabupaten/kota single retrieval with combined provinsi data
+        - Redis caching for geographic operations
+        - Non-destructive merge with profile_cabang.js (1.5.0)
+        - Access control based on user level and module permissions (module 15 for provinsi, module 8 for kabkota)
+        - Geographic reference support for entire system
     - version: 1.5.0
       date: 2025-10-29
       changes:
         - Added complete Profile Cabang Management CRUD endpoints
-        - Added profile_cabang read with advanced filtering, organizational structure, sorting, and pagination
-        - Added profile_cabang single retrieval with multiple filter options
-        - Added leadership structure management (ketua, sekretaris, bendahara)
-        - Added organizational profile management (visi, misi, program)
-        - Added SK (Surat Keputusan) document management with file attachment
-        - Redis caching for profile_cabang operations
-        - Non-destructive merge with cabang.js (1.4.0)
-        - Access control based on user level and module permissions (module ID 14)
-        - Leadership team with link to user profiles
+        - Added organizational structure and visi-misi management
     - version: 1.4.0
       date: 2025-10-29
       changes:
         - Added complete Cabang (Branch) Management CRUD endpoints
-        - Added cabang geographic support
     - version: 1.3.0
       date: 2025-10-29
       changes:
@@ -35,7 +39,6 @@ info:
       date: 2025-10-29
       changes:
         - Added complete Users CRUD endpoints
-        - Added Excel import functionality
     - version: 1.1.0
       date: 2025-10-29
       changes:
@@ -66,7 +69,9 @@ tags:
   - name: Cabang (Branch)
     description: Endpoints untuk manajemen cabang/branch di berbagai lokasi
   - name: Profile Cabang
-    description: Endpoints untuk manajemen profil detail cabang termasuk struktur organisasi dan dokumen
+    description: Endpoints untuk manajemen profil detail cabang
+  - name: Geographic
+    description: Endpoints untuk manajemen data geografis (provinsi, kabupaten/kota)
 
 paths:
   /auth/google:
@@ -77,7 +82,7 @@ paths:
       operationId: googleLogin
       responses:
         '302':
-          description: Redirect ke Google OAuth authorization page
+          description: Redirect ke Google OAuth
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -93,15 +98,9 @@ paths:
           required: true
           schema:
             type: string
-        - name: state
-          in: query
-          schema:
-            type: string
       responses:
         '302':
-          description: Redirect ke frontend dengan JWT token
-        '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Redirect dengan JWT token
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -124,12 +123,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegisterResponse'
-        '400':
-          description: Validasi input gagal
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -152,14 +145,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
-        '400':
-          description: Validasi atau autentikasi gagal
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ValidationError'
-                  - $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -178,8 +163,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -202,8 +185,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -228,8 +209,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
-        '400':
-          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -248,8 +227,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -261,12 +238,6 @@ paths:
       operationId: deleteToken
       security:
         - BearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteTokenRequest'
       responses:
         '200':
           description: Token berhasil dihapus
@@ -274,14 +245,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: Token tidak ditemukan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -289,7 +252,7 @@ paths:
     get:
       tags:
         - Users
-      summary: Daftar pengguna dengan filter dan pagination
+      summary: Daftar pengguna
       operationId: listUsers
       security:
         - BearerAuth: []
@@ -298,24 +261,10 @@ paths:
           in: query
           schema:
             type: integer
-            default: 1
         - name: limit
           in: query
           schema:
             type: integer
-            default: 10
-        - name: order_by
-          in: query
-          schema:
-            type: string
-        - name: id_user
-          in: query
-          schema:
-            type: integer
-        - name: username
-          in: query
-          schema:
-            type: string
       responses:
         '200':
           description: Daftar pengguna berhasil diambil
@@ -323,14 +272,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: Data tidak ditemukan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -354,16 +295,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateUserResponse'
-        '400':
-          description: Validasi gagal
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ValidationError'
-                  - $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -394,8 +325,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -419,105 +348,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /users/single:
-    get:
-      tags:
-        - Users
-      summary: Ambil data pengguna single
-      operationId: getSingleUser
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Data pengguna berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleUserResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /users/import/preview:
-    post:
-      tags:
-        - Users Import
-      summary: Preview Excel sebelum import
-      operationId: previewExcelImport
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        '200':
-          description: Preview file berhasil dibaca
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PreviewExcelResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /users/import/excel:
-    post:
-      tags:
-        - Users Import
-      summary: Import users dari Excel
-      operationId: importExcelUsers
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        '200':
-          description: Import berhasil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ImportExcelResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /users/import/download-template:
-    get:
-      tags:
-        - Users Import
-      summary: Download template Excel
-      operationId: downloadExcelTemplate
-      responses:
-        '200':
-          description: Template file berhasil didownload
-          content:
-            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -525,19 +355,10 @@ paths:
     get:
       tags:
         - Profile
-      summary: Daftar profil dengan filter dan pagination
+      summary: Daftar profil
       operationId: listProfiles
       security:
         - BearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-        - name: limit
-          in: query
-          schema:
-            type: integer
       responses:
         '200':
           description: Daftar profil berhasil diambil
@@ -545,8 +366,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProfileListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -626,41 +445,14 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /profile/single:
-    get:
-      tags:
-        - Profile
-      summary: Ambil data profil single
-      operationId: getSingleProfile
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Data profil berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleProfileResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /settings/cabang:
     get:
       tags:
         - Cabang (Branch)
-      summary: Daftar cabang dengan filter dan pagination
+      summary: Daftar cabang
       operationId: listCabang
       security:
         - BearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-        - name: limit
-          in: query
-          schema:
-            type: integer
       responses:
         '200':
           description: Daftar cabang berhasil diambil
@@ -747,102 +539,14 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /settings/cabang/single:
-    get:
-      tags:
-        - Cabang (Branch)
-      summary: Ambil data cabang single
-      operationId: getSingleCabang
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Data cabang berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleCabangResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /settings/profile-cabang:
     get:
       tags:
         - Profile Cabang
-      summary: Daftar profil cabang dengan filter dan pagination
-      description: Mengambil daftar profil detail cabang dengan dukungan filter cabang, leadership team, visi-misi, sorting, pagination, dan Redis cache
+      summary: Daftar profil cabang
       operationId: listProfileCabang
       security:
         - BearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-          description: Nomor halaman (default 1)
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-          description: Jumlah data per halaman (default 10)
-        - name: order_by
-          in: query
-          schema:
-            type: string
-            default: created_at ASC
-          description: Urutan sorting
-        - name: ids_profile_cabang
-          in: query
-          schema:
-            type: string
-          description: Filter by profile ID (IN query, comma-separated)
-        - name: ids_cabang
-          in: query
-          schema:
-            type: string
-          description: Filter by cabang ID (IN query)
-        - name: cabang
-          in: query
-          schema:
-            type: string
-          description: Filter by cabang name (LIKE query)
-        - name: ids_provinsi
-          in: query
-          schema:
-            type: string
-          description: Filter by provinsi ID (IN query)
-        - name: provinsi
-          in: query
-          schema:
-            type: string
-          description: Filter by provinsi name (LIKE query)
-        - name: pulau
-          in: query
-          schema:
-            type: string
-          description: Filter by pulau name
-        - name: ids_kabkota
-          in: query
-          schema:
-            type: string
-          description: Filter by kabkota ID (IN query)
-        - name: kabkota
-          in: query
-          schema:
-            type: string
-          description: Filter by kabkota name (LIKE query)
-        - name: id_profile_ketua
-          in: query
-          schema:
-            type: string
-          description: Filter by ketua profile ID (IN query)
-        - name: ketua
-          in: query
-          schema:
-            type: string
-          description: Filter by ketua name (LIKE query)
       responses:
         '200':
           description: Daftar profil cabang berhasil diambil
@@ -850,20 +554,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProfileCabangListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Data tidak ditemukan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -871,7 +561,6 @@ paths:
       tags:
         - Profile Cabang
       summary: Buat profil cabang baru
-      description: Membuat profil detail cabang dengan struktur organisasi, visi-misi, dan dokumen SK
       operationId: createProfileCabang
       security:
         - BearerAuth: []
@@ -888,6 +577,152 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateProfileCabangResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /settings/profile-cabang/{id}:
+    put:
+      tags:
+        - Profile Cabang
+      summary: Update profil cabang
+      operationId: updateProfileCabang
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileCabangRequest'
+      responses:
+        '200':
+          description: Profil cabang berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Profile Cabang
+      summary: Hapus profil cabang
+      operationId: deleteProfileCabang
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Profil cabang berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /settings/provinsi:
+    get:
+      tags:
+        - Geographic
+      summary: Daftar provinsi dengan filtering
+      description: Mengambil daftar provinsi dengan dukungan filter, sorting, pagination, dan Redis cache
+      operationId: listProvinsi
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: created_at ASC
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by provinsi ID (IN query, comma-separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by kode provinsi (IN query, max 5 karakter)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by provinsi name (LIKE query)
+        - name: pulau
+          in: query
+          schema:
+            type: string
+          description: Filter by pulau name (enum or LIKE query)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [YA, TIDAK]
+          description: Filter by status
+      responses:
+        '200':
+          description: Daftar provinsi berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinsiListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Geographic
+      summary: Buat provinsi baru
+      description: Membuat data provinsi baru dengan validasi enum pulau
+      operationId: createProvinsi
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProvinsiRequest'
+      responses:
+        '200':
+          description: Provinsi berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProvinsiResponse'
         '400':
           description: Validasi gagal
           content:
@@ -907,13 +742,13 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /settings/profile-cabang/{id}:
+  /settings/provinsi/{id}:
     put:
       tags:
-        - Profile Cabang
-      summary: Update profil cabang
-      description: Mengubah data profil cabang (semua field opsional)
-      operationId: updateProfileCabang
+        - Geographic
+      summary: Update provinsi
+      description: Mengubah data provinsi (semua field opsional)
+      operationId: updateProvinsi
       security:
         - BearerAuth: []
       parameters:
@@ -922,16 +757,15 @@ paths:
           required: true
           schema:
             type: integer
-          description: ID profil cabang yang akan diupdate
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateProfileCabangRequest'
+              $ref: '#/components/schemas/UpdateProvinsiRequest'
       responses:
         '200':
-          description: Profil cabang berhasil diupdate
+          description: Provinsi berhasil diupdate
           content:
             application/json:
               schema:
@@ -953,7 +787,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Profil cabang tidak ditemukan
+          description: Provinsi tidak ditemukan
           content:
             application/json:
               schema:
@@ -963,10 +797,10 @@ paths:
 
     delete:
       tags:
-        - Profile Cabang
-      summary: Hapus profil cabang
-      description: Menghapus profil cabang dari sistem
-      operationId: deleteProfileCabang
+        - Geographic
+      summary: Hapus provinsi
+      description: Menghapus data provinsi dari sistem
+      operationId: deleteProvinsi
       security:
         - BearerAuth: []
       parameters:
@@ -975,10 +809,9 @@ paths:
           required: true
           schema:
             type: integer
-          description: ID profil cabang yang akan dihapus
       responses:
         '200':
-          description: Profil cabang berhasil dihapus
+          description: Provinsi berhasil dihapus
           content:
             application/json:
               schema:
@@ -992,7 +825,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Profil cabang tidak ditemukan
+          description: Provinsi tidak ditemukan
           content:
             application/json:
               schema:
@@ -1000,68 +833,326 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /settings/profile-cabang/single:
+  /settings/provinsi/single:
     get:
       tags:
-        - Profile Cabang
-      summary: Ambil data profil cabang single
-      description: Mengambil data satu profil cabang dengan filter spesifik dan Redis cache
-      operationId: getSingleProfileCabang
+        - Geographic
+      summary: Ambil data provinsi single
+      description: Mengambil data satu provinsi dengan filter spesifik dan Redis cache
+      operationId: getSingleProvinsi
       security:
         - BearerAuth: []
       parameters:
-        - name: ids_profile_cabang
-          in: query
-          schema:
-            type: integer
-          description: Filter by profile ID
-        - name: ids_cabang
-          in: query
-          schema:
-            type: integer
-          description: Filter by cabang ID
-        - name: cabang
-          in: query
-          schema:
-            type: string
-          description: Filter by cabang name (LIKE query)
         - name: ids_provinsi
           in: query
           schema:
             type: integer
-          description: Filter by provinsi ID
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+        - name: pulau
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [YA, TIDAK]
+      responses:
+        '200':
+          description: Data provinsi berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleProvinsiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /settings/kabupaten-kota:
+    get:
+      tags:
+        - Geographic
+      summary: Daftar kabupaten/kota dengan filtering
+      description: Mengambil daftar kabupaten/kota dengan dukungan filter geographic, sorting, pagination, dan Redis cache
+      operationId: listKabKota
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: created_at ASC
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by provinsi ID (IN query)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by kode provinsi (IN query)
         - name: provinsi
           in: query
           schema:
             type: string
           description: Filter by provinsi name (LIKE query)
+        - name: pulau
+          in: query
+          schema:
+            type: string
+          description: Filter by pulau name (IN query)
         - name: ids_kabkota
           in: query
           schema:
-            type: integer
-          description: Filter by kabkota ID
+            type: string
+          description: Filter by kabkota ID (IN query)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by kode kabkota (IN query)
         - name: kabkota
           in: query
           schema:
             type: string
           description: Filter by kabkota name (LIKE query)
-        - name: id_profile_ketua
-          in: query
-          schema:
-            type: integer
-          description: Filter by ketua profile ID
-        - name: ketua
+        - name: status
           in: query
           schema:
             type: string
-          description: Filter by ketua name (LIKE query)
+            enum: [YA, TIDAK]
+          description: Filter by status
       responses:
         '200':
-          description: Data profil cabang berhasil diambil
+          description: Daftar kabupaten/kota berhasil diambil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProfileCabangResponse'
+                $ref: '#/components/schemas/KabKotaListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Geographic
+      summary: Buat kabupaten/kota baru
+      description: Membuat data kabupaten/kota baru dengan referensi provinsi
+      operationId: createKabKota
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKabKotaRequest'
+      responses:
+        '200':
+          description: Kabupaten/Kota berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateKabKotaResponse'
+        '400':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /settings/kabupaten-kota/{id}:
+    put:
+      tags:
+        - Geographic
+      summary: Update kabupaten/kota
+      description: Mengubah data kabupaten/kota (semua field opsional)
+      operationId: updateKabKota
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKabKotaRequest'
+      responses:
+        '200':
+          description: Kabupaten/Kota berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Kabupaten/Kota tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Geographic
+      summary: Hapus kabupaten/kota
+      description: Menghapus data kabupaten/kota dari sistem
+      operationId: deleteKabKota
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Kabupaten/Kota berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Kabupaten/Kota tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /settings/kabupaten-kota/single:
+    get:
+      tags:
+        - Geographic
+      summary: Ambil data kabupaten/kota single
+      description: Mengambil data satu kabupaten/kota dengan filter spesifik dan Redis cache
+      operationId: getSingleKabKota
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: integer
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+        - name: pulau
+          in: query
+          schema:
+            type: string
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: integer
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [YA, TIDAK]
+      responses:
+        '200':
+          description: Data kabupaten/kota berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleKabKotaResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1090,20 +1181,12 @@ components:
       properties:
         username:
           type: string
-          minLength: 4
-          maxLength: 20
           example: john_doe
         password:
           type: string
-          minLength: 8
           example: Secure@Pass123
         confirm_password:
           type: string
-          example: Secure@Pass123
-        reset:
-          type: string
-          enum: [YA, TIDAK]
-          default: TIDAK
 
     LoginRequest:
       type: object
@@ -1113,10 +1196,8 @@ components:
       properties:
         username:
           type: string
-          example: john_doe
         password:
           type: string
-          example: Secure@Pass123
 
     CreateTokenRequest:
       type: object
@@ -1126,13 +1207,6 @@ components:
         payload:
           type: object
           additionalProperties: true
-
-    DeleteTokenRequest:
-      type: object
-      properties:
-        keterangan:
-          type: string
-          default: LOGOUT
 
     CreateUserRequest:
       type: object
@@ -1144,23 +1218,12 @@ components:
       properties:
         ids_grup:
           type: integer
-          example: 1
         username:
           type: string
-          minLength: 3
-          maxLength: 50
-          example: newuser
         password:
           type: string
-          minLength: 8
-          example: SecurePass@123
         confirm_password:
           type: string
-          example: SecurePass@123
-        reset:
-          type: string
-          enum: [YA, TIDAK]
-          default: TIDAK
 
     UpdateUserRequest:
       type: object
@@ -1169,11 +1232,8 @@ components:
           type: integer
         username:
           type: string
-          minLength: 3
-          maxLength: 50
         password:
           type: string
-          minLength: 8
         confirm_password:
           type: string
 
@@ -1185,68 +1245,18 @@ components:
       properties:
         nama_lengkap:
           type: string
-          minLength: 3
-          maxLength: 255
-          example: John Doe
         jenis_kelamin:
           type: string
           enum: [LAKI-LAKI, PEREMPUAN]
-          example: LAKI-LAKI
-        ids_kelurahan:
-          type: integer
-          nullable: true
-        rw:
-          type: string
-          maxLength: 5
-          nullable: true
-        rt:
-          type: string
-          maxLength: 5
-          nullable: true
-        alamat:
-          type: string
-          nullable: true
-        nmr_tlpn:
-          type: string
-          minLength: 10
-          maxLength: 20
-          nullable: true
-        foto:
-          type: string
-          nullable: true
 
     UpdateProfileRequest:
       type: object
       properties:
         nama_lengkap:
           type: string
-          minLength: 3
-          maxLength: 255
         jenis_kelamin:
           type: string
           enum: [LAKI-LAKI, PEREMPUAN]
-        ids_kelurahan:
-          type: integer
-          nullable: true
-        rw:
-          type: string
-          maxLength: 5
-          nullable: true
-        rt:
-          type: string
-          maxLength: 5
-          nullable: true
-        alamat:
-          type: string
-          nullable: true
-        nmr_tlpn:
-          type: string
-          minLength: 10
-          maxLength: 20
-          nullable: true
-        foto:
-          type: string
-          nullable: true
 
     CreateCabangRequest:
       type: object
@@ -1258,17 +1268,13 @@ components:
       properties:
         cabang:
           type: string
-          example: Cabang Jakarta Pusat
         ids_kabkota:
           type: integer
-          example: 101
         alamat:
           type: string
-          example: Jl. Merdeka No. 1, Jakarta Pusat
         status:
           type: string
           enum: [YA, TIDAK]
-          example: YA
 
     UpdateCabangRequest:
       type: object
@@ -1297,257 +1303,219 @@ components:
       properties:
         ids_cabang:
           type: integer
-          description: ID cabang (wajib, harus integer positif)
-          example: 1
         ketua:
           type: integer
           nullable: true
-          description: ID user ketua cabang (opsional, harus integer jika diisi)
-          example: 10
         sekretaris:
           type: integer
           nullable: true
-          description: ID user sekretaris cabang (opsional, harus integer jika diisi)
-          example: 11
         bendahara:
           type: integer
           nullable: true
-          description: ID user bendahara cabang (opsional, harus integer jika diisi)
-          example: 12
         profile:
           type: string
-          description: Profil/deskripsi cabang (wajib, text type)
-          example: Cabang PPBI yang berlokasi di Jakarta Pusat dengan fokus pada pengembangan bonsai tradisional
         visi:
           type: string
-          description: Visi cabang (wajib, text type)
-          example: Menjadi pusat pembelajaran bonsai terbaik di Indonesia
         misi:
           type: string
-          description: Misi cabang (wajib, text type)
-          example: Mengembangkan seni bonsai melalui edukasi dan pelatihan
         program:
           type: string
-          description: Program cabang (wajib, text type)
-          example: Workshop bulanan, kompetisi bonsai, konsultasi gratis
         nomor_sk:
           type: string
-          maxLength: 255
-          description: Nomor Surat Keputusan (wajib, max 255 karakter)
-          example: SK/PPBI/JAKARTA/001/2025
         masa_aktif:
           type: string
           format: date
-          description: Tanggal mulai berlaku (wajib, format YYYY-MM-DD)
-          example: '2025-01-01'
         file_sk:
           type: string
-          description: URL file SK atau # untuk no file (wajib, harus URL http/https atau #)
-          example: https://example.com/documents/sk_ppbi_jakarta.pdf
 
     UpdateProfileCabangRequest:
       type: object
       properties:
         ids_cabang:
           type: integer
-          description: ID cabang (opsional, harus integer jika diisi)
-          example: 1
         ketua:
           type: integer
           nullable: true
-          description: ID user ketua cabang (opsional)
-          example: 10
         sekretaris:
           type: integer
           nullable: true
-          description: ID user sekretaris cabang (opsional)
-          example: 11
         bendahara:
           type: integer
           nullable: true
-          description: ID user bendahara cabang (opsional)
-          example: 12
         profile:
           type: string
-          description: Profil/deskripsi cabang (opsional)
-          example: Cabang PPBI Jakarta Pusat - Updated
         visi:
           type: string
-          description: Visi cabang (opsional)
-          example: Menjadi pusat bonsai terdepan
         misi:
           type: string
-          description: Misi cabang (opsional)
-          example: Edukasi berkelanjutan tentang seni bonsai
         program:
           type: string
-          description: Program cabang (opsional)
-          example: Workshop, kompetisi, konsultasi
         nomor_sk:
           type: string
-          maxLength: 255
-          description: Nomor SK (opsional)
-          example: SK/PPBI/JAKARTA/001/2025
         masa_aktif:
           type: string
           format: date
-          description: Tanggal berlaku (opsional, format YYYY-MM-DD)
-          example: '2025-01-01'
         file_sk:
           type: string
-          description: URL file SK atau # (opsional)
-          example: https://example.com/documents/sk_ppbi_jakarta_updated.pdf
 
-    ProfileCabangData:
+    CreateProvinsiRequest:
       type: object
+      required:
+        - kode_provinsi
+        - provinsi
+        - pulau
+        - status
       properties:
-        ids_profile_cabang:
-          type: integer
-          description: ID profil cabang
-          example: 1
-        ids_cabang:
-          type: integer
-          description: ID cabang
-          example: 1
-        cabang:
+        kode_provinsi:
           type: string
-          description: Nama cabang
-          example: Cabang Jakarta Pusat
-        ids_provinsi:
-          type: integer
-          nullable: true
-          description: ID provinsi
-          example: 1
+          maxLength: 5
+          description: Kode provinsi (max 5 karakter, wajib)
+          example: '11'
         provinsi:
           type: string
-          nullable: true
-          description: Nama provinsi
+          description: Nama provinsi (wajib)
           example: DKI Jakarta
         pulau:
           type: string
-          nullable: true
-          description: Nama pulau
-          example: Jawa
-        ids_kabkota:
-          type: integer
-          nullable: true
-          description: ID kabupaten/kota
-          example: 101
-        kabkota:
+          enum:
+            [PAPUA, KALIMANTAN, SUMATERA, SULAWESI, JAWA, TIMOR, HALMAHERA, SERAM, SUMBAWA, FLORES]
+          description: Nama pulau (enum, wajib)
+          example: JAWA
+        status:
           type: string
-          nullable: true
-          description: Nama kabupaten/kota
-          example: Jakarta Pusat
-        id_profile_ketua:
-          type: integer
-          nullable: true
-          description: ID profile user ketua
-          example: 10
-        ketua:
-          type: string
-          nullable: true
-          description: Nama ketua cabang
-          example: Budi Santoso
-        sekretaris:
-          type: string
-          nullable: true
-          description: Nama sekretaris cabang
-          example: Siti Nurhaliza
-        bendahara:
-          type: string
-          nullable: true
-          description: Nama bendahara cabang
-          example: Ahmad Wijaya
-        profile:
-          type: string
-          description: Profil/deskripsi cabang
-          example: Cabang PPBI Jakarta dengan fokus pengembangan bonsai
-        visi:
-          type: string
-          description: Visi cabang
-          example: Menjadi pusat pembelajaran bonsai terbaik
-        misi:
-          type: string
-          description: Misi cabang
-          example: Mengembangkan seni bonsai melalui edukasi
-        program:
-          type: string
-          description: Program cabang
-          example: Workshop bulanan, kompetisi, konsultasi
-        nomor_sk:
-          type: string
-          description: Nomor SK
-          example: SK/PPBI/JAKARTA/001/2025
-        masa_aktif:
-          type: string
-          format: date
-          description: Tanggal berlaku SK
-          example: '2025-01-01'
-        file_sk:
-          type: string
-          nullable: true
-          description: URL file SK atau #
-          example: https://example.com/documents/sk_ppbi_jakarta.pdf
-        created_by:
-          type: integer
-          description: User ID yang membuat profil
-          example: 1
-        created_at:
-          type: string
-          format: date-time
-          description: Waktu pembuatan
-          example: '2025-10-29T00:00:00Z'
-        updated_by:
-          type: integer
-          nullable: true
-          description: User ID yang terakhir update
-          example: 2
-        updated_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: Waktu update terakhir
-          example: null
+          enum: [YA, TIDAK]
+          description: Status aktif (wajib)
+          example: YA
 
-    CabangData:
+    UpdateProvinsiRequest:
       type: object
       properties:
-        ids_cabang:
+        kode_provinsi:
+          type: string
+          maxLength: 5
+          description: Kode provinsi (opsional)
+        provinsi:
+          type: string
+          description: Nama provinsi (opsional)
+        pulau:
+          type: string
+          enum:
+            [PAPUA, KALIMANTAN, SUMATERA, SULAWESI, JAWA, TIMOR, HALMAHERA, SERAM, SUMBAWA, FLORES]
+          description: Nama pulau (opsional)
+        status:
+          type: string
+          enum: [YA, TIDAK]
+          description: Status (opsional)
+
+    CreateKabKotaRequest:
+      type: object
+      required:
+        - kode_kabkota
+        - ids_provinsi
+        - kabkota
+        - status
+      properties:
+        kode_kabkota:
+          type: string
+          description: Kode kabupaten/kota (wajib, unique)
+          example: '1101'
+        ids_provinsi:
+          type: integer
+          description: ID provinsi referensi (wajib)
+          example: 1
+        kabkota:
+          type: string
+          description: Nama kabupaten/kota (wajib)
+          example: Jakarta Pusat
+        status:
+          type: string
+          enum: [YA, TIDAK]
+          description: Status aktif (wajib)
+          example: YA
+
+    UpdateKabKotaRequest:
+      type: object
+      properties:
+        kode_kabkota:
+          type: string
+          description: Kode kabupaten/kota (opsional)
+        ids_provinsi:
+          type: integer
+          description: ID provinsi (opsional)
+        kabkota:
+          type: string
+          description: Nama kabupaten/kota (opsional)
+        status:
+          type: string
+          enum: [YA, TIDAK]
+          description: Status (opsional)
+
+    ProvinsiData:
+      type: object
+      properties:
+        ids_provinsi:
           type: integer
           example: 1
-        cabang:
+        kode_provinsi:
           type: string
-          example: Cabang Jakarta Pusat
-        alamat:
+          example: '11'
+        provinsi:
           type: string
-          example: Jl. Merdeka No. 1
+          example: DKI Jakarta
+        pulau:
+          type: string
+          example: JAWA
         status:
           type: string
           enum: [YA, TIDAK]
           example: YA
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
 
-    ProfileData:
+    KabKotaData:
       type: object
       properties:
-        id_profile:
+        ids_kabkota:
+          type: integer
+          example: 101
+        kode_kabkota:
+          type: string
+          example: '1101'
+        ids_provinsi:
           type: integer
           example: 1
-        username:
+        kode_provinsi:
           type: string
-          example: john_doe
-        nama_lengkap:
+          example: '11'
+        provinsi:
           type: string
-          example: John Doe
-
-    UserData:
-      type: object
-      properties:
-        id_user:
+          example: DKI Jakarta
+        pulau:
+          type: string
+          example: JAWA
+        kabkota:
+          type: string
+          example: Jakarta Pusat
+        status:
+          type: string
+          enum: [YA, TIDAK]
+          example: YA
+        created_by:
           type: integer
-          example: 1
-        username:
+        created_at:
           type: string
-          example: john_doe
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
 
     RegisterResponse:
       type: object
@@ -1562,10 +1530,6 @@ components:
           type: string
         data:
           type: object
-          properties:
-            id_user:
-              type: integer
-              example: 123
 
     LoginResponse:
       type: object
@@ -1576,14 +1540,11 @@ components:
         status:
           type: string
           example: success
-        message:
-          type: string
         data:
           type: object
           properties:
             token:
               type: string
-              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
     TokenResponse:
       type: object
@@ -1609,8 +1570,6 @@ components:
         status:
           type: string
           example: success
-        message:
-          type: string
         data:
           type: object
           properties:
@@ -1656,15 +1615,49 @@ components:
         status:
           type: string
           example: success
+        data:
+          type: object
+          properties:
+            ids_profile_cabang:
+              type: integer
+
+    CreateProvinsiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
         message:
           type: string
           example: Data added successfully.
         data:
           type: object
           properties:
-            ids_profile_cabang:
+            ids_provinsi:
               type: integer
               example: 1
+
+    CreateKabKotaResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Data added successfully.
+        data:
+          type: object
+          properties:
+            ids_kabkota:
+              type: integer
+              example: 101
 
     UserListResponse:
       type: object
@@ -1677,25 +1670,6 @@ components:
           example: success
         data:
           type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/UserData'
-            pagination:
-              $ref: '#/components/schemas/Pagination'
-
-    SingleUserResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: success
-        data:
-          $ref: '#/components/schemas/UserData'
 
     ProfileListResponse:
       type: object
@@ -1708,25 +1682,6 @@ components:
           example: success
         data:
           type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/ProfileData'
-            pagination:
-              $ref: '#/components/schemas/Pagination'
-
-    SingleProfileResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: success
-        data:
-          $ref: '#/components/schemas/ProfileData'
 
     CabangListResponse:
       type: object
@@ -1739,15 +1694,8 @@ components:
           example: success
         data:
           type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/CabangData'
-            pagination:
-              $ref: '#/components/schemas/Pagination'
 
-    SingleCabangResponse:
+    ProfileCabangListResponse:
       type: object
       properties:
         code:
@@ -1757,9 +1705,9 @@ components:
           type: string
           example: success
         data:
-          $ref: '#/components/schemas/CabangData'
+          type: object
 
-    ProfileCabangListResponse:
+    ProvinsiListResponse:
       type: object
       properties:
         code:
@@ -1777,11 +1725,11 @@ components:
             data:
               type: array
               items:
-                $ref: '#/components/schemas/ProfileCabangData'
+                $ref: '#/components/schemas/ProvinsiData'
             pagination:
               $ref: '#/components/schemas/Pagination'
 
-    SingleProfileCabangResponse:
+    SingleProvinsiResponse:
       type: object
       properties:
         code:
@@ -1794,7 +1742,44 @@ components:
           type: string
           example: ''
         data:
-          $ref: '#/components/schemas/ProfileCabangData'
+          $ref: '#/components/schemas/ProvinsiData'
+
+    KabKotaListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: ''
+        data:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/KabKotaData'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    SingleKabKotaResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: ''
+        data:
+          $ref: '#/components/schemas/KabKotaData'
 
     Pagination:
       type: object
@@ -1811,30 +1796,6 @@ components:
         last_page:
           type: integer
           example: 5
-
-    PreviewExcelResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: success
-        data:
-          type: object
-
-    ImportExcelResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: success
-        data:
-          type: object
 
     SuccessResponse:
       type: object
@@ -1878,39 +1839,28 @@ components:
           additionalProperties:
             type: string
           example:
-            ids_cabang: ids cabang tidak boleh kosong.
-            profile: profile tidak boleh kosong.
-            visi: visi tidak boleh kosong.
-            misi: misi tidak boleh kosong.
-            program: program tidak boleh kosong.
-            nomor_sk: nomor sk tidak boleh kosong.
-            masa_aktif: masa aktif harus format tanggal YYYY-MM-DD.
-            file_sk: file sk harus berupa URL (http/https) atau #.
+            kode_provinsi: kode provinsi tidak boleh kosong.
+            provinsi: nama provinsi tidak boleh kosong.
+            pulau: pulau tidak valid.
+            status: status tidak valid.
 
   responses:
     BadRequest:
-      description: Request tidak valid atau validasi gagal
+      description: Request tidak valid
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
 
     Unauthorized:
-      description: Token tidak valid atau tidak diberikan
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-
-    NotFound:
-      description: Resource tidak ditemukan
+      description: Token tidak valid
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
 
     InternalServerError:
-      description: Terjadi kesalahan pada server
+      description: Server error
       content:
         application/json:
           schema:
