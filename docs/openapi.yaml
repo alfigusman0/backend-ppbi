@@ -1,30 +1,36 @@
 openapi: 3.0.3
 info:
-  title: API PPBI - Authentication & Users Management Service
-  version: 1.2.0
+  title: API PPBI - Complete Service (Auth, Users, Profile Management)
+  version: 1.3.0
   description: |
-    Dokumentasi lengkap Authentication & Users Management API untuk PPBI (Persatuan Penggemar Bonsai Indonesia).
-    Sistem mencakup autentikasi pengguna, manajemen token JWT, dan bulk user management via Excel import.
+    Dokumentasi lengkap Complete API Service untuk PPBI (Persatuan Penggemar Bonsai Indonesia).
+    Sistem mencakup autentikasi pengguna, manajemen users dengan bulk import, dan management profil user yang detail.
   contact:
     name: API Support
     email: support@ppbi.local
   x-changelog:
+    - version: 1.3.0
+      date: 2025-10-29
+      changes:
+        - Added complete Profile Management CRUD endpoints
+        - Added profile read with advanced filtering, sorting, and pagination
+        - Added profile single retrieval with multiple filter options
+        - Added geographic data support (provinsi, kabkota, kecamatan, kelurahan)
+        - Added profile photo/image field support (URL or # placeholder)
+        - Redis caching for profile operations (read and single)
+        - Non-destructive merge with users.js (1.2.0)
+        - Access control based on user level and module permissions
     - version: 1.2.0
       date: 2025-10-29
       changes:
-        - Added complete Users CRUD endpoints (Create, Read, Update, Delete, Single)
-        - Added Excel import functionality with preview and validation
-        - Added advanced filtering and pagination for user listing
-        - Added Redis caching for improved performance
-        - Non-destructive merge with auth.js (1.1.0)
-        - New fields: jenis_kelamin, ids_kelurahan, rw, rt, alamat, nmr_tlpn
+        - Added complete Users CRUD endpoints
+        - Added Excel import functionality
+        - Added Redis caching for user listing
     - version: 1.1.0
       date: 2025-10-29
       changes:
         - Added Google OAuth authentication
         - Added token management endpoints
-        - Added Redis/Database session support
-        - Added comprehensive input validation
 
 servers:
   - url: http://localhost:5000/api
@@ -46,6 +52,8 @@ tags:
     description: Endpoints untuk manajemen data pengguna (CRUD)
   - name: Users Import
     description: Endpoints untuk import bulk users dari Excel
+  - name: Profile
+    description: Endpoints untuk manajemen profil user yang detail
 
 paths:
   /auth/google:
@@ -134,24 +142,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegisterResponse'
-              example:
-                code: 200
-                status: success
-                message: Data added successfully.
-                data:
-                  id_user: 123
         '400':
           description: Validasi input gagal
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
-              example:
-                code: 400
-                status: error
-                message:
-                  username: username harus 4-20 karakter.
-                  password: password harus minimal 8 karakter dengan kombinasi huruf kecil, huruf besar, angka, dan simbol.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -168,9 +164,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
-            example:
-              username: john_doe
-              password: Secure@Pass123
       responses:
         '200':
           description: Login berhasil
@@ -178,12 +171,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
-              example:
-                code: 200
-                status: success
-                message: ''
-                data:
-                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         '400':
           description: Validasi atau autentikasi gagal
           content:
@@ -192,29 +179,6 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/ValidationError'
                   - $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                validation_error:
-                  value:
-                    code: 400
-                    status: error
-                    message:
-                      username: username tidak boleh kosong.
-                      password: password tidak boleh kosong.
-                user_not_found:
-                  value:
-                    code: 400
-                    status: error
-                    message: username not found.
-                wrong_password:
-                  value:
-                    code: 400
-                    status: error
-                    message: Password is wrong.
-                google_login:
-                  value:
-                    code: 400
-                    status: error
-                    message: Anda login menggunakan google. silahkan login kembali menggunakan google.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -234,11 +198,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-              example:
-                code: 200
-                status: success
-                message: You have successfully logged out!
-                data: {}
         '400':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -257,12 +216,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateTokenRequest'
-            example:
-              payload:
-                id_user: 123
-                username: john_doe
-                email: john@example.com
-                role: user
       responses:
         '200':
           description: Token berhasil dibuat
@@ -270,12 +223,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
-              example:
-                code: 200
-                status: success
-                message: ''
-                data:
-                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -296,12 +243,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateTokenRequest'
-            example:
-              payload:
-                id_user: 123
-                username: john_doe
-                email: john@example.com
-                role: user
       responses:
         '200':
           description: Token berhasil di-refresh
@@ -309,12 +250,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
-              example:
-                code: 200
-                status: success
-                message: Token has been refreshed successfully
-                data:
-                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         '400':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -336,11 +271,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-              example:
-                code: 200
-                status: success
-                message: Your token is still active
-                data: {}
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -361,8 +291,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/DeleteTokenRequest'
-            example:
-              keterangan: LOGOUT
       responses:
         '200':
           description: Token berhasil dihapus
@@ -370,11 +298,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-              example:
-                code: 200
-                status: success
-                message: Your token has been deleted!
-                data: {}
         '400':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -383,10 +306,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: 404
-                status: error
-                message: Token not found.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -438,11 +357,6 @@ paths:
           schema:
             type: string
           description: Filter by level name (LIKE query)
-        - name: tingkat
-          in: query
-          schema:
-            type: integer
-          description: Filter by user tier/level (greater than or equal)
         - name: ids_grup
           in: query
           schema:
@@ -453,17 +367,6 @@ paths:
           schema:
             type: string
           description: Filter by group name (LIKE query)
-        - name: keterangan
-          in: query
-          schema:
-            type: string
-          description: Filter by description (LIKE query)
-        - name: reset
-          in: query
-          schema:
-            type: string
-            enum: [YA, TIDAK]
-          description: Filter by reset status
       responses:
         '200':
           description: Daftar pengguna berhasil diambil
@@ -471,27 +374,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserListResponse'
-              example:
-                code: 200
-                status: success
-                message: ''
-                data:
-                  data:
-                    - id_user: 1
-                      username: john_doe
-                      nama: John Doe
-                      jenis_kelamin: LAKI-LAKI
-                      ids_level: 1
-                      level: Admin
-                      ids_grup: 1
-                      grup: Administrator
-                      reset: TIDAK
-                      created_at: '2025-10-29T00:00:00Z'
-                  pagination:
-                    current_page: 1
-                    per_page: 10
-                    total: 50
-                    last_page: 5
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -500,10 +382,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: 404
-                status: error
-                message: Data not found.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -521,12 +399,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateUserRequest'
-            example:
-              ids_grup: 1
-              username: newuser
-              password: SecurePass@123
-              confirm_password: SecurePass@123
-              reset: TIDAK
       responses:
         '200':
           description: User berhasil dibuat
@@ -534,12 +406,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateUserResponse'
-              example:
-                code: 200
-                status: success
-                message: Data added successfully.
-                data:
-                  id_user: 123
         '400':
           description: Validasi gagal atau user sudah ada
           content:
@@ -548,19 +414,6 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/ValidationError'
                   - $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                validation_error:
-                  value:
-                    code: 400
-                    status: error
-                    message:
-                      ids_grup: ids grup tidak boleh kosong.
-                      username: username harus 3-50 karakter.
-                user_exists:
-                  value:
-                    code: 400
-                    status: error
-                    message: Data already exists.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -588,12 +441,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateUserRequest'
-            example:
-              ids_grup: 2
-              username: updated_username
-              password: NewSecurePass@456
-              confirm_password: NewSecurePass@456
-              reset: TIDAK
       responses:
         '200':
           description: User berhasil diupdate
@@ -601,11 +448,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-              example:
-                code: 200
-                status: success
-                message: Data changed successfully.
-                data: {}
         '400':
           description: Validasi gagal atau tidak ada perubahan
           content:
@@ -614,18 +456,6 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/ValidationError'
                   - $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                validation_error:
-                  value:
-                    code: 400
-                    status: error
-                    message:
-                      username: username harus 3-50 karakter.
-                no_changes:
-                  value:
-                    code: 400
-                    status: error
-                    message: No data has been changed.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -634,10 +464,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: 404
-                status: error
-                message: Data not found.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -663,11 +489,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-              example:
-                code: 200
-                status: success
-                message: Data deleted successfully.
-                data: {}
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -676,10 +497,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: 404
-                status: error
-                message: Data not found.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -708,37 +525,6 @@ paths:
           schema:
             type: string
           description: Filter by user levels
-        - name: level
-          in: query
-          schema:
-            type: string
-          description: Filter by level name
-        - name: tingkat
-          in: query
-          schema:
-            type: integer
-          description: Filter by user tier
-        - name: ids_grup
-          in: query
-          schema:
-            type: string
-          description: Filter by group IDs
-        - name: grup
-          in: query
-          schema:
-            type: string
-          description: Filter by group name
-        - name: keterangan
-          in: query
-          schema:
-            type: string
-          description: Filter by description
-        - name: reset
-          in: query
-          schema:
-            type: string
-            enum: [YA, TIDAK]
-          description: Filter by reset status
       responses:
         '200':
           description: Data pengguna berhasil diambil
@@ -746,21 +532,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SingleUserResponse'
-              example:
-                code: 200
-                status: success
-                message: ''
-                data:
-                  id_user: 1
-                  username: john_doe
-                  nama: John Doe
-                  jenis_kelamin: LAKI-LAKI
-                  ids_level: 1
-                  level: Admin
-                  ids_grup: 1
-                  grup: Administrator
-                  reset: TIDAK
-                  created_at: '2025-10-29T00:00:00Z'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -769,10 +540,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: 404
-                status: error
-                message: Data not found.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -805,49 +572,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PreviewExcelResponse'
-              example:
-                code: 200
-                status: success
-                message: Preview file Excel berhasil.
-                data:
-                  file_info:
-                    total_rows: 100
-                    valid_rows: 95
-                    invalid_rows: 3
-                    duplicate_rows: 2
-                    ready_to_import: true
-                  column_mapping:
-                    mapped:
-                      username: 0
-                      password: 1
-                      nama_lengkap: 2
-                      jenis_kelamin: 3
-                    optional_columns:
-                      ids_grup: true
-                      ids_kelurahan: false
-                  preview_data:
-                    - row_number: 1
-                      is_header: true
-                      data:
-                        - Username
-                        - Password
-                        - Nama Lengkap
-                        - Jenis Kelamin
-                  validation_summary:
-                    is_valid: true
-                    structure_valid: true
-                    no_duplicates: true
-                    has_valid_data: true
         '400':
           description: Validasi file gagal
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: 400
-                status: error
-                message: Struktur kolom Excel tidak sesuai. Pastikan semua kolom wajib ada.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -882,40 +612,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ImportExcelResponse'
-              example:
-                code: 200
-                status: success
-                message: Data berhasil diimport.
-                data:
-                  summary:
-                    total_rows: 100
-                    valid_rows: 95
-                    duplicate_rows: 3
-                    import_success: 92
-                    import_failure: 3
-                    success_rate: '96%'
-                  details:
-                    - row: 1
-                      username: user1
-                      status: success
-                    - row: 2
-                      username: user2
-                      status: success
-                    - row: 50
-                      username: user50
-                      status: failed
-                      error: Username already exists
-                  timestamp: '2025-10-29T09:20:00Z'
         '400':
           description: Validasi atau error import
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: 400
-                status: error
-                message: Data duplikasi ditemukan.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -936,7 +638,352 @@ paths:
               schema:
                 type: string
                 format: binary
-                description: Excel template file
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: Daftar profil dengan filter dan pagination
+      description: Mengambil daftar profil pengguna dengan dukungan filter advanced, pagination, sorting, dan Redis cache
+      operationId: listProfiles
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Nomor halaman (default 1)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Jumlah data per halaman (default 10)
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: created_at DESC
+          description: Urutan sorting (field ASC/DESC)
+        - name: id_profile
+          in: query
+          schema:
+            type: string
+          description: Filter by profile ID (IN query, comma-separated)
+        - name: username
+          in: query
+          schema:
+            type: string
+          description: Filter by username
+        - name: ids_level
+          in: query
+          schema:
+            type: string
+          description: Filter by level ID (IN query)
+        - name: level
+          in: query
+          schema:
+            type: string
+          description: Filter by level name (LIKE query)
+        - name: ids_grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group ID (IN query)
+        - name: grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group name (LIKE query)
+        - name: nama_lengkap
+          in: query
+          schema:
+            type: string
+          description: Filter by full name (LIKE query)
+        - name: jenis_kelamin
+          in: query
+          schema:
+            type: string
+            enum: [LAKI-LAKI, PEREMPUAN]
+          description: Filter by gender
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province (LIKE query)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city (LIKE query)
+        - name: kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district (LIKE query)
+        - name: kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village (LIKE query)
+        - name: nmr_tlpn
+          in: query
+          schema:
+            type: string
+          description: Filter by phone number (LIKE query)
+      responses:
+        '200':
+          description: Daftar profil berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Profile
+      summary: Buat profil baru
+      description: Membuat profil pengguna baru dengan validasi lengkap
+      operationId: createProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProfileRequest'
+      responses:
+        '200':
+          description: Profil berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProfileResponse'
+        '400':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /profile/{id}:
+    put:
+      tags:
+        - Profile
+      summary: Update profil
+      description: Mengubah data profil yang ada (semua field opsional)
+      operationId: updateProfile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID profil yang akan diupdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profil berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Validasi gagal atau tidak ada perubahan
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Profil tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Profile
+      summary: Hapus profil
+      description: Menghapus profil pengguna dari sistem
+      operationId: deleteProfile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID profil yang akan dihapus
+      responses:
+        '200':
+          description: Profil berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Profil tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /profile/single:
+    get:
+      tags:
+        - Profile
+      summary: Ambil data profil single
+      description: Mengambil data satu profil dengan filter spesifik dan Redis cache
+      operationId: getSingleProfile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id_profile
+          in: query
+          schema:
+            type: integer
+          description: Filter by profile ID
+        - name: username
+          in: query
+          schema:
+            type: string
+          description: Filter by username
+        - name: ids_level
+          in: query
+          schema:
+            type: integer
+          description: Filter by level ID
+        - name: level
+          in: query
+          schema:
+            type: string
+          description: Filter by level name (LIKE query)
+        - name: ids_grup
+          in: query
+          schema:
+            type: integer
+          description: Filter by group ID
+        - name: grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group name (LIKE query)
+        - name: nama_lengkap
+          in: query
+          schema:
+            type: string
+          description: Filter by full name (LIKE query)
+        - name: jenis_kelamin
+          in: query
+          schema:
+            type: string
+            enum: [LAKI-LAKI, PEREMPUAN]
+          description: Filter by gender
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province (LIKE query)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city (LIKE query)
+        - name: kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village (LIKE query)
+        - name: nmr_tlpn
+          in: query
+          schema:
+            type: string
+          description: Filter by phone number (LIKE query)
+      responses:
+        '200':
+          description: Data profil berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -954,12 +1001,12 @@ components:
           minLength: 4
           maxLength: 20
           pattern: '^[a-zA-Z0-9._]+$'
-          description: Username pengguna (4-20 karakter, alphanumeric, underscore, dan titik)
+          description: Username pengguna (4-20 karakter)
           example: john_doe
         password:
           type: string
           minLength: 8
-          description: Password dengan kombinasi huruf kecil, besar, angka, dan simbol (minimal 8 karakter). Diabaikan jika reset=YA
+          description: Password dengan kombinasi huruf kecil, besar, angka, simbol (minimal 8 karakter)
           example: Secure@Pass123
         confirm_password:
           type: string
@@ -969,7 +1016,7 @@ components:
           type: string
           enum: [YA, TIDAK]
           default: TIDAK
-          description: Flag untuk bypass password validation (untuk admin reset)
+          description: Flag untuk bypass password validation
           example: TIDAK
 
     LoginRequest:
@@ -996,11 +1043,6 @@ components:
           type: object
           description: Payload yang akan di-encode ke dalam JWT token
           additionalProperties: true
-          example:
-            id_user: 123
-            username: john_doe
-            email: john@example.com
-            role: user
 
     DeleteTokenRequest:
       type: object
@@ -1028,12 +1070,12 @@ components:
           minLength: 3
           maxLength: 50
           pattern: '^[a-zA-Z0-9._]+$'
-          description: Username pengguna (3-50 karakter, alphanumeric, underscore, titik)
+          description: Username pengguna (3-50 karakter)
           example: newuser
         password:
           type: string
           minLength: 8
-          description: Password dengan kombinasi huruf kecil, besar, angka, dan simbol (minimal 8 karakter)
+          description: Password dengan kombinasi huruf kecil, besar, angka, simbol (minimal 8 karakter)
           example: SecurePass@123
         confirm_password:
           type: string
@@ -1051,14 +1093,14 @@ components:
       properties:
         ids_grup:
           type: integer
-          description: ID grup pengguna
+          description: ID grup pengguna (opsional)
           example: 2
         username:
           type: string
           minLength: 3
           maxLength: 50
           pattern: '^[a-zA-Z0-9._]+$'
-          description: Username pengguna (3-50 karakter)
+          description: Username pengguna (opsional, 3-50 karakter)
           example: updated_username
         password:
           type: string
@@ -1067,26 +1109,127 @@ components:
           example: NewSecurePass@456
         confirm_password:
           type: string
-          description: Konfirmasi password baru
+          description: Konfirmasi password baru (opsional)
           example: NewSecurePass@456
         reset:
           type: string
           enum: [YA, TIDAK]
-          description: Flag untuk bypass password validation
+          description: Flag untuk bypass password validation (opsional)
           example: TIDAK
 
-    UserData:
+    CreateProfileRequest:
+      type: object
+      required:
+        - nama_lengkap
+        - jenis_kelamin
+      properties:
+        nama_lengkap:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Nama lengkap pengguna (3-255 karakter, wajib)
+          example: John Doe
+        jenis_kelamin:
+          type: string
+          enum: [LAKI-LAKI, PEREMPUAN]
+          description: Jenis kelamin (LAKI-LAKI atau PEREMPUAN, wajib)
+          example: LAKI-LAKI
+        ids_kelurahan:
+          type: integer
+          nullable: true
+          description: ID kelurahan (opsional)
+          example: 5
+        rw:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: RW - max 5 karakter (opsional)
+          example: '02'
+        rt:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: RT - max 5 karakter (opsional)
+          example: '03'
+        alamat:
+          type: string
+          nullable: true
+          description: Alamat lengkap (opsional, tipe text)
+          example: Jl. Merdeka No. 1, Kota
+        nmr_tlpn:
+          type: string
+          minLength: 10
+          maxLength: 20
+          nullable: true
+          description: Nomor telepon - 10-20 karakter (opsional)
+          example: '081234567890'
+        foto:
+          type: string
+          nullable: true
+          description: URL foto profil atau # untuk no image (opsional, harus valid URL http/https atau #)
+          example: https://example.com/photo.jpg
+
+    UpdateProfileRequest:
       type: object
       properties:
-        id_user:
+        nama_lengkap:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Nama lengkap pengguna (opsional, 3-255 karakter)
+          example: John Doe Updated
+        jenis_kelamin:
+          type: string
+          enum: [LAKI-LAKI, PEREMPUAN]
+          description: Jenis kelamin (opsional)
+          example: LAKI-LAKI
+        ids_kelurahan:
           type: integer
-          description: ID pengguna
+          nullable: true
+          description: ID kelurahan (opsional)
+          example: 5
+        rw:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: RW - max 5 karakter (opsional)
+          example: '02'
+        rt:
+          type: string
+          maxLength: 5
+          nullable: true
+          description: RT - max 5 karakter (opsional)
+          example: '03'
+        alamat:
+          type: string
+          nullable: true
+          description: Alamat lengkap (opsional)
+          example: Jl. Merdeka No. 2, Kota
+        nmr_tlpn:
+          type: string
+          minLength: 10
+          maxLength: 20
+          nullable: true
+          description: Nomor telepon - 10-20 karakter (opsional)
+          example: '081234567891'
+        foto:
+          type: string
+          nullable: true
+          description: URL foto profil atau # untuk no image (opsional)
+          example: https://example.com/photo_new.jpg
+
+    ProfileData:
+      type: object
+      properties:
+        id_profile:
+          type: integer
+          description: ID profil
           example: 1
         username:
           type: string
-          description: Username
+          description: Username pengguna
           example: john_doe
-        nama:
+        nama_lengkap:
           type: string
           description: Nama lengkap
           example: John Doe
@@ -1097,59 +1240,118 @@ components:
           example: LAKI-LAKI
         ids_level:
           type: integer
+          nullable: true
           description: ID level/role
           example: 1
         level:
           type: string
+          nullable: true
           description: Nama level/role
           example: Admin
-        tingkat:
-          type: integer
-          description: Tier/level pengguna
-          example: 1
         ids_grup:
           type: integer
+          nullable: true
           description: ID grup
           example: 1
         grup:
           type: string
+          nullable: true
           description: Nama grup
           example: Administrator
+        ids_provinsi:
+          type: integer
+          nullable: true
+          description: ID provinsi
+          example: 1
+        kode_provinsi:
+          type: string
+          nullable: true
+          description: Kode provinsi
+          example: '11'
+        provinsi:
+          type: string
+          nullable: true
+          description: Nama provinsi
+          example: DKI Jakarta
+        pulau:
+          type: string
+          nullable: true
+          description: Nama pulau
+          example: Jawa
+        ids_kabkota:
+          type: integer
+          nullable: true
+          description: ID kabupaten/kota
+          example: 101
+        kode_kabkota:
+          type: string
+          nullable: true
+          description: Kode kabupaten/kota
+          example: '1101'
+        kabkota:
+          type: string
+          nullable: true
+          description: Nama kabupaten/kota
+          example: Jakarta Pusat
+        ids_kecamatan:
+          type: integer
+          nullable: true
+          description: ID kecamatan
+          example: 1001
+        kode_kecamatan:
+          type: string
+          nullable: true
+          description: Kode kecamatan
+          example: '110101'
+        kecamatan:
+          type: string
+          nullable: true
+          description: Nama kecamatan
+          example: Menteng
         ids_kelurahan:
           type: integer
           nullable: true
-          description: ID kelurahan (opsional)
-          example: 5
+          description: ID kelurahan
+          example: 10001
+        kode_kelurahan:
+          type: string
+          nullable: true
+          description: Kode kelurahan
+          example: '1101010'
+        kelurahan:
+          type: string
+          nullable: true
+          description: Nama kelurahan
+          example: Cikini
         rw:
           type: string
           nullable: true
-          description: RW (opsional)
+          description: RW
           example: '02'
         rt:
           type: string
           nullable: true
-          description: RT (opsional)
+          description: RT
           example: '03'
         alamat:
           type: string
           nullable: true
-          description: Alamat lengkap (opsional)
+          description: Alamat lengkap
           example: Jl. Merdeka No. 1, Kota
         nmr_tlpn:
           type: string
           nullable: true
-          description: Nomor telepon (opsional)
+          description: Nomor telepon
           example: '081234567890'
-        reset:
-          type: string
-          enum: [YA, TIDAK]
-          description: Flag reset password
-          example: TIDAK
-        keterangan:
+        foto:
           type: string
           nullable: true
-          description: Keterangan tambahan
-          example: null
+          description: URL foto profil atau #
+          example: https://example.com/photo.jpg
+        created_by:
+          type: integer
+          description: Created by user ID
+          example: 1
         created_at:
           type: string
           format: date-time
@@ -1161,6 +1363,39 @@ components:
           nullable: true
           description: Waktu update terakhir
           example: null
+
+    UserData:
+      type: object
+      properties:
+        id_user:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: john_doe
+        nama:
+          type: string
+          example: John Doe
+        jenis_kelamin:
+          type: string
+          enum: [LAKI-LAKI, PEREMPUAN]
+          example: LAKI-LAKI
+        ids_level:
+          type: integer
+          example: 1
+        level:
+          type: string
+          example: Admin
+        ids_grup:
+          type: integer
+          example: 1
+        grup:
+          type: string
+          example: Administrator
+        created_at:
+          type: string
+          format: date-time
+          example: '2025-10-29T00:00:00Z'
 
     RegisterResponse:
       type: object
@@ -1179,7 +1414,6 @@ components:
           properties:
             id_user:
               type: integer
-              description: ID pengguna yang baru dibuat
               example: 123
 
     LoginResponse:
@@ -1199,8 +1433,8 @@ components:
           properties:
             token:
               type: string
-              description: JWT token untuk autentikasi request berikutnya
-              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyVGltZSI6IjEyMzQ1IiwiYXBwIjoiUFBCSSIsImlkX3VzZXIiOjEyMywidXNlcm5hbWUiOiJqb2huX2RvZSIsIm5hbWEiOiJKb2huIERvZSIsImVtYWlsIjoiam9obkBleGFtcGxlLmNvbSIsImxvZ2luX2FzIjoiVElEQUsiLCJpZF9hZG1pbiI6bnVsbCwiaWF0IjoxNjk4MDUxMzk5LCJleHAiOjE2OTgzNzMzOTl9.xyz
+              description: JWT token
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
     TokenResponse:
       type: object
@@ -1219,7 +1453,6 @@ components:
           properties:
             token:
               type: string
-              description: JWT token baru
               example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
     CreateUserResponse:
@@ -1239,7 +1472,25 @@ components:
           properties:
             id_user:
               type: integer
-              description: ID pengguna yang baru dibuat
+              example: 123
+
+    CreateProfileResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Data added successfully.
+        data:
+          type: object
+          properties:
+            id_profile:
+              type: integer
               example: 123
 
     UserListResponse:
@@ -1278,6 +1529,43 @@ components:
           example: ''
         data:
           $ref: '#/components/schemas/UserData'
+
+    ProfileListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: ''
+        data:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProfileData'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    SingleProfileResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: ''
+        data:
+          $ref: '#/components/schemas/ProfileData'
 
     Pagination:
       type: object
@@ -1332,31 +1620,6 @@ components:
                 ready_to_import:
                   type: boolean
                   example: true
-            column_mapping:
-              type: object
-              properties:
-                mapped:
-                  type: object
-                  additionalProperties:
-                    type: integer
-                optional_columns:
-                  type: object
-                  additionalProperties:
-                    type: boolean
-            preview_data:
-              type: array
-              items:
-                type: object
-                properties:
-                  row_number:
-                    type: integer
-                  is_header:
-                    type: boolean
-                  data:
-                    type: array
-                  validation_message:
-                    type: string
-                    nullable: true
             validation_summary:
               type: object
               properties:
@@ -1368,21 +1631,6 @@ components:
                   type: boolean
                 has_valid_data:
                   type: boolean
-            errors:
-              type: object
-              properties:
-                structure_errors:
-                  type: array
-                  items:
-                    type: string
-                duplicate_errors:
-                  type: array
-                  items:
-                    type: string
-                total_structure_errors:
-                  type: integer
-                total_duplicate_errors:
-                  type: integer
 
     ImportExcelResponse:
       type: object
@@ -1405,12 +1653,6 @@ components:
                 total_rows:
                   type: integer
                   example: 100
-                valid_rows:
-                  type: integer
-                  example: 95
-                duplicate_rows:
-                  type: integer
-                  example: 3
                 import_success:
                   type: integer
                   example: 92
@@ -1420,24 +1662,6 @@ components:
                 success_rate:
                   type: string
                   example: '96%'
-            details:
-              type: array
-              items:
-                type: object
-                properties:
-                  row:
-                    type: integer
-                  username:
-                    type: string
-                  status:
-                    type: string
-                    enum: [success, failed]
-                  error:
-                    type: string
-                    nullable: true
-            timestamp:
-              type: string
-              format: date-time
 
     SuccessResponse:
       type: object
@@ -1482,9 +1706,9 @@ components:
           additionalProperties:
             type: string
           example:
-            username: username harus 3-50 karakter.
-            password: password harus minimal 8 karakter dengan kombinasi huruf kecil, huruf besar, angka, dan simbol.
-            confirm_password: password dan konfirmasi password tidak cocok.
+            nama_lengkap: nama lengkap harus 3-255 karakter.
+            jenis_kelamin: jenis kelamin tidak valid. harus LAKI-LAKI atau PEREMPUAN.
+            nmr_tlpn: nomor telepon harus 10-20 karakter.
 
     JWTPayload:
       type: object
@@ -1492,71 +1716,52 @@ components:
       properties:
         userTime:
           type: string
-          description: Unique user session identifier
           example: '1698051399'
         app:
           type: string
-          description: Nama aplikasi
           example: PPBI
         id_user:
           type: integer
-          description: ID pengguna
           example: 123
         username:
           type: string
-          description: Username pengguna
           example: john_doe
         nama:
           type: string
-          description: Nama lengkap pengguna
           example: John Doe
         email:
           type: string
           format: email
-          description: Email pengguna
           example: john@example.com
-        nmr_tlpn:
-          type: string
-          nullable: true
-          description: Nomor telepon pengguna
-          example: '081234567890'
         ids_level:
           type: integer
           nullable: true
-          description: ID level/role pengguna
           example: 1
         level:
           type: string
           nullable: true
-          description: Nama level/role pengguna
           example: Admin
         ids_grup:
           type: integer
           nullable: true
-          description: ID grup pengguna
           example: 1
         grup:
           type: string
           nullable: true
-          description: Nama grup pengguna
           example: Administrator
         login_as:
           type: string
           enum: [YA, TIDAK]
-          description: Flag login dengan akun lain
           example: TIDAK
         id_admin:
           type: integer
           nullable: true
-          description: ID admin jika login_as=YA
           example: null
         iat:
           type: integer
-          description: Issued at time (Unix timestamp)
           example: 1698051399
         exp:
           type: integer
-          description: Expiration time (Unix timestamp)
           example: 1698373399
 
   responses:
@@ -1566,10 +1771,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            code: 400
-            status: error
-            message: Request body tidak valid
 
     Unauthorized:
       description: Token tidak valid atau tidak diberikan
@@ -1577,10 +1778,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            code: 400
-            status: error
-            message: You are not logged in.
 
     NotFound:
       description: Resource tidak ditemukan
@@ -1588,10 +1785,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            code: 404
-            status: error
-            message: Resource not found
 
     InternalServerError:
       description: Terjadi kesalahan pada server
@@ -1599,17 +1792,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            code: 500
-            status: error
-            message: An error occurred in the system, please try again.
 
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token didapatkan dari endpoint login atau Google OAuth callback. Gunakan token dalam header Authorization dengan format "Bearer {token}"
+      description: JWT token didapatkan dari endpoint login atau Google OAuth callback
 
 security:
   - BearerAuth: []
