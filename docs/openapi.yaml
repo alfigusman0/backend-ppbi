@@ -1,1712 +1,280 @@
 openapi: 3.0.3
 info:
-  title: API PPBI
+  title: API PPBI - Authentication Service
   version: 1.1.0
   description: |
-    API specification for the PPBI (Persatuan Penggemar Bonsai Indonesia) backend.
-    This API provides endpoints for managing bonsai community, events, and related activities.
+    Authentication API untuk PPBI (Persatuan Penggemar Bonsai Indonesia).
+    Sistem autentikasi mendukung login tradisional, Google OAuth, dan manajemen token JWT.
+  contact:
+    name: API Support
+    email: support@ppbi.local
+  x-changelog:
+    - version: 1.1.0
+      date: 2025-10-29
+      changes:
+        - Added Google OAuth authentication
+        - Added token management endpoints
+        - Added Redis/Database session support
+        - Added comprehensive input validation
 
-    ## Key Features
-    - Authentication & Authorization (JWT)
-    - User Management & Profiles
-    - Event Management (Competitions, Judging, Categories)
-    - Form Processing (Registration, Awards, Assessment)
-    - File Management (AWS S3)
-    - Notifications (WhatsApp)
-    - Regional Settings (Branches, Groups, Areas)
-    - Master Data Management
 servers:
-  - url: http://localhost:{port}/api
+  - url: http://localhost:5000/api
+    description: Development Server
     variables:
       port:
         default: '5000'
-        description: Local development server port
-  - url: https://api.ppbi.or.id/api
-    description: Production server
+  - url: https://api.ppbi.id/api
+    description: Production Server
 
-x-api-info:
-  rateLimit: true
-  compression: true
-  security:
-    - helmet: true
-    - cors: true
-    - production:
-        ipWhitelist: true
-        description: In production, requests are restricted to whitelisted IP addresses
-  requestLimits:
-    bodyLimit: '500mb'
-    parameterLimit: 50000
 tags:
-  - name: auth
-    description: Authentication and token management
-  - name: aws
-    description: AWS S3 file operations (upload/delete)
-  - name: cronejob
-    description: Scheduled tasks and maintenance
-  - name: kta
-    description: KTA (Kartu Tanda Anggota) management
-  - name: notif
-    description: General notification management
-  - name: pengantar
-    description: Pengantar (introduction) management
-  - name: pohon
-    description: Tree (pohon) management
-  - name: profile
-    description: User profile management
-  - name: suiseki
-    description: Suiseki management
-  - name: users
-    description: User account management
-  - name: event
-    description: Event related endpoints
-  - name: event-acara
-    description: Event activities management
-  - name: event-juara
-    description: Event winners management
-  - name: event-juri
-    description: Event judges management
-  - name: event-kategori
-    description: Event categories management
-  - name: event-settings
-    description: Event settings management
-  - name: formulir
-    description: Form processing endpoints
-  - name: formulir-pendaftaran
-    description: Registration form management
-  - name: formulir-penghargaan
-    description: Awards form management
-  - name: formulir-penilaian
-    description: Assessment form management
-  - name: notification
-    description: Notification system endpoints
-  - name: notification-whatsapp
-    description: WhatsApp integration endpoints
-  - name: settings
-    description: Application settings
-  - name: settings-cabang
-    description: Branch settings management
-  - name: settings-grup
-    description: Group settings management
-  - name: settings-hak-akses
-    description: Access rights management
-  - name: settings-jenis-bonsai
-    description: Bonsai types management
-  - name: settings-wilayah
-    description: Regional settings (provinsi, kab/kota, kecamatan, kelurahan)
-  - name: settings-kelas
-    description: Class settings management
-  - name: settings-level
-    description: Level settings management
-  - name: settings-modul
-    description: Module settings management
-  - name: settings-profile-cabang
-    description: Branch profile settings
+  - name: Authentication
+    description: Endpoints untuk autentikasi pengguna
+  - name: Token Management
+    description: Endpoints untuk manajemen token JWT
+  - name: OAuth
+    description: Endpoints untuk autentikasi OAuth (Google)
+
 paths:
+  /auth/google:
+    get:
+      tags:
+        - OAuth
+      summary: Redirect ke Google OAuth
+      description: Mengarahkan user ke halaman login Google
+      operationId: googleLogin
+      responses:
+        '302':
+          description: Redirect ke Google OAuth authorization page
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL redirect ke Google OAuth
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/google/callback:
+    get:
+      tags:
+        - OAuth
+      summary: Google OAuth Callback
+      description: Callback endpoint setelah user login via Google
+      operationId: googleCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code dari Google
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: State parameter untuk CSRF protection
+      responses:
+        '302':
+          description: Redirect ke frontend dengan JWT token
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Frontend URL dengan token
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register pengguna baru
+      description: Membuat akun pengguna baru dengan validasi input lengkap
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              normal:
+                summary: Register dengan password validation
+                value:
+                  username: john_doe
+                  password: Secure@Pass123
+                  confirm_password: Secure@Pass123
+                  reset: TIDAK
+              reset:
+                summary: Register dengan flag reset
+                value:
+                  username: admin_user
+                  password: TempPass@123
+                  confirm_password: TempPass@123
+                  reset: YA
+      responses:
+        '200':
+          description: User berhasil didaftarkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+              example:
+                code: 200
+                status: success
+                message: Data added successfully.
+                data:
+                  id_user: 123
+        '400':
+          description: Validasi input gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: 400
+                status: error
+                message:
+                  username: username harus 4-20 karakter.
+                  password: password harus minimal 8 karakter dengan kombinasi huruf kecil, huruf besar, angka, dan simbol.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /auth/login:
     post:
-      tags: [auth]
-      summary: Login and obtain JWT
+      tags:
+        - Authentication
+      summary: Login pengguna
+      description: Melakukan login dengan username dan password
+      operationId: login
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Credentials'
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: john_doe
+              password: Secure@Pass123
       responses:
         '200':
-          description: JWT token and user data
+          description: Login berhasil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                code: 200
+                status: success
+                message: ''
+                data:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Validasi atau autentikasi gagal
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ErrorResponse'
               examples:
-                success:
-                  summary: Successful login example
+                validation_error:
                   value:
-                    token: 'eyJhbGciOiJI...exampletoken'
-                    user:
-                      id_user: 1
-                      username: 'admin'
-                      nama_lengkap: 'Admin User'
-
-  /aws/upload:
-    post:
-      tags: [aws]
-      summary: Upload file to S3
-      description: Upload file to AWS S3 bucket with optional folder path
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                folder:
-                  type: string
-                  description: Target folder in bucket
-                  example: 'photos/users'
-              required:
-                - file
-      responses:
-        '200':
-          description: File uploaded successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'File berhasil diupload'
-                  data:
-                    type: object
-                    properties:
-                      url:
-                        type: string
-                        format: uri
-                        example: 'https://bucket.s3.region.amazonaws.com/photos/users/image.jpg'
-                      key:
-                        type: string
-                        example: 'photos/users/image.jpg'
-
-  /aws/delete:
-    delete:
-      tags: [aws]
-      summary: Delete file from S3
-      description: Delete file from AWS S3 bucket by URL
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                url:
-                  type: string
-                  format: uri
-                  example: 'https://bucket.s3.region.amazonaws.com/photos/users/image.jpg'
-              required:
-                - url
-      responses:
-        '200':
-          description: File deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'File berhasil dihapus'
-                  data:
-                    type: object
-                    example: {}
-
-  /users:
-    get:
-      tags: [users]
-      summary: List users (requires auth)
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 1
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 20
-      responses:
-        '200':
-          description: Array of users with pagination
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/User'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
-              examples:
-                sample:
-                  summary: User list sample
+                    code: 400
+                    status: error
+                    message:
+                      username: username tidak boleh kosong.
+                      password: password tidak boleh kosong.
+                user_not_found:
                   value:
-                    data:
-                      - id_user: 1
-                        username: 'admin'
-                        nama_lengkap: 'Admin User'
-                        nmr_tlpn: '+62812345678'
-                      - id_user: 2
-                        username: 'joko'
-                        nama_lengkap: 'Joko'
-                        nmr_tlpn: '+62887654321'
-                    pagination:
-                      total: 2
-                      page: 1
-                      limit: 20
-                      pages: 1
-
-  /users/{id}:
-    get:
-      tags: [users]
-      summary: Get user by id
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: User object
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-
-  /kta:
-    get:
-      tags: [kta]
-      summary: Get all KTA records
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of KTA records
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data KTA berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/KTA'
-    post:
-      tags: [kta]
-      summary: Create new KTA
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/KTACreate'
-      responses:
-        '201':
-          description: KTA created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KTAResponse'
-
-  /kta/{id}:
-    put:
-      tags: [kta]
-      summary: Update KTA by ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/KTAUpdate'
-      responses:
-        '200':
-          description: KTA updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KTAResponse'
-    delete:
-      tags: [kta]
-      summary: Delete KTA by ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: KTA deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KTAResponse'
-
-  /kta/single:
-    get:
-      tags: [kta]
-      summary: Get single KTA record
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single KTA record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KTAResponse'
-
-  /event/acara:
-    get:
-      tags: [event-acara]
-      summary: List all events
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 1
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 20
-      responses:
-        '200':
-          description: List of events
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data acara berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Event'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
-    post:
-      tags: [event-acara]
-      summary: Create new event
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EventCreate'
-      responses:
-        '201':
-          description: Event created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventResponse'
-
-  /event/acara/{id}:
-    get:
-      tags: [event]
-      summary: Get event by id
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Event object
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Event'
-
-  /event/juri:
-    get:
-      tags: [event-juri]
-      summary: List all event judges
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of event judges
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data juri berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/EventJudge'
-    post:
-      tags: [event-juri]
-      summary: Assign judge to event
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EventJudgeCreate'
-      responses:
-        '201':
-          description: Judge assigned successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventJudgeResponse'
-
-  /event/juri/{id}:
-    put:
-      tags: [event-juri]
-      summary: Update event judge
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EventJudgeUpdate'
-      responses:
-        '200':
-          description: Judge updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventJudgeResponse'
-    delete:
-      tags: [event-juri]
-      summary: Remove judge from event
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Judge removed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventJudgeResponse'
-
-  /event/juri/single:
-    get:
-      tags: [event-juri]
-      summary: Get single event judge
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single event judge record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventJudgeResponse'
-
-  /event/kategori:
-    get:
-      tags: [event-kategori]
-      summary: List all event categories
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of event categories
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data kategori berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/EventCategory'
-    post:
-      tags: [event-kategori]
-      summary: Create new event category
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EventCategoryCreate'
-      responses:
-        '201':
-          description: Category created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventCategoryResponse'
-
-  /event/kategori/{id}:
-    put:
-      tags: [event-kategori]
-      summary: Update event category
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EventCategoryUpdate'
-      responses:
-        '200':
-          description: Category updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventCategoryResponse'
-    delete:
-      tags: [event-kategori]
-      summary: Delete event category
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Category deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventCategoryResponse'
-
-  /event/kategori/single:
-    get:
-      tags: [event-kategori]
-      summary: Get single event category
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single event category record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventCategoryResponse'
-
-  /event/juara:
-    get:
-      tags: [event-juara]
-      summary: List all event winners
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of event winners
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data juara berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/EventWinner'
-    post:
-      tags: [event-juara]
-      summary: Create new event winner
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EventWinnerCreate'
-      responses:
-        '201':
-          description: Winner created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventWinnerResponse'
-
-  /event/juara/{id}:
-    put:
-      tags: [event-juara]
-      summary: Update event winner
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EventWinnerUpdate'
-      responses:
-        '200':
-          description: Winner updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventWinnerResponse'
-    delete:
-      tags: [event-juara]
-      summary: Delete event winner
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Winner deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventWinnerResponse'
-
-  /event/juara/single:
-    get:
-      tags: [event-juara]
-      summary: Get single event winner
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single event winner record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EventWinnerResponse'
-
-  /formulir/pendaftaran:
-    get:
-      tags: [formulir-pendaftaran]
-      summary: List all registrations
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of registrations
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data pendaftaran berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/FormRegistration'
-    post:
-      tags: [formulir-pendaftaran]
-      summary: Create new registration
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FormRegistrationCreate'
-      responses:
-        '201':
-          description: Registration created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormRegistrationResponse'
-
-  /formulir/pendaftaran/{id}:
-    put:
-      tags: [formulir-pendaftaran]
-      summary: Update registration
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FormRegistrationUpdate'
-      responses:
-        '200':
-          description: Registration updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormRegistrationResponse'
-    delete:
-      tags: [formulir-pendaftaran]
-      summary: Delete registration
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Registration deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormRegistrationResponse'
-
-  /formulir/pendaftaran/single:
-    get:
-      tags: [formulir-pendaftaran]
-      summary: Get single registration
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single registration record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormRegistrationResponse'
-
-  /formulir/penghargaan:
-    get:
-      tags: [formulir-penghargaan]
-      summary: List all awards
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of awards
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data penghargaan berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/FormAward'
-    post:
-      tags: [formulir-penghargaan]
-      summary: Create new award
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FormAwardCreate'
-      responses:
-        '201':
-          description: Award created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAwardResponse'
-
-  /formulir/penghargaan/{id}:
-    put:
-      tags: [formulir-penghargaan]
-      summary: Update award
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FormAwardUpdate'
-      responses:
-        '200':
-          description: Award updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAwardResponse'
-    delete:
-      tags: [formulir-penghargaan]
-      summary: Delete award
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Award deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAwardResponse'
-
-  /formulir/penghargaan/single:
-    get:
-      tags: [formulir-penghargaan]
-      summary: Get single award
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single award record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAwardResponse'
-
-  /formulir/penilaian:
-    get:
-      tags: [formulir-penilaian]
-      summary: List all assessments
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of assessments
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data penilaian berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/FormAssessment'
-    post:
-      tags: [formulir-penilaian]
-      summary: Create new assessment
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FormAssessmentCreate'
-      responses:
-        '201':
-          description: Assessment created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAssessmentResponse'
-
-  /formulir/penilaian/{id}:
-    put:
-      tags: [formulir-penilaian]
-      summary: Update assessment
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FormAssessmentUpdate'
-      responses:
-        '200':
-          description: Assessment updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAssessmentResponse'
-    delete:
-      tags: [formulir-penilaian]
-      summary: Delete assessment
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Assessment deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAssessmentResponse'
-
-  /formulir/penilaian/single:
-    get:
-      tags: [formulir-penilaian]
-      summary: Get single assessment
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single assessment record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FormAssessmentResponse'
-
-  /settings/cabang:
-    get:
-      tags:
-        - settings-cabang
-      summary: Get all branch settings
-      description: Retrieve list of all branch settings
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            minimum: 1
-            default: 10
-          description: Number of items per page
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchSettingsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                    code: 400
+                    status: error
+                    message: username not found.
+                wrong_password:
+                  value:
+                    code: 400
+                    status: error
+                    message: Password is wrong.
+                google_login:
+                  value:
+                    code: 400
+                    status: error
+                    message: Anda login menggunakan google. silahkan login kembali menggunakan google.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /auth/logout:
     post:
       tags:
-        - settings-cabang
-      summary: Create new branch setting
-      description: Create a new branch setting entry
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BranchSettingsCreate'
-      responses:
-        '201':
-          description: Branch setting created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchSettingsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/cabang/{id}:
-    get:
-      tags:
-        - settings-cabang
-      summary: Get branch setting by ID
-      description: Retrieve branch setting data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Branch setting ID
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchSettingsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    put:
-      tags:
-        - settings-cabang
-      summary: Update branch setting by ID
-      description: Update branch setting data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Branch setting ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BranchSettingsUpdate'
-      responses:
-        '200':
-          description: Branch setting updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchSettingsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - settings-cabang
-      summary: Delete branch setting by ID
-      description: Delete branch setting data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Branch setting ID
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchSettingsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/cabang/single:
-    get:
-      tags:
-        - settings-cabang
-      summary: Get single branch setting
-      description: Get a single branch setting data without pagination
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchSettingsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/grup:
-    get:
-      tags:
-        - settings-grup
-      summary: Get all group settings
-      description: Retrieve list of all group settings
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            minimum: 1
-            default: 10
-          description: Number of items per page
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupSettingsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    post:
-      tags:
-        - settings-grup
-      summary: Create new group setting
-      description: Create a new group setting entry
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupSettingsCreate'
-      responses:
-        '201':
-          description: Group setting created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupSettingsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/grup/{id}:
-    get:
-      tags:
-        - settings-grup
-      summary: Get group setting by ID
-      description: Retrieve group setting data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Group setting ID
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupSettingsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    put:
-      tags:
-        - settings-grup
-      summary: Update group setting by ID
-      description: Update group setting data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Group setting ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupSettingsUpdate'
-      responses:
-        '200':
-          description: Group setting updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupSettingsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - settings-grup
-      summary: Delete group setting by ID
-      description: Delete group setting data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Group setting ID
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupSettingsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/grup/single:
-    get:
-      tags:
-        - settings-grup
-      summary: Get single group setting
-      description: Get a single group setting data without pagination
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupSettingsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/hak-akses:
-    get:
-      tags:
-        - settings-hak-akses
-      summary: Get all access rights
-      description: Retrieve list of all access rights settings
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            minimum: 1
-            default: 10
-          description: Number of items per page
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessRightsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    post:
-      tags:
-        - settings-hak-akses
-      summary: Create new access right
-      description: Create a new access right entry
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AccessRightsCreate'
-      responses:
-        '201':
-          description: Access right created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessRightsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/hak-akses/{id}:
-    get:
-      tags:
-        - settings-hak-akses
-      summary: Get access right by ID
-      description: Retrieve access right data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Access right ID
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessRightsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    put:
-      tags:
-        - settings-hak-akses
-      summary: Update access right by ID
-      description: Update access right data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Access right ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AccessRightsUpdate'
-      responses:
-        '200':
-          description: Access right updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessRightsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - settings-hak-akses
-      summary: Delete access right by ID
-      description: Delete access right data based on the specified ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Access right ID
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessRightsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/hak-akses/single:
-    get:
-      tags:
-        - settings-hak-akses
-      summary: Get single access right
-      description: Get a single access right data without pagination
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessRightsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/modul:
-    get:
-      tags:
-        - settings-modul
-      summary: Get all modules
-      description: Retrieve list of all modules
+        - Authentication
+      summary: Logout pengguna
+      description: Mengeluarkan user dan menginvalidasi token
+      operationId: logout
       security:
         - BearerAuth: []
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            minimum: 1
-            default: 10
-          description: Number of items per page
       responses:
         '200':
-          description: Successful operation
+          description: Logout berhasil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModuleResponse'
-        '401':
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 200
+                status: success
+                message: You have successfully logged out!
+                data: {}
+        '400':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /auth/token/create:
     post:
       tags:
-        - settings-modul
-      summary: Create new module
-      description: Create a new module entry
+        - Token Management
+      summary: Buat token baru
+      description: Generate JWT token baru dengan payload yang diberikan
+      operationId: createToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTokenRequest'
+            example:
+              payload:
+                id_user: 123
+                username: john_doe
+                email: john@example.com
+                role: user
+      responses:
+        '200':
+          description: Token berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                code: 200
+                status: success
+                message: ''
+                data:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/token/refresh:
+    post:
+      tags:
+        - Token Management
+      summary: Refresh token
+      description: Membuat token baru berdasarkan token yang masih aktif
+      operationId: refreshToken
       security:
         - BearerAuth: []
       requestBody:
@@ -1714,862 +282,173 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModuleCreate'
+              $ref: '#/components/schemas/CreateTokenRequest'
+            example:
+              payload:
+                id_user: 123
+                username: john_doe
+                email: john@example.com
+                role: user
       responses:
-        '201':
-          description: Module created successfully
+        '200':
+          description: Token berhasil di-refresh
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModuleResponse'
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                code: 200
+                status: success
+                message: Token has been refreshed successfully
+                data:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /settings/modul/{id}:
+  /auth/token/check:
     get:
       tags:
-        - settings-modul
-      summary: Get module by ID
-      description: Retrieve module data based on the specified ID
+        - Token Management
+      summary: Validasi token
+      description: Memeriksa apakah token masih aktif dan valid
+      operationId: checkToken
       security:
         - BearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Module ID
       responses:
         '200':
-          description: Successful operation
+          description: Token masih aktif
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModuleResponse'
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 200
+                status: success
+                message: Your token is still active
+                data: {}
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-    put:
-      tags:
-        - settings-modul
-      summary: Update module by ID
-      description: Update module data based on the specified ID
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Module ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ModuleUpdate'
-      responses:
-        '200':
-          description: Module updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ModuleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
+  /auth/token/delete:
     delete:
       tags:
-        - settings-modul
-      summary: Delete module by ID
-      description: Delete module data based on the specified ID
+        - Token Management
+      summary: Hapus/invalidate token
+      description: Menghapus atau menginvalidasi token yang diberikan
+      operationId: deleteToken
       security:
         - BearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: Module ID
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteTokenRequest'
+            example:
+              keterangan: LOGOUT
       responses:
         '200':
-          description: Successful operation
+          description: Token berhasil dihapus
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModuleResponse'
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 200
+                status: success
+                message: Your token has been deleted!
+                data: {}
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: Token tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 404
+                status: error
+                message: Token not found.
         '500':
           $ref: '#/components/responses/InternalServerError'
-
-  /settings/modul/single:
-    get:
-      tags:
-        - settings-modul
-      summary: Get single module
-      description: Get a single module data without pagination
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ModuleResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /notification/whatsapp:
-    post:
-      tags: [notification]
-      summary: Send WhatsApp message
-      description: Send a single WhatsApp message with optional media attachment
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id_event:
-                  type: integer
-                  example: 1
-                target:
-                  type: string
-                  description: Phone number with country code
-                  example: '6285156157684'
-                message:
-                  type: string
-                  example: 'Hello World!'
-                url:
-                  type: string
-                  format: uri
-                  description: Optional media URL
-                  example: 'https://example.com/doc.pdf'
-                filename:
-                  type: string
-                  description: Optional filename for media
-                  example: 'document.pdf'
-                typing:
-                  type: boolean
-                  description: Show typing indicator
-                  default: true
-              required:
-                - target
-                - message
-      responses:
-        '200':
-          description: Message sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Pesan WhatsApp berhasil dikirim'
-                  data:
-                    type: object
-                    properties:
-                      detail:
-                        type: string
-                        example: 'success! message in queue'
-                      id:
-                        type: array
-                        items:
-                          type: string
-                        example: ['127331075']
-                      process:
-                        type: string
-                        example: 'pending'
-                      quota:
-                        type: object
-                        properties:
-                          '085117343518':
-                            type: object
-                            properties:
-                              details:
-                                type: string
-                              quota:
-                                type: integer
-                              remaining:
-                                type: integer
-                              used:
-                                type: integer
-                      requestid:
-                        type: integer
-                      status:
-                        type: boolean
-                      target:
-                        type: array
-                        items:
-                          type: string
-
-  /notification/whatsapp/bulk:
-    post:
-      tags: [notification]
-      summary: Send bulk WhatsApp messages
-      description: Send multiple WhatsApp messages in a single request
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                targets:
-                  type: array
-                  description: List of phone numbers with country code
-                  items:
-                    type: string
-                    example: '6285156157684'
-                id_event:
-                  type: integer
-                  example: 1
-                message:
-                  type: string
-                  example: 'Bulk message content'
-                url:
-                  type: string
-                  format: uri
-                  description: Optional media URL
-                  example: 'https://example.com/doc.pdf'
-                filename:
-                  type: string
-                  description: Optional filename for media
-                  example: 'document.pdf'
-              required:
-                - targets
-                - message
-
-  /notif:
-    get:
-      tags: [notif]
-      summary: Get all notifications
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of notifications
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Data notifikasi berhasil ditemukan'
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Notification'
-    post:
-      tags: [notif]
-      summary: Create new notification
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationCreate'
-      responses:
-        '201':
-          description: Notification created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationResponse'
-
-  /notif/{id}:
-    put:
-      tags: [notif]
-      summary: Update notification
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationUpdate'
-      responses:
-        '200':
-          description: Notification updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationResponse'
-    delete:
-      tags: [notif]
-      summary: Delete notification
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Notification deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationResponse'
-
-  /notif/single:
-    get:
-      tags: [notif]
-      summary: Get single notification
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Single notification record
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationResponse'
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  status:
-                    type: string
-                    example: 'success'
-                  message:
-                    type: string
-                    example: 'Pesan WhatsApp berhasil dikirim ke semua target'
-                  data:
-                    type: object
-                    properties:
-                      sent:
-                        type: integer
-                        description: Number of messages sent
-                        example: 5
-                      failed:
-                        type: integer
-                        description: Number of failed sends
-                        example: 0
-                      details:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            target:
-                              type: string
-                            status:
-                              type: string
-                            requestId:
-                              type: string
-
-security:
-  - bearerAuth: []
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: JWT token obtained from /auth/login
   schemas:
-    Credentials:
+    RegisterRequest:
       type: object
+      required:
+        - username
+        - password
+        - confirm_password
       properties:
         username:
           type: string
-          example: 'admin'
-          minLength: 3
+          minLength: 4
+          maxLength: 20
+          pattern: '^[a-zA-Z0-9._]+$'
+          description: Username pengguna (4-20 karakter, alphanumeric, underscore, dan titik)
+          example: john_doe
         password:
           type: string
-          format: password
-          example: 'secret123'
-          minLength: 6
-      required: [username, password]
-
-    AuthResponse:
-      type: object
-      properties:
-        token:
+          minLength: 8
+          description: Password dengan kombinasi huruf kecil, besar, angka, dan simbol (minimal 8 karakter). Diabaikan jika reset=YA
+          example: Secure@Pass123
+        confirm_password:
           type: string
-        user:
-          $ref: '#/components/schemas/User'
+          description: Konfirmasi password (harus sama dengan password)
+          example: Secure@Pass123
+        reset:
+          type: string
+          enum: [YA, TIDAK]
+          default: TIDAK
+          description: Flag untuk bypass password validation (untuk admin reset)
+          example: TIDAK
 
-    UserCreate:
+    LoginRequest:
       type: object
+      required:
+        - username
+        - password
       properties:
         username:
           type: string
+          description: Username pengguna
+          example: john_doe
         password:
           type: string
-        nama_lengkap:
-          type: string
-      required: [username, password]
+          description: Password pengguna
+          example: Secure@Pass123
 
-    User:
-      type: object
-      properties:
-        id_user:
-          type: integer
-          example: 1
-        username:
-          type: string
-          example: 'johndoe'
-        nama_lengkap:
-          type: string
-          example: 'John Doe'
-        nmr_tlpn:
-          type: string
-          example: '+628123456789'
-        email:
-          type: string
-          format: email
-          example: 'john@example.com'
-        level:
-          type: string
-          enum: [Admin, User, Judge]
-          example: 'User'
-        grup:
-          type: string
-          example: 'Anggota'
-        cabang:
-          type: string
-          example: 'Jakarta'
-        foto:
-          type: string
-          format: uri
-          example: 'https://example.com/photos/john.jpg'
-        status:
-          type: string
-          enum: [active, inactive]
-          example: 'active'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    Pagination:
-      type: object
-      properties:
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-        pages:
-          type: integer
-
-    Event:
-      type: object
-      properties:
-        id_acara:
-          type: integer
-          example: 1
-        ids_cabang:
-          type: string
-          example: '1'
-        nama_acara:
-          type: string
-          maxLength: 255
-          example: 'Kontes Bonsai Nasional 2025'
-        slug_event:
-          type: string
-          maxLength: 255
-          example: 'kontes-bonsai-nasional-2025'
-        proposal:
-          type: string
-          format: uri
-          example: 'https://example.com/proposal.pdf'
-        tgl_awal_acara:
-          type: string
-          format: date
-          example: '2025-12-01'
-        tgl_akhir_acara:
-          type: string
-          format: date
-          example: '2025-12-03'
-        ids_kelurahan:
-          type: string
-          example: '1'
-        rw:
-          type: string
-          maxLength: 3
-          example: '001'
-        rt:
-          type: string
-          maxLength: 3
-          example: '002'
-        alamat:
-          type: string
-          example: 'Jl. Contoh No. 123'
-        poster:
-          type: string
-          format: uri
-          example: 'https://example.com/poster.jpg'
-        bukti_bayar:
-          type: string
-          format: uri
-          example: 'https://example.com/bukti.jpg'
-        jenis:
-          type: string
-          enum: [OFFLINE, ONLINE]
-          example: 'OFFLINE'
-        status:
-          type: string
-          enum: [PENDING, APPROVED, REJECTED]
-          example: 'PENDING'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    EventCreate:
+    CreateTokenRequest:
       type: object
       required:
-        - ids_cabang
-        - nama_acara
-        - tgl_awal_acara
-        - tgl_akhir_acara
-        - ids_kelurahan
-        - alamat
-        - jenis
+        - payload
       properties:
-        ids_cabang:
-          type: string
-        nama_acara:
-          type: string
-          maxLength: 255
-        slug_event:
-          type: string
-          maxLength: 255
-        proposal:
-          type: string
-          format: uri
-        tgl_awal_acara:
-          type: string
-          format: date
-        tgl_akhir_acara:
-          type: string
-          format: date
-        ids_kelurahan:
-          type: string
-        rw:
-          type: string
-          maxLength: 3
-        rt:
-          type: string
-          maxLength: 3
-        alamat:
-          type: string
-        poster:
-          type: string
-          format: uri
-        bukti_bayar:
-          type: string
-          format: uri
-        jenis:
-          type: string
-          enum: [OFFLINE, ONLINE]
-          default: OFFLINE
-        status:
-          type: string
-          enum: [PENDING, APPROVED, REJECTED]
-          default: PENDING
+        payload:
+          type: object
+          description: Payload yang akan di-encode ke dalam JWT token
+          additionalProperties: true
+          example:
+            id_user: 123
+            username: john_doe
+            email: john@example.com
+            role: user
 
-    EventUpdate:
+    DeleteTokenRequest:
       type: object
       properties:
-        ids_cabang:
-          type: string
-        nama_acara:
-          type: string
-          maxLength: 255
-        slug_event:
-          type: string
-          maxLength: 255
-        proposal:
-          type: string
-          format: uri
-        tgl_awal_acara:
-          type: string
-          format: date
-        tgl_akhir_acara:
-          type: string
-          format: date
-        ids_kelurahan:
-          type: string
-        rw:
-          type: string
-          maxLength: 3
-        rt:
-          type: string
-          maxLength: 3
-        alamat:
-          type: string
-        poster:
-          type: string
-          format: uri
-        bukti_bayar:
-          type: string
-          format: uri
-        jenis:
-          type: string
-          enum: [OFFLINE, ONLINE]
-        status:
-          type: string
-          enum: [PENDING, APPROVED, REJECTED]
-
-    EventCategory:
-      type: object
-      properties:
-        id_kategori:
-          type: integer
-          example: 1
-        id_event:
-          type: integer
-          example: 1
-        ids_kelas:
-          type: string
-          example: '1'
-        nama_kategori:
-          type: string
-          maxLength: 50
-          example: 'Bonsai Mini'
-        ukuran_min:
-          type: number
-          format: float
-          example: 10.5
-        ukuran_maks:
-          type: number
-          format: float
-          example: 30.0
-        uang:
-          type: number
-          format: float
-          example: 100000
-        status:
-          type: string
-          enum: [active, inactive]
-          example: 'active'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        kelas:
-          $ref: '#/components/schemas/Kelas'
-
-    EventCategoryCreate:
-      type: object
-      required:
-        - id_event
-        - ids_kelas
-        - nama_kategori
-        - ukuran_min
-        - ukuran_maks
-        - uang
-      properties:
-        id_event:
-          type: integer
-        ids_kelas:
-          type: string
-        nama_kategori:
-          type: string
-          maxLength: 50
-        ukuran_min:
-          type: number
-          format: float
-        ukuran_maks:
-          type: number
-          format: float
-        uang:
-          type: number
-          format: float
-        status:
-          type: string
-          enum: [active, inactive]
-          default: 'active'
-
-    EventCategoryUpdate:
-      type: object
-      properties:
-        id_event:
-          type: integer
-        ids_kelas:
-          type: string
-        nama_kategori:
-          type: string
-          maxLength: 50
-        ukuran_min:
-          type: number
-          format: float
-        ukuran_maks:
-          type: number
-          format: float
-        uang:
-          type: number
-          format: float
-        status:
-          type: string
-          enum: [active, inactive]
-
-    EventCategoryResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: 'success'
-        message:
-          type: string
-          example: 'Data kategori berhasil ditemukan'
-        data:
-          oneOf:
-            - $ref: '#/components/schemas/EventCategory'
-            - type: array
-              items:
-                $ref: '#/components/schemas/EventCategory'
-
-    Kelas:
-      type: object
-      properties:
-        id_kelas:
-          type: integer
-          example: 1
-        nama_kelas:
-          type: string
-          example: 'Kelas A'
         keterangan:
           type: string
-          example: 'Kelas untuk bonsai mini'
+          default: LOGOUT
+          description: Keterangan alasan penghapusan token
+          example: LOGOUT
 
-    EventWinner:
-      type: object
-      properties:
-        id_juara:
-          type: integer
-          example: 1
-        id_event:
-          type: integer
-          example: 1
-        nama_juara:
-          type: string
-          maxLength: 100
-          example: 'Juara 1'
-        status:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'YA'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    EventWinnerCreate:
-      type: object
-      required:
-        - id_event
-        - nama_juara
-        - status
-      properties:
-        id_event:
-          type: integer
-          example: 1
-        nama_juara:
-          type: string
-          maxLength: 100
-          example: 'Juara 1'
-        status:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'YA'
-
-    EventWinnerUpdate:
-      type: object
-      properties:
-        id_event:
-          type: integer
-        nama_juara:
-          type: string
-          maxLength: 100
-        status:
-          type: string
-          enum: [YA, TIDAK]
-
-    EventWinnerResponse:
+    RegisterResponse:
       type: object
       properties:
         code:
@@ -2577,18 +456,19 @@ components:
           example: 200
         status:
           type: string
-          example: 'success'
+          example: success
         message:
           type: string
-          example: 'Data juara berhasil ditemukan'
+          example: Data added successfully.
         data:
-          oneOf:
-            - $ref: '#/components/schemas/EventWinner'
-            - type: array
-              items:
-                $ref: '#/components/schemas/EventWinner'
+          type: object
+          properties:
+            id_user:
+              type: integer
+              description: ID pengguna yang baru dibuat
+              example: 123
 
-    EventResponse:
+    LoginResponse:
       type: object
       properties:
         code:
@@ -2596,180 +476,19 @@ components:
           example: 200
         status:
           type: string
-          example: 'success'
+          example: success
         message:
           type: string
-          example: 'Data acara berhasil ditemukan'
+          example: ''
         data:
-          oneOf:
-            - $ref: '#/components/schemas/Event'
-            - type: array
-              items:
-                $ref: '#/components/schemas/Event'
+          type: object
+          properties:
+            token:
+              type: string
+              description: JWT token untuk autentikasi request berikutnya
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyVGltZSI6IjEyMzQ1IiwiYXBwIjoiUFBCSSIsImlkX3VzZXIiOjEyMywidXNlcm5hbWUiOiJqb2huX2RvZSIsIm5hbWEiOiJKb2huIERvZSIsImVtYWlsIjoiam9obkBleGFtcGxlLmNvbSIsImxvZ2luX2FzIjoiVElEQUsiLCJpZF9hZG1pbiI6bnVsbCwiaWF0IjoxNjk4MDUxMzk5LCJleHAiOjE2OTgzNzMzOTl9.xyz
 
-    FormRegistration:
-      type: object
-      properties:
-        id_pendaftaran:
-          type: integer
-          example: 1
-        id_event:
-          type: integer
-          example: 1
-        nomor_sertifikat:
-          type: string
-          maxLength: 50
-          example: 'CERT-2025-001'
-        no_registrasi:
-          type: string
-          maxLength: 50
-          example: 'REG-2025-001'
-        no_juri:
-          type: string
-          maxLength: 50
-          example: 'JURI-001'
-        id_pohon:
-          type: integer
-          example: 1
-        id_suiseki:
-          type: integer
-          example: 1
-        id_kategori:
-          type: integer
-          example: 1
-        ukuran:
-          type: number
-          format: float
-          example: 25.5
-        bukti_bayar:
-          type: string
-          format: uri
-          example: 'https://example.com/bukti.jpg'
-        bayar:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'YA'
-        cetak:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'TIDAK'
-        arena:
-          type: string
-          maxLength: 50
-          example: 'A'
-        meja:
-          type: string
-          maxLength: 50
-          example: '1'
-        foto:
-          type: string
-          format: uri
-          example: 'https://example.com/foto.jpg'
-        id_pengantar:
-          type: integer
-          example: 1
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    FormRegistrationCreate:
-      type: object
-      required:
-        - id_event
-        - id_kategori
-        - ukuran
-      properties:
-        id_event:
-          type: integer
-        nomor_sertifikat:
-          type: string
-          maxLength: 50
-        no_registrasi:
-          type: string
-          maxLength: 50
-        no_juri:
-          type: string
-          maxLength: 50
-        id_pohon:
-          type: integer
-        id_suiseki:
-          type: integer
-        id_kategori:
-          type: integer
-        ukuran:
-          type: number
-          format: float
-        bukti_bayar:
-          type: string
-          format: uri
-        bayar:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'TIDAK'
-        cetak:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'TIDAK'
-        arena:
-          type: string
-          maxLength: 50
-        meja:
-          type: string
-          maxLength: 50
-        foto:
-          type: string
-          format: uri
-        id_pengantar:
-          type: integer
-
-    FormRegistrationUpdate:
-      type: object
-      properties:
-        id_event:
-          type: integer
-        nomor_sertifikat:
-          type: string
-          maxLength: 50
-        no_registrasi:
-          type: string
-          maxLength: 50
-        no_juri:
-          type: string
-          maxLength: 50
-        id_pohon:
-          type: integer
-        id_suiseki:
-          type: integer
-        id_kategori:
-          type: integer
-        ukuran:
-          type: number
-          format: float
-        bukti_bayar:
-          type: string
-          format: uri
-        bayar:
-          type: string
-          enum: [YA, TIDAK]
-        cetak:
-          type: string
-          enum: [YA, TIDAK]
-        arena:
-          type: string
-          maxLength: 50
-        meja:
-          type: string
-          maxLength: 50
-        foto:
-          type: string
-          format: uri
-        id_pengantar:
-          type: integer
-
-    FormRegistrationResponse:
+    TokenResponse:
       type: object
       properties:
         code:
@@ -2777,62 +496,19 @@ components:
           example: 200
         status:
           type: string
-          example: 'success'
+          example: success
         message:
           type: string
-          example: 'Data pendaftaran berhasil ditemukan'
+          example: Token has been refreshed successfully
         data:
-          oneOf:
-            - $ref: '#/components/schemas/FormRegistration'
-            - type: array
-              items:
-                $ref: '#/components/schemas/FormRegistration'
+          type: object
+          properties:
+            token:
+              type: string
+              description: JWT token baru
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-    FormAward:
-      type: object
-      properties:
-        id_penghargaan:
-          type: integer
-          example: 1
-        id_formulir:
-          type: integer
-          example: 1
-        id_juara:
-          type: integer
-          example: 1
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        formulir:
-          $ref: '#/components/schemas/FormRegistration'
-        juara:
-          $ref: '#/components/schemas/EventWinner'
-
-    FormAwardCreate:
-      type: object
-      required:
-        - id_formulir
-        - id_juara
-      properties:
-        id_formulir:
-          type: integer
-          example: 1
-        id_juara:
-          type: integer
-          example: 1
-
-    FormAwardUpdate:
-      type: object
-      properties:
-        id_formulir:
-          type: integer
-        id_juara:
-          type: integer
-
-    FormAwardResponse:
+    SuccessResponse:
       type: object
       properties:
         code:
@@ -2840,715 +516,169 @@ components:
           example: 200
         status:
           type: string
-          example: 'success'
+          enum: [success]
         message:
           type: string
-          example: 'Data penghargaan berhasil ditemukan'
         data:
-          oneOf:
-            - $ref: '#/components/schemas/FormAward'
-            - type: array
-              items:
-                $ref: '#/components/schemas/FormAward'
-
-    FormAssessment:
-      type: object
-      properties:
-        id_penilaian:
-          type: integer
-          example: 1
-        id_formulir:
-          type: integer
-          example: 1
-        id_profile:
-          type: integer
-          example: 1
-        penampilan:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-          example: 85.5
-        gerak_dasar:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-          example: 90.0
-        keserasian:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-          example: 88.5
-        kematangan:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-          example: 87.0
-        total:
-          type: number
-          format: float
-          example: 87.75
-        kriteria:
-          type: string
-          maxLength: 50
-          example: 'A'
-        keterangan:
-          type: string
-          example: 'Penilaian sangat baik'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        formulir:
-          $ref: '#/components/schemas/FormRegistration'
-        profile:
-          $ref: '#/components/schemas/Profile'
-
-    FormAssessmentCreate:
-      type: object
-      required:
-        - id_formulir
-        - id_profile
-        - penampilan
-        - gerak_dasar
-        - keserasian
-        - kematangan
-      properties:
-        id_formulir:
-          type: integer
-        id_profile:
-          type: integer
-        penampilan:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        gerak_dasar:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        keserasian:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        kematangan:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        kriteria:
-          type: string
-          maxLength: 50
-        keterangan:
-          type: string
-
-    FormAssessmentUpdate:
-      type: object
-      properties:
-        id_formulir:
-          type: integer
-        id_profile:
-          type: integer
-        penampilan:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        gerak_dasar:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        keserasian:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        kematangan:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 100
-        kriteria:
-          type: string
-          maxLength: 50
-        keterangan:
-          type: string
-
-    FormAssessmentResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: 'success'
-        message:
-          type: string
-          example: 'Data penilaian berhasil ditemukan'
-        data:
-          oneOf:
-            - $ref: '#/components/schemas/FormAssessment'
-            - type: array
-              items:
-                $ref: '#/components/schemas/FormAssessment'
-
-    Notification:
-      type: object
-      properties:
-        id_notif:
-          type: integer
-          example: 1
-        id_user:
-          type: integer
-          example: 1
-        judul:
-          type: string
-          maxLength: 255
-          example: 'Pemberitahuan Baru'
-        isi:
-          type: string
-          example: 'Isi notifikasi yang detail'
-        dibaca:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'TIDAK'
-        whatsapp:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'TIDAK'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    NotificationCreate:
-      type: object
-      required:
-        - id_user
-        - judul
-        - isi
-        - dibaca
-      properties:
-        id_user:
-          type: integer
-          example: 1
-        judul:
-          type: string
-          maxLength: 255
-          example: 'Pemberitahuan Baru'
-        isi:
-          type: string
-          example: 'Isi notifikasi yang detail'
-        dibaca:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'TIDAK'
-        whatsapp:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'TIDAK'
-
-    NotificationUpdate:
-      type: object
-      properties:
-        id_user:
-          type: integer
-        judul:
-          type: string
-          maxLength: 255
-        isi:
-          type: string
-        dibaca:
-          type: string
-          enum: [YA, TIDAK]
-        whatsapp:
-          type: string
-          enum: [YA, TIDAK]
-
-    NotificationResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: 'success'
-        message:
-          type: string
-          example: 'Data notifikasi berhasil ditemukan'
-        data:
-          oneOf:
-            - $ref: '#/components/schemas/Notification'
-            - type: array
-              items:
-                $ref: '#/components/schemas/Notification'
-
-    NotificationRequest:
-      type: object
-      properties:
-        id_event:
-          type: integer
-          example: 1
-        target:
-          type: string
-          example: '6285156157684'
-        message:
-          type: string
-          example: 'Pesan notifikasi'
-        url:
-          type: string
-          format: uri
-          example: 'https://example.com/file.pdf'
-        filename:
-          type: string
-          example: 'dokumen.pdf'
-        schedule:
-          type: string
-          format: date-time
-        typing:
-          type: boolean
-          default: true
+          type: object
 
     ErrorResponse:
       type: object
       properties:
-        success:
-          type: boolean
-        message:
+        code:
+          type: integer
+          example: 400
+        status:
           type: string
-        error:
+          enum: [error]
+        message:
+          oneOf:
+            - type: string
+            - type: object
+
+    ValidationError:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        status:
+          type: string
+          enum: [error]
+        message:
           type: object
+          description: Object berisi field dan error message untuk setiap field
+          additionalProperties:
+            type: string
+          example:
+            username: username harus 4-20 karakter.
+            password: password harus minimal 8 karakter dengan kombinasi huruf kecil, huruf besar, angka, dan simbol.
+            confirm_password: password dan konfirmasi password tidak cocok.
 
-    BranchSettings:
+    JWTPayload:
       type: object
+      description: Struktur data yang di-encode dalam JWT token
       properties:
-        id_cabang:
+        userTime:
+          type: string
+          description: Unique user session identifier
+          example: '1698051399'
+        app:
+          type: string
+          description: Nama aplikasi
+          example: PPBI
+        id_user:
           type: integer
-          example: 1
-        id_provinsi:
-          type: integer
-          example: 1
-        id_kab_kota:
-          type: integer
-          example: 1
-        kode_cabang:
+          description: ID pengguna
+          example: 123
+        username:
           type: string
-          maxLength: 10
-          example: 'CBG001'
-        nama_cabang:
+          description: Username pengguna
+          example: john_doe
+        nama:
           type: string
-          maxLength: 100
-          example: 'Cabang Jakarta Selatan'
-        alamat:
-          type: string
-          example: 'Jl. Raya No. 123'
-        telepon:
-          type: string
-          maxLength: 15
-          example: '0211234567'
+          description: Nama lengkap pengguna
+          example: John Doe
         email:
           type: string
           format: email
-          example: 'jakarta.selatan@ppbi.or.id'
-        logo:
+          description: Email pengguna
+          example: john@example.com
+        nmr_tlpn:
           type: string
-          format: uri
-          example: 'https://storage.ppbi.or.id/cabang/logo1.png'
-        ttd_ketua:
-          type: string
-          format: uri
-          example: 'https://storage.ppbi.or.id/cabang/ttd1.png'
-        ttd_sekretaris:
-          type: string
-          format: uri
-          example: 'https://storage.ppbi.or.id/cabang/ttd2.png'
-        stempel:
-          type: string
-          format: uri
-          example: 'https://storage.ppbi.or.id/cabang/stempel1.png'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        provinsi:
-          $ref: '#/components/schemas/Province'
-        kab_kota:
-          $ref: '#/components/schemas/City'
-
-    BranchSettingsCreate:
-      type: object
-      required:
-        - id_provinsi
-        - id_kab_kota
-        - kode_cabang
-        - nama_cabang
-        - alamat
-      properties:
-        id_provinsi:
+          nullable: true
+          description: Nomor telepon pengguna
+          example: '081234567890'
+        ids_level:
           type: integer
-        id_kab_kota:
-          type: integer
-        kode_cabang:
-          type: string
-          maxLength: 10
-        nama_cabang:
-          type: string
-          maxLength: 100
-        alamat:
-          type: string
-        telepon:
-          type: string
-          maxLength: 15
-        email:
-          type: string
-          format: email
-        logo:
-          type: string
-          format: uri
-        ttd_ketua:
-          type: string
-          format: uri
-        ttd_sekretaris:
-          type: string
-          format: uri
-        stempel:
-          type: string
-          format: uri
-
-    BranchSettingsUpdate:
-      type: object
-      properties:
-        id_provinsi:
-          type: integer
-        id_kab_kota:
-          type: integer
-        kode_cabang:
-          type: string
-          maxLength: 10
-        nama_cabang:
-          type: string
-          maxLength: 100
-        alamat:
-          type: string
-        telepon:
-          type: string
-          maxLength: 15
-        email:
-          type: string
-          format: email
-        logo:
-          type: string
-          format: uri
-        ttd_ketua:
-          type: string
-          format: uri
-        ttd_sekretaris:
-          type: string
-          format: uri
-        stempel:
-          type: string
-          format: uri
-
-    BranchSettingsResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: 'success'
-        message:
-          type: string
-          example: 'Data cabang berhasil ditemukan'
-        data:
-          oneOf:
-            - $ref: '#/components/schemas/BranchSettings'
-            - type: array
-              items:
-                $ref: '#/components/schemas/BranchSettings'
-
-    Province:
-      type: object
-      properties:
-        id_provinsi:
-          type: integer
+          nullable: true
+          description: ID level/role pengguna
           example: 1
-        nama_provinsi:
-          type: string
-          example: 'DKI Jakarta'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    City:
-      type: object
-      properties:
-        id_kab_kota:
-          type: integer
-          example: 1
-        id_provinsi:
-          type: integer
-          example: 1
-        nama_kab_kota:
-          type: string
-          example: 'Jakarta Selatan'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        provinsi:
-          $ref: '#/components/schemas/Province'
-
-    GroupSettings:
-      type: object
-      properties:
-        id_grup:
-          type: integer
-          example: 1
-        id_cabang:
-          type: integer
-          example: 1
-        kode_grup:
-          type: string
-          maxLength: 10
-          example: 'GRP001'
-        nama_grup:
-          type: string
-          maxLength: 100
-          example: 'Grup Bonsai A'
-        keterangan:
-          type: string
-          example: 'Grup untuk penggemar bonsai tingkat lanjut'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        cabang:
-          $ref: '#/components/schemas/BranchSettings'
-
-    GroupSettingsCreate:
-      type: object
-      required:
-        - id_cabang
-        - kode_grup
-        - nama_grup
-      properties:
-        id_cabang:
-          type: integer
-        kode_grup:
-          type: string
-          maxLength: 10
-        nama_grup:
-          type: string
-          maxLength: 100
-        keterangan:
-          type: string
-
-    GroupSettingsUpdate:
-      type: object
-      properties:
-        id_cabang:
-          type: integer
-        kode_grup:
-          type: string
-          maxLength: 10
-        nama_grup:
-          type: string
-          maxLength: 100
-        keterangan:
-          type: string
-
-    GroupSettingsResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: 'success'
-        message:
-          type: string
-          example: 'Data grup berhasil ditemukan'
-        data:
-          oneOf:
-            - $ref: '#/components/schemas/GroupSettings'
-            - type: array
-              items:
-                $ref: '#/components/schemas/GroupSettings'
-
-    AccessRights:
-      type: object
-      properties:
-        id_hak_akses:
-          type: integer
-          example: 1
-        id_level:
-          type: integer
-          example: 1
-        id_modul:
-          type: integer
-          example: 1
-        tambah:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'YA'
-        ubah:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'YA'
-        hapus:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'YA'
-        lihat:
-          type: string
-          enum: [YA, TIDAK]
-          example: 'YA'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
         level:
-          $ref: '#/components/schemas/Level'
-        modul:
-          $ref: '#/components/schemas/Module'
-
-    AccessRightsCreate:
-      type: object
-      required:
-        - id_level
-        - id_modul
-      properties:
-        id_level:
+          type: string
+          nullable: true
+          description: Nama level/role pengguna
+          example: Admin
+        ids_grup:
           type: integer
-        id_modul:
-          type: integer
-        tambah:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'TIDAK'
-        ubah:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'TIDAK'
-        hapus:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'TIDAK'
-        lihat:
-          type: string
-          enum: [YA, TIDAK]
-          default: 'YA'
-
-    AccessRightsUpdate:
-      type: object
-      properties:
-        id_level:
-          type: integer
-        id_modul:
-          type: integer
-        tambah:
-          type: string
-          enum: [YA, TIDAK]
-        ubah:
-          type: string
-          enum: [YA, TIDAK]
-        hapus:
-          type: string
-          enum: [YA, TIDAK]
-        lihat:
-          type: string
-          enum: [YA, TIDAK]
-
-    AccessRightsResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 200
-        status:
-          type: string
-          example: 'success'
-        message:
-          type: string
-          example: 'Data hak akses berhasil ditemukan'
-        data:
-          oneOf:
-            - $ref: '#/components/schemas/AccessRights'
-            - type: array
-              items:
-                $ref: '#/components/schemas/AccessRights'
-
-    Level:
-      type: object
-      properties:
-        id_level:
-          type: integer
+          nullable: true
+          description: ID grup pengguna
           example: 1
-        nama_level:
+        grup:
           type: string
-          example: 'Administrator'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    Module:
-      type: object
-      properties:
-        id_modul:
-          type: integer
-          example: 1
-        nama_modul:
-          type: string
-          example: 'User Management'
-        icon:
-          type: string
-          example: 'users'
-        url:
-          type: string
-          example: '/users'
-        urutan:
-          type: integer
-          example: 1
-        aktif:
+          nullable: true
+          description: Nama grup pengguna
+          example: Administrator
+        login_as:
           type: string
           enum: [YA, TIDAK]
-          example: 'YA'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-# Notes:
-# - This is a starter OpenAPI file. For a full spec, expand each path with
-#   detailed request/response schemas, examples, and error responses.
-# - I can iterate and generate more detailed schemas by scanning `routes/` and `controllers/`.
+          description: Flag login dengan akun lain
+          example: TIDAK
+        id_admin:
+          type: integer
+          nullable: true
+          description: ID admin jika login_as=YA
+          example: null
+        iat:
+          type: integer
+          description: Issued at time (Unix timestamp)
+          example: 1698051399
+        exp:
+          type: integer
+          description: Expiration time (Unix timestamp)
+          example: 1698373399
+
+  responses:
+    BadRequest:
+      description: Request tidak valid atau validasi gagal
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 400
+            status: error
+            message: Request body tidak valid
+
+    Unauthorized:
+      description: Token tidak valid atau tidak diberikan
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 400
+            status: error
+            message: You are not logged in.
+
+    NotFound:
+      description: Resource tidak ditemukan
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 404
+            status: error
+            message: Resource not found
+
+    InternalServerError:
+      description: Terjadi kesalahan pada server
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 500
+            status: error
+            message: An error occurred in the system, please try again.
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token didapatkan dari endpoint login atau Google OAuth callback. Gunakan token dalam header Authorization dengan format "Bearer {token}"
+
+security:
+  - BearerAuth: []
