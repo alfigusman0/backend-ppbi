@@ -1,64 +1,41 @@
 openapi: 3.0.3
 info:
   title: API PPBI - Persatuan Penggemar Bonsai Indonesia
-  version: 1.13.0
+  version: 1.15.0
   description: |
     API untuk sistem Persatuan Penggemar Bonsai Indonesia (PPBI)
     Menyediakan layanan autentikasi, manajemen pengguna, event, dan berbagai fitur terkait bonsai.
   contact:
     name: PPBI Support
   x-changelog:
-    version: '1.13.0'
-    date: '2024-07-02'
+    version: '1.15.0'
+    date: '2025-01-23'
     changes:
-      - 'ADDED: Modul Settings Profile Cabang dengan CRUD operations lengkap'
-      - 'ADDED: Validasi lengkap untuk data profile cabang (nama, kontak, alamat, status)'
-      - 'ADDED: Redis caching untuk data profile cabang dengan berbagai filter'
-      - 'ADDED: Role-based access control untuk operasi profile cabang'
-      - 'ADDED: Foreign key relationship dengan tabel cabang dan geografis'
-      - 'ADDED: Support untuk informasi kontak dan alamat lengkap cabang'
-      - 'ENHANCED: Pagination dan filtering untuk data profile cabang'
+      - 'ADDED: Modul Settings Kelas dengan CRUD operations lengkap'
+      - 'ADDED: Validasi lengkap untuk data kelas (nama kelas, status)'
+      - 'ADDED: Redis caching untuk data kelas dengan berbagai filter'
+      - 'ADDED: Role-based access control untuk operasi kelas'
+      - 'ENHANCED: Pagination dan filtering untuk data master kelas'
     previous_versions:
-      - version: '1.12.0'
-        date: '2024-07-01'
+      - version: '1.14.0'
+        date: '2024-07-03'
         changes:
-          - 'ADDED: Modul Settings Cabang dengan CRUD operations lengkap'
-          - 'ADDED: Validasi lengkap untuk data cabang (kode, nama, alamat, lokasi geografis, status)'
-          - 'ADDED: Redis caching untuk data cabang dengan berbagai filter'
-          - 'ADDED: Role-based access control untuk operasi cabang'
-          - 'ADDED: Foreign key relationship dengan tabel geografis (provinsi, kabupaten, kecamatan, kelurahan)'
-          - 'ADDED: Support untuk manajemen cabang PPBI di seluruh Indonesia'
-          - 'ENHANCED: Pagination dan filtering untuk data master cabang'
-      - version: '1.11.0'
-        date: '2024-06-30'
+          - 'ADDED: Modul Settings Jenis Bonsai dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data jenis bonsai (nama jenis, status)'
+          - 'ADDED: Redis caching untuk data jenis bonsai dengan berbagai filter'
+          - 'ADDED: Role-based access control untuk operasi jenis bonsai'
+          - 'ADDED: Support untuk katalog jenis-jenis bonsai dalam sistem'
+          - 'ENHANCED: Pagination dan filtering untuk data master jenis bonsai'
+      - version: '1.13.0'
+        date: '2024-07-02'
         changes:
-          - 'ADDED: Modul Settings Hak Akses dengan CRUD operations lengkap'
-          - 'ADDED: Validasi lengkap untuk data hak akses (level, modul, permission, status)'
-          - 'ADDED: Redis caching untuk data hak akses dengan berbagai filter'
-          - 'ADDED: Role-based access control untuk operasi hak akses'
-          - 'ADDED: Support untuk permission string dengan format CRUDS (Create, Read, Update, Delete, Special)'
-          - 'ADDED: Foreign key relationship dengan tabel level dan modul'
-          - 'COMPLETED: Sistem authorization lengkap (level, grup, modul, hak_akses)'
-          - 'ENHANCED: Pagination dan filtering untuk data master hak akses'
-      - version: '1.10.0'
-        date: '2024-06-29'
-        changes:
-          - 'ADDED: Modul Settings Modul dengan CRUD operations lengkap'
-          - 'ADDED: Validasi lengkap untuk data modul (nama modul, urutan, status)'
-          - 'ADDED: Redis caching untuk data modul dengan berbagai filter'
-          - 'ADDED: Role-based access control untuk operasi modul'
-          - 'ADDED: Support untuk urutan modul (ordering) dalam sistem'
-          - 'ENHANCED: Pagination dan filtering untuk data master modul'
-          - 'COMPLETED: Core settings modules (geografis, level, grup, modul)'
-      - version: '1.9.0'
-        date: '2024-06-28'
-        changes:
-          - 'ADDED: Modul Settings Grup dengan CRUD operations lengkap'
-          - 'ADDED: Validasi lengkap untuk data grup (nama grup, status)'
-          - 'ADDED: Redis caching untuk data grup dengan berbagai filter'
-          - 'ADDED: Role-based access control untuk operasi grup'
-          - 'ADDED: Support untuk manajemen grup pengguna sistem'
-          - 'ENHANCED: Pagination dan filtering untuk data master grup'
+          - 'ADDED: Modul Settings Profile Cabang dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data profile cabang (nama, kontak, alamat, status)'
+          - 'ADDED: Redis caching untuk data profile cabang dengan berbagai filter'
+          - 'ADDED: Role-based access control untuk operasi profile cabang'
+          - 'ADDED: Foreign key relationship dengan tabel cabang dan geografis'
+          - 'ADDED: Support untuk informasi kontak dan alamat lengkap cabang'
+          - 'ENHANCED: Pagination dan filtering untuk data profile cabang'
 
 servers:
   - url: http://localhost:5000/api
@@ -102,6 +79,10 @@ tags:
     description: Manajemen data master cabang PPBI
   - name: Settings - Profile Cabang PPBI
     description: Manajemen data profile cabang PPBI
+  - name: Settings - Jenis Bonsai
+    description: Manajemen data master jenis bonsai
+  - name: Settings - Kelas
+    description: Manajemen data master kelas bonsai
 
 paths:
   /:
@@ -3623,6 +3604,394 @@ paths:
         '500':
           $ref: '#/components/schemas/ErrorResponse'
 
+  # ============================================
+  # SETTINGS JENIS BONSAI ENDPOINTS
+  # ============================================
+  /api/settings/jenis-bonsai:
+    get:
+      summary: Get list of bonsai types
+      description: Mendapatkan daftar jenis bonsai dengan pagination, filtering, dan caching Redis
+      tags:
+        - Settings - Jenis Bonsai
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_jenis_bonsai
+          in: query
+          schema:
+            type: string
+          description: Filter by bonsai type IDs (comma separated)
+        - name: jenis_bonsai
+          in: query
+          schema:
+            type: string
+          description: Filter by bonsai type name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at ASC'
+          description: Order by field
+      responses:
+        '200':
+          description: Daftar jenis bonsai berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JenisBonsaiListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new bonsai type
+      description: Membuat jenis bonsai baru dengan validasi lengkap
+      tags:
+        - Settings - Jenis Bonsai
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJenisBonsaiRequest'
+      responses:
+        '200':
+          description: Jenis bonsai berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateJenisBonsaiResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/jenis-bonsai/single:
+    get:
+      summary: Get single bonsai type
+      description: Mendapatkan data satu jenis bonsai dengan caching Redis
+      tags:
+        - Settings - Jenis Bonsai
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_jenis_bonsai
+          in: query
+          schema:
+            type: integer
+          description: Bonsai type ID
+        - name: jenis_bonsai
+          in: query
+          schema:
+            type: string
+          description: Bonsai type name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Status
+      responses:
+        '200':
+          description: Data jenis bonsai berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JenisBonsaiResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/jenis-bonsai/{id}:
+    put:
+      summary: Update bonsai type
+      description: Mengupdate data jenis bonsai dengan validasi role-based access
+      tags:
+        - Settings - Jenis Bonsai
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Bonsai type ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateJenisBonsaiRequest'
+      responses:
+        '200':
+          description: Data jenis bonsai berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateJenisBonsaiResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete bonsai type
+      description: Menghapus jenis bonsai dengan validasi role-based access
+      tags:
+        - Settings - Jenis Bonsai
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Bonsai type ID
+      responses:
+        '200':
+          description: Jenis bonsai berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # SETTINGS KELAS ENDPOINTS
+  # ============================================
+  /api/settings/kelas:
+    get:
+      summary: Get list of classes
+      description: Mendapatkan daftar kelas dengan pagination, filtering, dan caching Redis
+      tags:
+        - Settings - Kelas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kelas
+          in: query
+          schema:
+            type: string
+          description: Filter by class IDs (comma separated)
+        - name: kelas
+          in: query
+          schema:
+            type: string
+          description: Filter by class name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at ASC'
+          description: Order by field
+      responses:
+        '200':
+          description: Daftar kelas berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KelasListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new class
+      description: Membuat kelas baru dengan validasi lengkap
+      tags:
+        - Settings - Kelas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKelasRequest'
+      responses:
+        '200':
+          description: Kelas berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateKelasResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kelas/single:
+    get:
+      summary: Get single class
+      description: Mendapatkan data satu kelas dengan caching Redis
+      tags:
+        - Settings - Kelas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kelas
+          in: query
+          schema:
+            type: integer
+          description: Class ID
+        - name: kelas
+          in: query
+          schema:
+            type: string
+          description: Class name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Status
+      responses:
+        '200':
+          description: Data kelas berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KelasResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kelas/{id}:
+    put:
+      summary: Update class
+      description: Mengupdate data kelas dengan validasi role-based access
+      tags:
+        - Settings - Kelas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Class ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKelasRequest'
+      responses:
+        '200':
+          description: Data kelas berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateKelasResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete class
+      description: Menghapus kelas dengan validasi role-based access
+      tags:
+        - Settings - Kelas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Class ID
+      responses:
+        '200':
+          description: Kelas berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     # Schema untuk responses umum
@@ -5904,6 +6273,202 @@ components:
           type: integer
         to:
           type: integer
+
+    # Schema untuk settings jenis bonsai
+    JenisBonsaiListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/JenisBonsaiData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    JenisBonsaiResponse:
+      type: object
+      properties:
+        ids_jenis_bonsai:
+          type: integer
+        jenis_bonsai:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    JenisBonsaiData:
+      type: object
+      properties:
+        ids_jenis_bonsai:
+          type: integer
+        jenis_bonsai:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateJenisBonsaiRequest:
+      type: object
+      required:
+        - jenis_bonsai
+        - status
+      properties:
+        jenis_bonsai:
+          type: string
+          example: 'Bonsai Beringin'
+          description: Nama jenis bonsai
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    CreateJenisBonsaiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_jenis_bonsai:
+          type: integer
+          example: 1
+
+    UpdateJenisBonsaiRequest:
+      type: object
+      properties:
+        jenis_bonsai:
+          type: string
+          example: 'Bonsai Beringin Updated'
+          description: Nama jenis bonsai
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    UpdateJenisBonsaiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_jenis_bonsai:
+          type: integer
+          example: 1
+
+    # Schema untuk settings kelas
+    KelasListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KelasData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    KelasResponse:
+      type: object
+      properties:
+        ids_kelas:
+          type: integer
+        kelas:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    KelasData:
+      type: object
+      properties:
+        ids_kelas:
+          type: integer
+        kelas:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateKelasRequest:
+      type: object
+      required:
+        - kelas
+        - status
+      properties:
+        kelas:
+          type: string
+          example: 'Kelas Pemula'
+          description: Nama kelas
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    CreateKelasResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_kelas:
+          type: integer
+          example: 1
+
+    UpdateKelasRequest:
+      type: object
+      properties:
+        kelas:
+          type: string
+          example: 'Kelas Pemula Updated'
+          description: Nama kelas
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    UpdateKelasResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_kelas:
+          type: integer
+          example: 1
 
     # Schema untuk success response
     SuccessResponse:
