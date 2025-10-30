@@ -70,6 +70,12 @@ tags:
     description: Manajemen data pengguna
   - name: Profile
     description: Manajemen profil pengguna
+  - name: KTA
+    description: Manajemen Kartu Tanda Anggota (KTA) PPBI
+  - name: Pohon
+    description: Manajemen data pohon bonsai
+  - name: Suiseki
+    description: Manajemen data suiseki
   - name: Settings - Provinsi
     description: Manajemen data master provinsi
   - name: Settings - Kabupaten/Kota
