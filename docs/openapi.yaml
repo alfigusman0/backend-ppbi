@@ -1,89 +1,31 @@
 openapi: 3.0.3
 info:
-  title: PPBI API - Persatuan Penggemar Bonsai Indonesia
-  version: 1.4.2
+  title: API PPBI - Persatuan Penggemar Bonsai Indonesia
+  version: 1.2.0
   description: |
-    Dokumentasi lengkap API Service untuk PPBI (Persatuan Penggemar Bonsai Indonesia).
-
-    ## Fitur Utama
-    - **Authentication**: Login, Register, Google OAuth, Token Management
-    - **Users Management**: CRUD operations dengan Excel bulk import
-    - **Profile Management**: Detailed user profiles dengan geographic hierarchy
-    - **Cabang Management**: Branch office management dengan filtering
-    - **Access Control**: Role-based access dengan permission checking
-    - **Caching**: Redis caching untuk optimasi performa
-    - **Excel Import**: Bulk data import dengan validation dan preview
-
-    ## Architecture Features
-    - **Security**: JWT Bearer Token, Role-based Access Control (RBAC)
-    - **Performance**: Redis caching dengan configurable TTL, MD5 URL hashing
-    - **Logging**: Winston logger dengan daily rotation
-    - **Validation**: Field-level validation, duplicate checking, foreign key validation
-    - **Error Handling**: Comprehensive error codes dan messages
-
+    API untuk sistem Persatuan Penggemar Bonsai Indonesia (PPBI)
+    Menyediakan layanan autentikasi, manajemen pengguna, event, dan berbagai fitur terkait bonsai.
   contact:
-    name: API Support
-    email: itdivision.ppbi@gmail.com
-    url: https://ppbindonesia.org
+    name: PPBI Support
   x-changelog:
-    - version: 1.4.2
-      date: 2025-10-29
-      breaking_changes:
-        - Restructured auth endpoints untuk token management
-      additions:
-        - Added createToken endpoint untuk custom token generation
-        - Added refreshToken endpoint untuk token refresh
-        - Added checkToken endpoint untuk token validation
-        - Added deleteToken endpoint untuk token invalidation
-        - Added /profile/single endpoint GET
-        - Added /users/single endpoint GET
-        - Added /settings/cabang/single endpoint GET
-        - Complete Excel import system (importExcel, previewExcel, downloadTemplate)
-        - Comprehensive query filters dengan geographic hierarchy support
-      fixes:
-        - Fixed logout method ke GET (sesuai source code)
-        - Added detailed access control documentation
-        - Added Redis caching explanation
-      improvements:
-        - Enhanced filtering dengan IN dan LIKE operators
-        - Added created_by conditional logic documentation
-        - Added response examples dari actual implementation
-        - Added access level descriptions
-    - version: 1.4.1
-      date: 2025-10-29
-      changes:
-        - Fixed logout endpoint method dari POST menjadi GET
-        - Merged dengan openapi.yaml versi 1.5.0 non-destructively
-        - Maintained urutan dokumentasi struktur yang konsisten
-        - Added /users/single endpoint (GET)
-        - Verified semua routes dari server.js routing
-        - Standardized HTTP methods sesuai actual implementation
-    - version: 1.4.0
-      date: 2025-10-29
-      changes:
-        - Added complete Cabang PPBI Management CRUD endpoints
-        - Added cabang read with advanced filtering, geographic support, sorting, and pagination
-        - Added cabang single retrieval with multiple filter options
-        - Added cabang status management (YA/TIDAK untuk active/inactive)
-        - Redis caching for cabang operations
-        - Non-destructive merge with profile.js (1.3.0)
-        - Access control based on user level and module permissions (module ID 4)
-        - Geographic hierarchy support (provinsi, kabkota, kecamatan, kelurahan)
-    - version: 1.3.0
-      date: 2025-10-29
-      changes:
-        - Added complete Profile Management CRUD endpoints
-        - Added profile geographic data support
-    - version: 1.2.0
-      date: 2025-10-29
-      changes:
-        - Added complete Users CRUD endpoints
-        - Added Excel import functionality
-    - version: 1.1.0
-      date: 2025-10-29
-      changes:
-        - Added Google OAuth authentication
-        - Added token management endpoints
+    version: '1.2.0'
+    date: '2024-06-21'
+    changes:
+      - 'ADDED: Modul Users Management dengan CRUD operations lengkap'
+      - 'ADDED: Fitur import users dari Excel dengan validasi'
+      - 'ADDED: Endpoint preview Excel sebelum import'
+      - 'ADDED: Download template Excel untuk import'
+      - 'ADDED: Pagination dan filtering untuk list users'
+      - 'ADDED: Redis caching untuk performance users data'
+      - 'ENHANCED: Security dengan role-based access control'
+    previous_versions:
+      - version: '1.1.0'
+        date: '2024-06-20'
+        changes:
+          - 'INITIAL: Dokumentasi API lengkap dengan OpenAPI 3.0.3'
+          - 'ADDED: Authentication module dengan JWT dan OAuth2 Google'
+          - 'ADDED: Basic API structure dan error handling'
+          - 'ADDED: Documentation endpoints (Swagger UI, OpenAPI spec, health check)'
 
 servers:
   - url: http://localhost:5000/api
@@ -100,68 +42,84 @@ servers:
 
 tags:
   - name: Authentication
-    description: Endpoints untuk autentikasi pengguna
-  - name: Token Management
-    description: Endpoints untuk manajemen token JWT
-  - name: OAuth
-    description: Endpoints untuk autentikasi OAuth (Google)
+    description: Operasi terkait autentikasi dan autorisasi
   - name: Users
-    description: Endpoints untuk manajemen data pengguna (CRUD)
-  - name: Users Import
-    description: Endpoints untuk import bulk users dari Excel
-  - name: Profile
-    description: Endpoints untuk manajemen profil user yang detail
-  - name: Cabang PPBI
-    description: Endpoints untuk manajemen cabang ppbi di berbagai lokasi
+    description: Manajemen data pengguna
+  - name: Documentation
+    description: Endpoint dokumentasi API
 
 paths:
-  # ===========================
-  # AUTHENTICATION ENDPOINTS
-  # ===========================
-
-  /auth/register:
-    post:
-      tags:
-        - Authentication
-      summary: Register pengguna baru
-      description: |
-        Membuat akun pengguna baru dengan validasi username dan password yang kuat.
-        User baru akan mendapat ids_grup = 8 (default user group).
-      operationId: registerUser
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-            examples:
-              success:
-                summary: Register berhasil
-                value:
-                  username: john_doe
-                  password: SecurePass@123
+  /:
+    get:
+      summary: Root endpoint - Informasi API
+      description: Menampilkan informasi dasar API dan dokumentasi
       responses:
         '200':
-          description: User berhasil didaftarkan
+          description: Informasi API berhasil diambil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegisterResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                $ref: '#/components/schemas/APIInfo'
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/login:
+  /docs:
+    get:
+      summary: Dokumentasi API - Swagger UI
+      description: Menampilkan dokumentasi API interaktif
+      responses:
+        '200':
+          description: Dokumentasi berhasil ditampilkan
+          content:
+            text/html:
+              schema:
+                type: string
+        '404':
+          description: File dokumentasi tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api-spec:
+    get:
+      summary: OpenAPI Specification
+      description: Mendapatkan file spesifikasi OpenAPI YAML
+      responses:
+        '200':
+          description: Spesifikasi berhasil diambil
+          content:
+            application/yaml:
+              schema:
+                type: string
+        '404':
+          description: File spesifikasi tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /docs-health:
+    get:
+      summary: Health Check Dokumentasi
+      description: Memeriksa status kesehatan file dokumentasi
+      responses:
+        '200':
+          description: Dokumentasi sehat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocsHealth'
+        '503':
+          description: Dokumentasi tidak sehat
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # AUTHENTICATION ENDPOINTS
+  # ============================================
+  /api/auth/login:
     post:
+      summary: Login pengguna
+      description: Autentikasi pengguna dengan username dan password
       tags:
         - Authentication
-      summary: Login pengguna
-      description: |
-        Melakukan autentikasi pengguna dan mengembalikan JWT token.
-        Password di-hash menggunakan bcrypt dan divalidasi saat login.
-        User login dengan level >= 5 akan memasuki mode "LOGIN AS" (login dengan privilege lebih rendah).
-      operationId: loginUser
       requestBody:
         required: true
         content:
@@ -176,560 +134,200 @@ paths:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Validasi gagal atau kredensial salah
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/logout:
-    get:
+  /api/auth/register:
+    post:
+      summary: Registrasi pengguna baru
+      description: Mendaftarkan pengguna baru ke sistem
       tags:
         - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Registrasi berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Validasi gagal atau username sudah ada
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/logout:
+    get:
       summary: Logout pengguna
-      description: |
-        Melakukan logout pengguna dan invalidasi JWT token.
-        Token akan ditandai sebagai expired di database/Redis.
-        Method: GET (tidak POST)
-      operationId: logoutUser
+      description: Menghapus session dan token pengguna
+      tags:
+        - Authentication
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Logout berhasil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-              example:
-                success: true
-                message: 'You have successfully logged out!'
+                $ref: '#/components/schemas/LogoutResponse'
         '400':
-          description: User belum login
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Tidak ada session aktif
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  # ===========================
-  # TOKEN MANAGEMENT ENDPOINTS
-  # ===========================
-
-  /auth/create-token:
-    post:
-      tags:
-        - Token Management
-      summary: Buat JWT token custom
-      description: |
-        Membuat JWT token baru dengan payload custom.
-        Token akan disimpan di database/Redis dan dapat digunakan untuk API calls.
-      operationId: createToken
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - payload
-              properties:
-                payload:
-                  type: object
-                  description: Custom payload untuk JWT token
-                  example:
-                    id_user: 1
-                    username: john_doe
-                    ids_level: 2
-      responses:
-        '200':
-          description: Token berhasil dibuat
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      token:
-                        type: string
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /auth/refresh-token:
-    post:
-      tags:
-        - Token Management
-      summary: Refresh JWT token
-      description: |
-        Membuat token baru dengan payload yang di-update.
-        Token lama akan tetap aktif sampai expiration time-nya.
-      operationId: refreshToken
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - payload
-              properties:
-                payload:
-                  type: object
-                  description: Updated payload untuk JWT token baru
-      responses:
-        '200':
-          description: Token berhasil di-refresh
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      token:
-                        type: string
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /auth/check-token:
+  /api/auth/check:
     get:
+      summary: Cek status token
+      description: Memeriksa apakah token masih aktif
       tags:
-        - Token Management
-      summary: Validasi JWT token
-      description: |
-        Mengecek apakah JWT token masih aktif dan valid.
-        Endpoint ini akan mengembalikan 200 jika token valid.
-      operationId: checkToken
+        - Authentication
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Token masih aktif
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: 'Your token is still active'
+                $ref: '#/components/schemas/CheckTokenResponse'
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Token tidak valid
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/delete-token:
-    post:
-      tags:
-        - Token Management
-      summary: Hapus/invalidasi JWT token
-      description: |
-        Menghapus token dari sistem (database/Redis).
-        Token akan tidak bisa digunakan lagi untuk API calls.
-      operationId: deleteToken
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                keterangan:
-                  type: string
-                  default: LOGOUT
-                  description: Alasan penghapusan token
-      responses:
-        '200':
-          description: Token berhasil dihapus
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: Token tidak ditemukan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  # ===========================
-  # OAUTH ENDPOINTS
-  # ===========================
-
-  /auth/google:
+  /api/auth/google:
     get:
+      summary: Login dengan Google OAuth2
+      description: Redirect ke halaman autentikasi Google
       tags:
-        - OAuth
-      summary: Redirect ke Google OAuth
-      description: |
-        Mengarahkan user ke halaman login Google.
-        Google akan melakukan redirect kembali ke `/auth/google/callback` dengan authorization code.
-      operationId: googleLogin
+        - Authentication
       responses:
         '302':
-          description: Redirect ke Google OAuth authorization page
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+          description: Redirect ke Google OAuth
+          headers:
+            Location:
+              schema:
+                type: string
+                example: 'https://accounts.google.com/o/oauth2/auth?response_type=code...'
 
-  /auth/google/callback:
+  /api/auth/google/callback:
     get:
+      summary: Callback Google OAuth2
+      description: Endpoint callback untuk autentikasi Google
       tags:
-        - OAuth
-      summary: Google OAuth Callback Handler
-      description: |
-        Menerima callback dari Google OAuth dan melakukan login/registration.
-        Jika user belum ada di database, sistem akan membuat user baru secara otomatis.
-        Response berupa redirect ke frontend dengan JWT token.
-      operationId: googleCallback
+        - Authentication
       parameters:
         - name: code
           in: query
           required: true
           schema:
             type: string
-          description: Authorization code dari Google
-        - name: state
-          in: query
-          required: false
-          schema:
-            type: string
-          description: State parameter untuk CSRF protection
       responses:
         '302':
-          description: Redirect ke frontend dengan JWT token
+          description: Redirect ke frontend dengan token
           headers:
             Location:
-              description: Frontend URL dengan token
               schema:
                 type: string
+                example: 'http://frontend.url/auth/google/token_jwt_string'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Gagal mendapatkan informasi user dari Google
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  # ===========================
-  # USERS ENDPOINTS (CRUD)
-  # ===========================
-
-  /users:
-    get:
-      tags:
-        - Users
-      summary: Daftar users dengan filter dan pagination
-      description: |
-        Mengambil daftar users dengan dukungan filter comprehensive, sorting, dan pagination.
-
-        **Access Control**: Memerlukan permission 'read' pada module 2 (Users).
-        - User dengan tingkat > 2 hanya bisa melihat user dengan tingkat >= authTingkat
-        - User dengan tingkat <= 2 bisa akses semua user
-
-        **Caching**: Menggunakan Redis cache dengan MD5 URL hash + auth token
-      operationId: listUsers
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-          description: Nomor halaman (mulai dari 1)
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-          description: Jumlah data per halaman
-        - name: order_by
-          in: query
-          description: 'Urutan sorting (format: "field ASC/DESC")'
-          schema:
-            type: string
-            default: created_at DESC
-        - name: id_user
-          in: query
-          schema:
-            type: integer
-          description: Filter by user ID (IN operator support)
-        - name: username
-          in: query
-          schema:
-            type: string
-          description: Filter by username (LIKE operator, case-insensitive)
-        - name: ids_level
-          in: query
-          schema:
-            type: string
-          description: Filter by level ID (IN operator, comma-separated)
-        - name: level
-          in: query
-          schema:
-            type: string
-          description: Filter by level name (LIKE operator)
-        - name: tingkat
-          in: query
-          schema:
-            type: integer
-          description: Filter by user tingkat (>= operator)
-        - name: ids_grup
-          in: query
-          schema:
-            type: string
-          description: Filter by group ID (IN operator, comma-separated)
-        - name: grup
-          in: query
-          schema:
-            type: string
-          description: Filter by group name (LIKE operator)
-        - name: keterangan
-          in: query
-          schema:
-            type: string
-          description: Filter by description (LIKE operator)
-        - name: reset
-          in: query
-          schema:
-            type: string
-            enum:
-              - YA
-              - TIDAK
-          description: Filter by password reset flag
-      responses:
-        '200':
-          description: Daftar users berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Data tidak ditemukan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
+  /api/auth/token/create:
     post:
+      summary: Buat token baru
+      description: Membuat token JWT baru dengan payload custom
       tags:
-        - Users
-      summary: Buat user baru
-      description: |
-        Membuat user baru dengan validasi lengkap.
-
-        **Access Control**: Memerlukan permission 'create' pada module 2.
-        **Password**: Akan di-hash menggunakan bcrypt sebelum disimpan.
-        **created_by**:
-        - Jika authTingkat <= 5: bisa specify di request body
-        - Jika authTingkat > 5: automatic set ke authIdUser
-      operationId: createUser
-      security:
-        - BearerAuth: []
+        - Authentication
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateUserRequest'
+              $ref: '#/components/schemas/CreateTokenRequest'
       responses:
         '200':
-          description: User berhasil dibuat
+          description: Token berhasil dibuat
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      id_user:
-                        type: integer
+                $ref: '#/components/schemas/TokenResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+          description: Payload tidak valid
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  /users/{id}:
-    get:
+  /api/auth/token:
+    post:
+      summary: Refresh token
+      description: Memperbarui token dengan payload baru
       tags:
-        - Users
-      summary: Ambil data user spesifik
-      description: |
-        Mengambil data detail user berdasarkan ID.
-
-        **Access Control**: Memerlukan permission 'read' pada module 2.
-      operationId: getUserById
+        - Authentication
       security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID user yang akan diambil
-      responses:
-        '200':
-          description: Data user berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleUserResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    put:
-      tags:
-        - Users
-      summary: Update user
-      description: |
-        Mengubah data user yang ada.
-
-        **Access Control**: Memerlukan permission 'update' pada module 2.
-        **Password**: Jika diisi, akan di-hash terlebih dahulu.
-        **Restriction**: User dengan tingkat < authTingkat tidak bisa diupdate.
-      operationId: updateUser
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID user yang akan diupdate
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateUserRequest'
+              $ref: '#/components/schemas/RefreshTokenRequest'
       responses:
         '200':
-          description: User berhasil diupdate
+          description: Token berhasil di-refresh
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/TokenResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+          description: Payload tidak valid atau tidak ada session
         '500':
-          $ref: '#/components/responses/InternalServerError'
-
+          $ref: '#/components/schemas/ErrorResponse'
     delete:
+      summary: Hapus token
+      description: Menghapus token dari sistem (logout paksa)
       tags:
-        - Users
-      summary: Hapus user
-      description: |
-        Menghapus user dari sistem.
-
-        **Access Control**: Memerlukan permission 'delete' pada module 2.
-        **Restriction**: User dengan tingkat < authTingkat tidak bisa dihapus.
-      operationId: deleteUser
+        - Authentication
       security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID user yang akan dihapus
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteTokenRequest'
       responses:
         '200':
-          description: User berhasil dihapus
+          description: Token berhasil dihapus
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                $ref: '#/components/schemas/LogoutResponse'
+        '400':
+          description: Tidak ada session aktif
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: Token tidak ditemukan
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  /users/single:
+  # ============================================
+  # USERS MANAGEMENT ENDPOINTS
+  # ============================================
+  /api/users:
     get:
+      summary: Get list of users
+      description: Mendapatkan daftar pengguna dengan pagination, filtering, dan caching Redis
       tags:
         - Users
-      summary: Ambil data user single dengan filter
-      description: |
-        Mengambil data satu user dengan filter spesifik.
-        Hasil dibatasi hanya 1 row pertama yang cocok.
-
-        **Access Control**: Memerlukan permission 'single' pada module 2.
-        **Caching**: Menggunakan Redis cache dengan MD5 URL hash + auth token.
-      operationId: getSingleUser
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id_user
           in: query
@@ -740,914 +338,438 @@ paths:
           in: query
           schema:
             type: string
-          description: Filter by username (LIKE)
+          description: Filter by username
         - name: ids_level
           in: query
           schema:
             type: string
-          description: Filter by level ID (IN)
+          description: Filter by level IDs (comma separated)
         - name: level
           in: query
           schema:
             type: string
-          description: Filter by level name (LIKE)
-        - name: tingkat
-          in: query
-          schema:
-            type: integer
-          description: Filter by user tingkat (>=)
+          description: Filter by level name
         - name: ids_grup
           in: query
           schema:
             type: string
-          description: Filter by group ID (IN)
+          description: Filter by group IDs (comma separated)
         - name: grup
           in: query
           schema:
             type: string
-          description: Filter by group name (LIKE)
+          description: Filter by group name
         - name: keterangan
           in: query
           schema:
             type: string
-          description: Filter by description (LIKE)
+          description: Filter by description
         - name: reset
           in: query
           schema:
             type: string
-            enum:
-              - YA
-              - TIDAK
-          description: Filter by reset flag
+            enum: ['YA', 'TIDAK']
+          description: Filter by reset status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at DESC'
+          description: Order by field
       responses:
         '200':
-          description: Data user berhasil diambil
+          description: Daftar pengguna berhasil diambil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleUserResponse'
+                $ref: '#/components/schemas/UsersListResponse'
         '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+          description: Akses ditolak
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: Data tidak ditemukan
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  # ===========================
-  # USERS IMPORT ENDPOINTS
-  # ===========================
-
-  /users/import/excel:
     post:
+      summary: Create new user
+      description: Membuat pengguna baru dengan validasi strong password
       tags:
-        - Users Import
-      summary: Import bulk users dari Excel
-      description: |
-        Melakukan import multiple users dari file Excel dengan validasi lengkap.
-
-        **Validasi**:
-        1. Struktur kolom harus match dengan template
-        2. Data harus valid (format, tipe data)
-        3. Duplikasi username di file akan ditolak
-        4. Foreign key (ids_grup, ids_kelurahan) harus ada di database
-
-        **Response**: Summary dengan jumlah success/failure dan details error (max 50 rows).
-
-        **File Format**: Excel (.xlsx, .xls)
-        **Column Required**: Username, Password, Nama Lengkap, Jenis Kelamin
-        **Column Optional**: ID Grup, ID Kelurahan, RW, RT, Alamat, No. Telepon
-      operationId: importUsersExcel
+        - Users
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: File Excel (.xlsx/.xls) dengan data users
+              $ref: '#/components/schemas/CreateUserRequest'
       responses:
         '200':
-          description: Users berhasil diimport
+          description: Pengguna berhasil dibuat
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ImportUsersResponse'
+                $ref: '#/components/schemas/CreateUserResponse'
         '400':
-          description: Validasi gagal atau file tidak valid
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Validasi gagal atau data sudah ada
         '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+          description: Akses ditolak
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  /users/import/preview:
-    post:
-      tags:
-        - Users Import
-      summary: Preview data Excel sebelum import
-      description: |
-        Mengecek dan preview data Excel sebelum diimport.
-        Menampilkan validasi struktur, duplikasi, dan error details.
-
-        **Preview**: Menampilkan header + 5 baris pertama dengan validation messages.
-        **Stat**: Total rows, valid rows, invalid rows, duplicate rows, ready to import status.
-      operationId: previewUsersExcel
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: File Excel untuk preview
-      responses:
-        '200':
-          description: Preview data Excel berhasil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PreviewUsersResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /users/import/download-template:
+  /api/users/single:
     get:
+      summary: Get single user
+      description: Mendapatkan data satu pengguna dengan caching Redis
       tags:
-        - Users Import
-      summary: Download template Excel untuk import
-      description: |
-        Download template Excel dengan struktur kolom yang benar dan contoh data.
-        Template berisi header dan 3 baris contoh data.
-      operationId: downloadUsersTemplate
+        - Users
       security:
-        - BearerAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id_user
+          in: query
+          schema:
+            type: integer
+          description: User ID
+        - name: username
+          in: query
+          schema:
+            type: string
+          description: Username
+        - name: ids_level
+          in: query
+          schema:
+            type: string
+          description: Level IDs (comma separated)
+        - name: level
+          in: query
+          schema:
+            type: string
+          description: Level name
+        - name: ids_grup
+          in: query
+          schema:
+            type: string
+          description: Group IDs (comma separated)
+        - name: grup
+          in: query
+          schema:
+            type: string
+          description: Group name
+        - name: keterangan
+          in: query
+          schema:
+            type: string
+          description: Description
+        - name: reset
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Reset status
       responses:
         '200':
-          description: File template Excel berhasil didownload
+          description: Data pengguna berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/{id}:
+    put:
+      summary: Update user
+      description: Mengupdate data pengguna dengan validasi role-based access
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Data pengguna berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete user
+      description: Menghapus pengguna dengan validasi role-based access
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        '200':
+          description: Pengguna berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # USERS IMPORT ENDPOINTS
+  # ============================================
+  /api/users/import/excel:
+    post:
+      summary: Import users from Excel
+      description: Mengimpor data pengguna dari file Excel dengan validasi lengkap
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Excel file (.xlsx, .xls)
+      responses:
+        '200':
+          description: Import berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '400':
+          description: File tidak valid atau data duplikasi
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/import/preview:
+    post:
+      summary: Preview Excel before import
+      description: Preview data Excel sebelum melakukan import dengan validasi struktur
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Excel file (.xlsx, .xls)
+      responses:
+        '200':
+          description: Preview berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewResponse'
+        '400':
+          description: File tidak valid
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/import/download-template:
+    get:
+      summary: Download Excel template
+      description: Mendownload template Excel untuk import pengguna dengan format yang benar
+      tags:
+        - Users
+      responses:
+        '200':
+          description: Template berhasil didownload
           content:
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
               schema:
                 type: string
                 format: binary
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename=Template_Import_Users.xlsx'
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/schemas/ErrorResponse'
 
-  # ===========================
-  # PROFILE ENDPOINTS (CRUD)
-  # ===========================
-
-  /profile:
+  /api:
     get:
-      tags:
-        - Profile
-      summary: Daftar profile dengan filter dan pagination
-      description: |
-        Mengambil daftar profile user dengan comprehensive filtering dan pagination.
-
-        **Access Control**: Memerlukan permission 'read' pada module 3 (Profile).
-        **Geographic Filtering**: Support filtering by provinsi, kabkota, kecamatan, kelurahan.
-        **Caching**: Menggunakan Redis cache dengan MD5 URL hash.
-      operationId: listProfiles
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-        - name: order_by
-          in: query
-          schema:
-            type: string
-            default: created_at DESC
-        - name: id_profile
-          in: query
-          schema:
-            type: string
-          description: Filter by profile ID (IN, comma-separated)
-        - name: username
-          in: query
-          schema:
-            type: string
-          description: Filter by username (LIKE)
-        - name: ids_level
-          in: query
-          schema:
-            type: string
-          description: Filter by level ID (IN)
-        - name: level
-          in: query
-          schema:
-            type: string
-          description: Filter by level name (LIKE)
-        - name: ids_grup
-          in: query
-          schema:
-            type: string
-          description: Filter by group ID (IN)
-        - name: grup
-          in: query
-          schema:
-            type: string
-          description: Filter by group name (LIKE)
-        - name: nama_lengkap
-          in: query
-          schema:
-            type: string
-          description: Filter by full name (LIKE)
-        - name: jenis_kelamin
-          in: query
-          schema:
-            type: string
-            enum:
-              - LAKI-LAKI
-              - PEREMPUAN
-          description: Filter by gender
-        - name: ids_provinsi
-          in: query
-          schema:
-            type: string
-          description: Filter by province ID (IN)
-        - name: kode_provinsi
-          in: query
-          schema:
-            type: string
-          description: Filter by province code (IN)
-        - name: provinsi
-          in: query
-          schema:
-            type: string
-          description: Filter by province name (LIKE)
-        - name: pulau
-          in: query
-          schema:
-            type: string
-          description: Filter by island name
-        - name: ids_kabkota
-          in: query
-          schema:
-            type: string
-          description: Filter by regency/city ID (IN)
-        - name: kode_kabkota
-          in: query
-          schema:
-            type: string
-          description: Filter by regency/city code (IN)
-        - name: kabkota
-          in: query
-          schema:
-            type: string
-          description: Filter by regency/city name (LIKE)
-        - name: ids_kecamatan
-          in: query
-          schema:
-            type: string
-          description: Filter by district ID (IN)
-        - name: kode_kecamatan
-          in: query
-          schema:
-            type: string
-          description: Filter by district code (IN)
-        - name: kecamatan
-          in: query
-          schema:
-            type: string
-          description: Filter by district name (LIKE)
-        - name: ids_kelurahan
-          in: query
-          schema:
-            type: string
-          description: Filter by village ID (IN)
-        - name: kode_kelurahan
-          in: query
-          schema:
-            type: string
-          description: Filter by village code (IN)
-        - name: kelurahan
-          in: query
-          schema:
-            type: string
-          description: Filter by village name (LIKE)
-        - name: nmr_tlpn
-          in: query
-          schema:
-            type: string
-          description: Filter by phone number (LIKE)
+      summary: Health Check API
+      description: Memeriksa status kesehatan API
       responses:
         '200':
-          description: Daftar profile berhasil diambil
+          description: API sehat
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProfileListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    post:
-      tags:
-        - Profile
-      summary: Buat profile user baru
-      description: |
-        Membuat profile user baru dengan validasi data personal dan geographic.
-
-        **Access Control**: Memerlukan permission 'create' pada module 3.
-        **created_by**:
-        - Jika authTingkat <= 5: bisa specify di request body
-        - Jika authTingkat > 5: automatic set ke authIdUser
-      operationId: createProfile
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateProfileRequest'
-      responses:
-        '200':
-          description: Profile berhasil dibuat
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      id_profile:
-                        type: integer
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /profile/{id}:
-    get:
-      tags:
-        - Profile
-      summary: Ambil data profile spesifik
-      description: Mengambil data detail profile berdasarkan ID.
-      operationId: getProfileById
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID profile yang akan diambil
-      responses:
-        '200':
-          description: Data profile berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleProfileResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    put:
-      tags:
-        - Profile
-      summary: Update profile
-      description: Mengubah data profile user yang ada (semua field opsional).
-      operationId: updateProfile
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID profile yang akan diupdate
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateProfileRequest'
-      responses:
-        '200':
-          description: Profile berhasil diupdate
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - Profile
-      summary: Hapus profile
-      description: Menghapus profile user dari sistem.
-      operationId: deleteProfile
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Profile berhasil dihapus
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /profile/single:
-    get:
-      tags:
-        - Profile
-      summary: Ambil data profile single dengan filter
-      description: |
-        Mengambil data satu profile dengan filter spesifik.
-        Hasil dibatasi hanya 1 row pertama yang cocok.
-
-        **Caching**: Menggunakan Redis cache dengan MD5 URL hash.
-      operationId: getSingleProfile
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id_profile
-          in: query
-          schema:
-            type: integer
-        - name: username
-          in: query
-          schema:
-            type: string
-        - name: ids_level
-          in: query
-          schema:
-            type: string
-        - name: level
-          in: query
-          schema:
-            type: string
-        - name: ids_grup
-          in: query
-          schema:
-            type: string
-        - name: grup
-          in: query
-          schema:
-            type: string
-        - name: nama_lengkap
-          in: query
-          schema:
-            type: string
-        - name: jenis_kelamin
-          in: query
-          schema:
-            type: string
-            enum:
-              - LAKI-LAKI
-              - PEREMPUAN
-        - name: ids_provinsi
-          in: query
-          schema:
-            type: integer
-        - name: provinsi
-          in: query
-          schema:
-            type: string
-        - name: ids_kabkota
-          in: query
-          schema:
-            type: integer
-        - name: kabkota
-          in: query
-          schema:
-            type: string
-        - name: ids_kecamatan
-          in: query
-          schema:
-            type: integer
-        - name: kecamatan
-          in: query
-          schema:
-            type: string
-        - name: ids_kelurahan
-          in: query
-          schema:
-            type: integer
-        - name: kelurahan
-          in: query
-          schema:
-            type: string
-        - name: nmr_tlpn
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Data profile berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleProfileResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  # ===========================
-  # CABANG ENDPOINTS (CRUD)
-  # ===========================
-
-  /settings/cabang:
-    get:
-      tags:
-        - Cabang PPBI
-      summary: Daftar cabang dengan filter dan pagination
-      description: |
-        Mengambil daftar cabang dengan dukungan filter geographic, status, sorting, pagination, dan Redis cache.
-
-        **Access Control**: Memerlukan permission 'read' pada module 4 (Cabang).
-        **Caching**: Menggunakan Redis cache dengan MD5 URL hash, TTL configurable.
-      operationId: listCabang
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-        - name: order_by
-          in: query
-          schema:
-            type: string
-            default: created_at DESC
-        - name: ids_cabang
-          in: query
-          schema:
-            type: string
-          description: Filter by cabang ID (IN, comma-separated)
-        - name: cabang
-          in: query
-          schema:
-            type: string
-          description: Filter by cabang name (LIKE)
-        - name: ids_provinsi
-          in: query
-          schema:
-            type: integer
-          description: Filter by province ID
-        - name: provinsi
-          in: query
-          schema:
-            type: string
-          description: Filter by province name (LIKE)
-        - name: pulau
-          in: query
-          schema:
-            type: string
-          description: Filter by island name (LIKE)
-        - name: ids_kabkota
-          in: query
-          schema:
-            type: integer
-          description: Filter by regency/city ID
-        - name: kabkota
-          in: query
-          schema:
-            type: string
-          description: Filter by regency/city name (LIKE)
-        - name: alamat
-          in: query
-          schema:
-            type: string
-          description: Filter by address (LIKE)
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum:
-              - YA
-              - TIDAK
-          description: Filter by status (YA=active, TIDAK=inactive)
-      responses:
-        '200':
-          description: Daftar cabang berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CabangListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    post:
-      tags:
-        - Cabang PPBI
-      summary: Buat cabang baru
-      description: |
-        Membuat cabang baru dengan validasi lokasi dan status.
-
-        **Access Control**: Memerlukan permission 'create' pada module 4.
-      operationId: createCabang
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCabangRequest'
-      responses:
-        '200':
-          description: Cabang berhasil dibuat
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      ids_cabang:
-                        type: integer
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/cabang/{id}:
-    get:
-      tags:
-        - Cabang PPBI
-      summary: Ambil data cabang spesifik
-      description: Mengambil data detail cabang berdasarkan ID.
-      operationId: getCabangById
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID cabang yang akan diambil
-      responses:
-        '200':
-          description: Data cabang berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleCabangResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    put:
-      tags:
-        - Cabang PPBI
-      summary: Update cabang
-      description: Mengubah data cabang yang ada (semua field opsional).
-      operationId: updateCabang
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateCabangRequest'
-      responses:
-        '200':
-          description: Cabang berhasil diupdate
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - Cabang PPBI
-      summary: Hapus cabang
-      description: Menghapus cabang dari sistem.
-      operationId: deleteCabang
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Cabang berhasil dihapus
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /settings/cabang/single:
-    get:
-      tags:
-        - Cabang PPBI
-      summary: Ambil data cabang single dengan filter
-      description: |
-        Mengambil data satu cabang dengan filter spesifik.
-        Hasil dibatasi hanya 1 row pertama yang cocok.
-
-        **Caching**: Menggunakan Redis cache dengan MD5 URL hash.
-      operationId: getSingleCabang
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: ids_cabang
-          in: query
-          schema:
-            type: integer
-        - name: cabang
-          in: query
-          schema:
-            type: string
-        - name: ids_provinsi
-          in: query
-          schema:
-            type: integer
-        - name: provinsi
-          in: query
-          schema:
-            type: string
-        - name: pulau
-          in: query
-          schema:
-            type: string
-        - name: ids_kabkota
-          in: query
-          schema:
-            type: integer
-        - name: kabkota
-          in: query
-          schema:
-            type: string
-        - name: alamat
-          in: query
-          schema:
-            type: string
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum:
-              - YA
-              - TIDAK
-      responses:
-        '200':
-          description: Data cabang berhasil diambil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleCabangResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                $ref: '#/components/schemas/APIHealth'
 
 components:
   schemas:
-    # ===========================
-    # REQUEST SCHEMAS
-    # ===========================
+    # Schema untuk responses umum
+    APIInfo:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'API PPBI - Persatuan Penggemar Bonsai Indonesia'
+        version:
+          type: string
+          example: '1.2.0'
+        documentation:
+          type: object
+          properties:
+            url:
+              type: string
+            description:
+              type: string
+        endpoints:
+          type: object
+          properties:
+            docs:
+              type: string
+            api_spec:
+              type: string
+            health_check:
+              type: string
+            api_base:
+              type: string
 
-    RegisterRequest:
+    APIHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'OK'
+        message:
+          type: string
+          example: 'API PPBI is healthy'
+        timestamp:
+          type: string
+          format: date-time
+        documentation:
+          type: string
+
+    DocsHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'HEALTHY'
+        timestamp:
+          type: string
+          format: date-time
+        port:
+          type: integer
+          example: 5000
+        documentation:
+          type: object
+          properties:
+            swagger_html:
+              type: object
+              properties:
+                status:
+                  type: string
+                size:
+                  type: string
+            openapi_yaml:
+              type: object
+              properties:
+                status:
+                  type: string
+                size:
+                  type: string
+        access_urls:
+          type: object
+          properties:
+            docs:
+              type: string
+            api_spec:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        status:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        method:
+          type: string
+
+    # Schema untuk autentikasi
+    LoginRequest:
       type: object
       required:
         - username
@@ -1657,371 +779,164 @@ components:
           type: string
           minLength: 4
           maxLength: 20
-          pattern: ^[a-zA-Z0-9._]+$
-          example: john_doe
-          description: Username harus 4-20 karakter, hanya alphanumeric, underscore, dan titik
+          pattern: '^[a-zA-Z0-9._]+$'
+          example: 'user123'
         password:
           type: string
           minLength: 8
-          example: SecurePass@123
-          description: Password minimal 8 karakter (akan di-hash dengan bcrypt)
-        reset:
-          type: string
-          enum:
-            - YA
-            - TIDAK
-          default: TIDAK
-          description: Flag untuk bypass validasi password yang kuat
-
-    LoginRequest:
-      type: object
-      required:
-        - username
-        - password
-      properties:
-        username:
-          type: string
-          example: john_doe
-        password:
-          type: string
-          example: SecurePass@123
-
-    CreateUserRequest:
-      type: object
-      required:
-        - ids_grup
-        - username
-        - password
-      properties:
-        ids_grup:
-          type: integer
-          example: 1
-          description: ID grup/group yang user ini akan masuk
-        username:
-          type: string
-          minLength: 3
-          maxLength: 50
-          example: new_user
-        password:
-          type: string
-          minLength: 8
-          example: SecurePass@123
-        reset:
-          type: string
-          enum:
-            - YA
-            - TIDAK
-          default: TIDAK
-        created_by:
-          type: integer
-          description: User ID yang membuat (conditional, hanya jika authTingkat <= 5)
-
-    UpdateUserRequest:
-      type: object
-      properties:
-        ids_grup:
-          type: integer
-        username:
-          type: string
-        password:
-          type: string
-          description: Password baru (opsional, akan di-hash jika diisi)
-        reset:
-          type: string
-          enum:
-            - YA
-            - TIDAK
-
-    CreateProfileRequest:
-      type: object
-      required:
-        - nama_lengkap
-        - jenis_kelamin
-      properties:
-        nama_lengkap:
-          type: string
-          minLength: 3
-          maxLength: 255
-          example: John Doe
-        jenis_kelamin:
-          type: string
-          enum:
-            - LAKI-LAKI
-            - PEREMPUAN
-        ids_kelurahan:
-          type: integer
-          description: Kelurahan/village ID (opsional)
-        rw:
-          type: string
-          maxLength: 5
-          description: RW (opsional)
-        rt:
-          type: string
-          maxLength: 5
-          description: RT (opsional)
-        alamat:
-          type: string
-          description: Alamat (opsional)
-        nmr_tlpn:
-          type: string
-          minLength: 10
-          maxLength: 20
-          description: Nomor telepon (opsional)
-        foto:
-          type: string
-          example: https://example.com/photo.jpg
-          description: URL foto (opsional, http/https)
-
-    UpdateProfileRequest:
-      type: object
-      properties:
-        nama_lengkap:
-          type: string
-          minLength: 3
-          maxLength: 255
-        jenis_kelamin:
-          type: string
-          enum:
-            - LAKI-LAKI
-            - PEREMPUAN
-        ids_kelurahan:
-          type: integer
-        rw:
-          type: string
-        rt:
-          type: string
-        alamat:
-          type: string
-        nmr_tlpn:
-          type: string
-        foto:
-          type: string
-
-    CreateCabangRequest:
-      type: object
-      required:
-        - cabang
-        - ids_kabkota
-        - alamat
-        - status
-      properties:
-        cabang:
-          type: string
-          example: Cabang Jakarta Pusat
-        ids_kabkota:
-          type: integer
-          example: 101
-          description: Kabupaten/city ID
-        alamat:
-          type: string
-          example: Jl. Merdeka No. 1, Jakarta Pusat 12190
-        status:
-          type: string
-          enum:
-            - YA
-            - TIDAK
-          description: YA=active, TIDAK=inactive
-
-    UpdateCabangRequest:
-      type: object
-      properties:
-        cabang:
-          type: string
-        ids_kabkota:
-          type: integer
-        alamat:
-          type: string
-        status:
-          type: string
-          enum:
-            - YA
-            - TIDAK
-
-    # ===========================
-    # RESPONSE SCHEMAS
-    # ===========================
-
-    RegisterResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Data added successfully.
-        data:
-          type: object
-          properties:
-            id_user:
-              type: integer
+          example: 'Password123!'
 
     LoginResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
+        token:
           type: string
-        data:
-          type: object
-          properties:
-            token:
-              type: string
-              description: JWT Bearer token
+          description: JWT token untuk autentikasi
 
-    UserListResponse:
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+        - confirm_password
+      properties:
+        username:
+          type: string
+          minLength: 4
+          maxLength: 20
+          pattern: '^[a-zA-Z0-9._]+$'
+          example: 'newuser'
+        password:
+          type: string
+          minLength: 8
+          example: 'StrongPass123!'
+        confirm_password:
+          type: string
+          example: 'StrongPass123!'
+        reset:
+          type: string
+          enum: ['YA', 'TIDAK']
+          default: 'TIDAK'
+
+    RegisterResponse:
       type: object
       properties:
-        success:
-          type: boolean
         message:
           type: string
+          example: 'Data added successfully.'
+        id_user:
+          type: integer
+          example: 123
+
+    LogoutResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'You have successfully logged out!'
+
+    CheckTokenResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Your token is still active'
+
+    CreateTokenRequest:
+      type: object
+      required:
+        - payload
+      properties:
+        payload:
+          type: object
+          description: Payload untuk JWT token
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - payload
+      properties:
+        payload:
+          type: object
+          description: Payload baru untuk JWT token
+
+    DeleteTokenRequest:
+      type: object
+      properties:
+        keterangan:
+          type: string
+          example: 'LOGOUT'
+
+    TokenResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+
+    # Schema untuk JWT payload
+    JWTPayload:
+      type: object
+      properties:
+        userTime:
+          type: string
+        app:
+          type: string
+        id_user:
+          type: integer
+        nama:
+          type: string
+        email:
+          type: string
+        username:
+          type: string
+        nmr_tlpn:
+          type: string
+        mandiri:
+          type: string
+        ids_level:
+          type: integer
+        level:
+          type: string
+        tingkat:
+          type: string
+        ids_grup:
+          type: integer
+        grup:
+          type: string
+        keterangan:
+          type: string
+        login_as:
+          type: string
+        id_admin:
+          type: integer
+
+    # Schema untuk users management
+    UsersListResponse:
+      type: object
+      properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/UserData'
         pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+          $ref: '#/components/schemas/Pagination'
 
-    SingleUserResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        data:
-          $ref: '#/components/schemas/UserData'
-
-    ImportUsersResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        data:
-          type: object
-          properties:
-            summary:
-              type: object
-              properties:
-                total_rows:
-                  type: integer
-                valid_rows:
-                  type: integer
-                duplicate_rows:
-                  type: integer
-                import_success:
-                  type: integer
-                import_failure:
-                  type: integer
-                success_rate:
-                  type: string
-            details:
-              type: array
-              maxItems: 50
-            timestamp:
-              type: string
-
-    PreviewUsersResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        data:
-          type: object
-          properties:
-            file_info:
-              type: object
-              properties:
-                total_rows:
-                  type: integer
-                valid_rows:
-                  type: integer
-                invalid_rows:
-                  type: integer
-                duplicate_rows:
-                  type: integer
-                ready_to_import:
-                  type: boolean
-            column_mapping:
-              type: object
-            preview_data:
-              type: array
-            validation_summary:
-              type: object
-            errors:
-              type: object
-
-    ProfileListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProfileData'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
-
-    SingleProfileResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        data:
-          $ref: '#/components/schemas/ProfileData'
-
-    CabangListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/CabangData'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
-
-    SingleCabangResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        data:
-          $ref: '#/components/schemas/CabangData'
-
-    # ===========================
-    # DATA MODEL SCHEMAS
-    # ===========================
-
-    UserData:
+    UserResponse:
       type: object
       properties:
         id_user:
           type: integer
-        ids_grup:
-          type: integer
         username:
           type: string
+        ids_level:
+          type: integer
         level:
           type: string
         tingkat:
+          type: integer
+        ids_grup:
           type: integer
         grup:
           type: string
@@ -2029,6 +944,7 @@ components:
           type: string
         reset:
           type: string
+          enum: ['YA', 'TIDAK']
         created_at:
           type: string
           format: date-time
@@ -2036,48 +952,29 @@ components:
           type: string
           format: date-time
 
-    ProfileData:
+    UserData:
       type: object
       properties:
-        id_profile:
-          type: integer
-        user_id:
+        id_user:
           type: integer
         username:
           type: string
-        nama_lengkap:
-          type: string
-        jenis_kelamin:
-          type: string
-        ids_kelurahan:
+        ids_level:
           type: integer
-        rw:
+        level:
           type: string
-        rt:
-          type: string
-        alamat:
-          type: string
-        nmr_tlpn:
-          type: string
-        foto:
-          type: string
-        ids_provinsi:
+        tingkat:
           type: integer
-        provinsi:
-          type: string
-        ids_kabkota:
+        ids_grup:
           type: integer
-        kabkota:
+        grup:
           type: string
-        ids_kecamatan:
-          type: integer
-        kecamatan:
+        keterangan:
           type: string
-        ids_kelurahan_detail:
-          type: integer
-        kelurahan:
+        reset:
           type: string
-        pulau:
+          enum: ['YA', 'TIDAK']
+        import:
           type: string
         created_at:
           type: string
@@ -2086,119 +983,215 @@ components:
           type: string
           format: date-time
 
-    CabangData:
+    CreateUserRequest:
       type: object
+      required:
+        - ids_grup
+        - username
+        - password
+        - reset
       properties:
-        ids_cabang:
+        ids_grup:
           type: integer
-        cabang:
+          example: 8
+        username:
           type: string
-        ids_kabkota:
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9._]+$'
+          example: 'user123'
+        password:
+          type: string
+          minLength: 8
+          example: 'Password123!'
+        confirm_password:
+          type: string
+          example: 'Password123!'
+        reset:
+          type: string
+          enum: ['YA', 'TIDAK']
+          default: 'TIDAK'
+        created_by:
           type: integer
-        ids_provinsi:
-          type: integer
-        provinsi:
-          type: string
-        kabkota:
-          type: string
-        pulau:
-          type: string
-        alamat:
-          type: string
-        status:
-          type: string
-          enum:
-            - YA
-            - TIDAK
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
+          description: Untuk admin level tinggi
 
-    PaginationInfo:
+    CreateUserResponse:
       type: object
       properties:
-        page:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        id_user:
           type: integer
-        limit:
+          example: 123
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        ids_grup:
           type: integer
+          example: 8
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9._]+$'
+          example: 'updated_user'
+        password:
+          type: string
+          minLength: 8
+          example: 'NewPassword123!'
+        confirm_password:
+          type: string
+          example: 'NewPassword123!'
+        reset:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'TIDAK'
+
+    ImportResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Import data berhasil'
+        success:
+          type: integer
+          example: 10
+        failed:
+          type: integer
+          example: 2
+        details:
+          type: object
+          properties:
+            success_rows:
+              type: array
+              items:
+                type: integer
+            failed_rows:
+              type: array
+              items:
+                type: object
+                properties:
+                  row_number:
+                    type: integer
+                  error:
+                    type: string
+
+    PreviewResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Preview file Excel berhasil.'
+        file_info:
+          type: object
+          properties:
+            total_rows:
+              type: integer
+            valid_rows:
+              type: integer
+            invalid_rows:
+              type: integer
+            duplicate_rows:
+              type: integer
+            ready_to_import:
+              type: boolean
+        column_mapping:
+          type: object
+          properties:
+            mapped:
+              type: object
+            optional_columns:
+              type: object
+        preview_data:
+          type: array
+          items:
+            type: object
+            properties:
+              row_number:
+                type: integer
+              data:
+                type: array
+                items:
+                  type: string
+              is_header:
+                type: boolean
+              validation_message:
+                type: string
+        validation_summary:
+          type: object
+          properties:
+            is_valid:
+              type: boolean
+            structure_valid:
+              type: boolean
+            no_duplicates:
+              type: boolean
+            has_valid_data:
+              type: boolean
+        errors:
+          type: object
+          properties:
+            structure_errors:
+              type: array
+              items:
+                type: string
+            duplicate_errors:
+              type: array
+              items:
+                type: string
+            total_structure_errors:
+              type: integer
+            total_duplicate_errors:
+              type: integer
+
+    Pagination:
+      type: object
+      properties:
         total:
           type: integer
-        total_pages:
+        per_page:
+          type: integer
+        current_page:
+          type: integer
+        last_page:
+          type: integer
+        from:
+          type: integer
+        to:
           type: integer
 
     SuccessResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
         message:
           type: string
-        data:
-          type: object
+          example: 'Data changed successfully.'
 
-    ErrorResponse:
+    ExcelTemplateRequest:
       type: object
       properties:
-        success:
-          type: boolean
-          example: false
-        message:
+        template_type:
           type: string
-        error:
-          type: object
-
-  responses:
-    BadRequest:
-      description: Request tidak valid atau validasi gagal
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-
-    Unauthorized:
-      description: Token tidak valid, belum login, atau token expired
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-
-    Forbidden:
-      description: Access denied - user tidak memiliki permission untuk action ini
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-
-    NotFound:
-      description: Data tidak ditemukan
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-
-    InternalServerError:
-      description: Terjadi kesalahan pada server
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+          enum: ['basic', 'advanced']
+          default: 'basic'
 
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: |
-        JWT Bearer token yang didapatkan dari endpoint login atau Google OAuth.
-
-        Token digunakan untuk autentikasi semua endpoint yang dilindungi.
-        Simpan di header: Authorization: Bearer <token>
-
-        TTL token configurable via environment variable JWT_EXPIRED_IN (default: days)
+    googleOAuth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://accounts.google.com/o/oauth2/auth
+          tokenUrl: https://accounts.google.com/o/oauth2/token
+          scopes:
+            'https://www.googleapis.com/auth/userinfo.email': Akses email
+            'https://www.googleapis.com/auth/userinfo.profile': Akses profile
+            openid: OpenID Connect
 
 security:
-  - BearerAuth: []
+  - bearerAuth: []
