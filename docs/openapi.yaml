@@ -1,24 +1,70 @@
 openapi: 3.0.3
 info:
   title: API PPBI - Persatuan Penggemar Bonsai Indonesia
-  version: 1.2.0
+  version: 1.7.0
   description: |
     API untuk sistem Persatuan Penggemar Bonsai Indonesia (PPBI)
     Menyediakan layanan autentikasi, manajemen pengguna, event, dan berbagai fitur terkait bonsai.
   contact:
     name: PPBI Support
   x-changelog:
-    version: '1.2.0'
-    date: '2024-06-21'
+    version: '1.7.0'
+    date: '2024-06-26'
     changes:
-      - 'ADDED: Modul Users Management dengan CRUD operations lengkap'
-      - 'ADDED: Fitur import users dari Excel dengan validasi'
-      - 'ADDED: Endpoint preview Excel sebelum import'
-      - 'ADDED: Download template Excel untuk import'
-      - 'ADDED: Pagination dan filtering untuk list users'
-      - 'ADDED: Redis caching untuk performance users data'
-      - 'ENHANCED: Security dengan role-based access control'
+      - 'ADDED: Modul Settings Kelurahan dengan CRUD operations lengkap'
+      - 'ADDED: Validasi lengkap untuk data kelurahan (kode, kecamatan, nama, status)'
+      - 'ADDED: Redis caching untuk data kelurahan dengan berbagai filter'
+      - 'ADDED: Role-based access control untuk operasi kelurahan'
+      - 'ADDED: Foreign key relationship dengan tabel kecamatan'
+      - 'COMPLETED: Hierarki data geografis lengkap (provinsi → kabupaten/kota → kecamatan → kelurahan)'
+      - 'ENHANCED: Pagination dan filtering untuk data master kelurahan'
     previous_versions:
+      - version: '1.6.0'
+        date: '2024-06-25'
+        changes:
+          - 'ADDED: Modul Settings Kecamatan dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data kecamatan (kode, kabupaten/kota, nama, status)'
+          - 'ADDED: Redis caching untuk data kecamatan dengan berbagai filter'
+          - 'ADDED: Role-based access control untuk operasi kecamatan'
+          - 'ADDED: Foreign key relationship dengan tabel kabupaten/kota'
+          - 'ENHANCED: Pagination dan filtering untuk data master kecamatan'
+      - version: '1.5.0'
+        date: '2024-06-24'
+        changes:
+          - 'ADDED: Modul Settings Kabupaten/Kota dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data kabupaten/kota (kode, provinsi, nama, status)'
+          - 'ADDED: Redis caching untuk data kabupaten/kota dengan berbagai filter'
+          - 'ADDED: Role-based access control untuk operasi kabupaten/kota'
+          - 'ADDED: Foreign key relationship dengan tabel provinsi'
+          - 'ENHANCED: Pagination dan filtering untuk data master kabupaten/kota'
+      - version: '1.4.0'
+        date: '2024-06-23'
+        changes:
+          - 'ADDED: Modul Settings Provinsi dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data provinsi (kode, nama, pulau, status)'
+          - 'ADDED: Redis caching untuk data provinsi dengan berbagai filter'
+          - 'ADDED: Role-based access control untuk operasi provinsi'
+          - 'ADDED: Support untuk enum pulau (PAPUA, KALIMANTAN, SUMATERA, dll)'
+          - 'ENHANCED: Pagination dan filtering untuk data master provinsi'
+      - version: '1.3.0'
+        date: '2024-06-22'
+        changes:
+          - 'ADDED: Modul Profile Management dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data profile (nama, jenis kelamin, alamat, dll)'
+          - 'ADDED: Redis caching untuk profile data dengan berbagai filter'
+          - 'ADDED: Role-based access control untuk operasi profile'
+          - 'ADDED: Support untuk data geografis (provinsi, kabupaten, kecamatan, kelurahan)'
+          - 'ENHANCED: Pagination dan filtering advanced untuk profile'
+      - version: '1.2.0'
+        date: '2024-06-21'
+        changes:
+          - 'ADDED: Modul Users Management dengan CRUD operations lengkap'
+          - 'ADDED: Fitur import users dari Excel dengan validasi'
+          - 'ADDED: Endpoint preview Excel sebelum import'
+          - 'ADDED: Download template Excel untuk import'
+          - 'ADDED: Pagination dan filtering untuk list users'
+          - 'ADDED: Redis caching untuk performance users data'
+          - 'ENHANCED: Security dengan role-based access control'
       - version: '1.1.0'
         date: '2024-06-20'
         changes:
@@ -41,18 +87,30 @@ servers:
     x-environment: production
 
 tags:
+  - name: Documentation
+    description: Endpoint dokumentasi API
   - name: Authentication
     description: Operasi terkait autentikasi dan autorisasi
   - name: Users
     description: Manajemen data pengguna
-  - name: Documentation
-    description: Endpoint dokumentasi API
+  - name: Profile
+    description: Manajemen profil pengguna
+  - name: Settings - Provinsi
+    description: Manajemen data master provinsi
+  - name: Settings - Kabupaten/Kota
+    description: Manajemen data master kabupaten/kota
+  - name: Settings - Kecamatan
+    description: Manajemen data master kecamatan
+  - name: Settings - Kelurahan
+    description: Manajemen data master kelurahan
 
 paths:
   /:
     get:
       summary: Root endpoint - Informasi API
       description: Menampilkan informasi dasar API dan dokumentasi
+      tags:
+        - Documentation
       responses:
         '200':
           description: Informasi API berhasil diambil
@@ -67,6 +125,8 @@ paths:
     get:
       summary: Dokumentasi API - Swagger UI
       description: Menampilkan dokumentasi API interaktif
+      tags:
+        - Documentation
       responses:
         '200':
           description: Dokumentasi berhasil ditampilkan
@@ -83,6 +143,8 @@ paths:
     get:
       summary: OpenAPI Specification
       description: Mendapatkan file spesifikasi OpenAPI YAML
+      tags:
+        - Documentation
       responses:
         '200':
           description: Spesifikasi berhasil diambil
@@ -99,6 +161,8 @@ paths:
     get:
       summary: Health Check Dokumentasi
       description: Memeriksa status kesehatan file dokumentasi
+      tags:
+        - Documentation
       responses:
         '200':
           description: Dokumentasi sehat
@@ -110,6 +174,20 @@ paths:
           description: Dokumentasi tidak sehat
         '500':
           $ref: '#/components/schemas/ErrorResponse'
+
+  /api:
+    get:
+      summary: Health Check API
+      description: Memeriksa status kesehatan API
+      tags:
+        - Documentation
+      responses:
+        '200':
+          description: API sehat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIHealth'
 
   # ============================================
   # AUTHENTICATION ENDPOINTS
@@ -656,17 +734,1431 @@ paths:
         '500':
           $ref: '#/components/schemas/ErrorResponse'
 
-  /api:
+  # ============================================
+  # PROFILE MANAGEMENT ENDPOINTS
+  # ============================================
+  /api/profile:
     get:
-      summary: Health Check API
-      description: Memeriksa status kesehatan API
+      summary: Get list of profiles
+      description: Mendapatkan daftar profil dengan pagination, filtering, dan caching Redis
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id_profile
+          in: query
+          schema:
+            type: string
+          description: Filter by profile IDs (comma separated)
+        - name: username
+          in: query
+          schema:
+            type: string
+          description: Filter by username
+        - name: ids_level
+          in: query
+          schema:
+            type: string
+          description: Filter by level IDs (comma separated)
+        - name: level
+          in: query
+          schema:
+            type: string
+          description: Filter by level name
+        - name: ids_grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group IDs (comma separated)
+        - name: grup
+          in: query
+          schema:
+            type: string
+          description: Filter by group name
+        - name: nama_lengkap
+          in: query
+          schema:
+            type: string
+          description: Filter by full name
+        - name: jenis_kelamin
+          in: query
+          schema:
+            type: string
+            enum: ['LAKI-LAKI', 'PEREMPUAN']
+          description: Filter by gender
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province name
+        - name: pulau
+          in: query
+          schema:
+            type: string
+          description: Filter by island
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by city IDs (comma separated)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by city codes (comma separated)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by city name
+        - name: ids_kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district IDs (comma separated)
+        - name: kode_kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district codes (comma separated)
+        - name: kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district name
+        - name: ids_kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village IDs (comma separated)
+        - name: kode_kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village codes (comma separated)
+        - name: kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village name
+        - name: nmr_tlpn
+          in: query
+          schema:
+            type: string
+          description: Filter by phone number
+        - name: created_by
+          in: query
+          schema:
+            type: integer
+          description: Filter by creator ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at DESC'
+          description: Order by field
       responses:
         '200':
-          description: API sehat
+          description: Daftar profil berhasil diambil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/APIHealth'
+                $ref: '#/components/schemas/ProfileListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new profile
+      description: Membuat profil baru dengan validasi lengkap
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProfileRequest'
+      responses:
+        '200':
+          description: Profil berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProfileResponse'
+        '400':
+          description: Validasi gagal
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/profile/single:
+    get:
+      summary: Get single profile
+      description: Mendapatkan data satu profil dengan caching Redis
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id_profile
+          in: query
+          schema:
+            type: integer
+          description: Profile ID
+        - name: username
+          in: query
+          schema:
+            type: string
+          description: Username
+        - name: ids_level
+          in: query
+          schema:
+            type: string
+          description: Level IDs (comma separated)
+        - name: level
+          in: query
+          schema:
+            type: string
+          description: Level name
+        - name: ids_grup
+          in: query
+          schema:
+            type: string
+          description: Group IDs (comma separated)
+        - name: grup
+          in: query
+          schema:
+            type: string
+          description: Group name
+        - name: nama_lengkap
+          in: query
+          schema:
+            type: string
+          description: Full name
+        - name: jenis_kelamin
+          in: query
+          schema:
+            type: string
+            enum: ['LAKI-LAKI', 'PEREMPUAN']
+          description: Gender
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Province name
+        - name: pulau
+          in: query
+          schema:
+            type: string
+          description: Island
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: string
+          description: City IDs (comma separated)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: City codes (comma separated)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: City name
+        - name: ids_kecamatan
+          in: query
+          schema:
+            type: string
+          description: District IDs (comma separated)
+        - name: kode_kecamatan
+          in: query
+          schema:
+            type: string
+          description: District codes (comma separated)
+        - name: kecamatan
+          in: query
+          schema:
+            type: string
+          description: District name
+        - name: ids_kelurahan
+          in: query
+          schema:
+            type: string
+          description: Village IDs (comma separated)
+        - name: kode_kelurahan
+          in: query
+          schema:
+            type: string
+          description: Village codes (comma separated)
+        - name: kelurahan
+          in: query
+          schema:
+            type: string
+          description: Village name
+        - name: nmr_tlpn
+          in: query
+          schema:
+            type: string
+          description: Phone number
+        - name: created_by
+          in: query
+          schema:
+            type: integer
+          description: Creator ID
+      responses:
+        '200':
+          description: Data profil berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/profile/{id}:
+    put:
+      summary: Update profile
+      description: Mengupdate data profil dengan validasi role-based access
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Profile ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Data profil berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProfileResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete profile
+      description: Menghapus profil dengan validasi role-based access
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Profile ID
+      responses:
+        '200':
+          description: Profil berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # SETTINGS PROVINSI ENDPOINTS
+  # ============================================
+  /api/settings/provinsi:
+    get:
+      summary: Get list of provinces
+      description: Mendapatkan daftar provinsi dengan pagination, filtering, dan caching Redis
+      tags:
+        - Settings - Provinsi
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province name
+        - name: pulau
+          in: query
+          schema:
+            type: string
+            enum:
+              [
+                'PAPUA',
+                'KALIMANTAN',
+                'SUMATERA',
+                'SULAWESI',
+                'JAWA',
+                'TIMOR',
+                'HALMAHERA',
+                'SERAM',
+                'SUMBAWA',
+                'FLORES',
+              ]
+          description: Filter by island
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at ASC'
+          description: Order by field
+      responses:
+        '200':
+          description: Daftar provinsi berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinsiListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new province
+      description: Membuat provinsi baru dengan validasi lengkap
+      tags:
+        - Settings - Provinsi
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProvinsiRequest'
+      responses:
+        '200':
+          description: Provinsi berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProvinsiResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/provinsi/single:
+    get:
+      summary: Get single province
+      description: Mendapatkan data satu provinsi dengan caching Redis
+      tags:
+        - Settings - Provinsi
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: integer
+          description: Province ID
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province code
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Province name
+        - name: pulau
+          in: query
+          schema:
+            type: string
+            enum:
+              [
+                'PAPUA',
+                'KALIMANTAN',
+                'SUMATERA',
+                'SULAWESI',
+                'JAWA',
+                'TIMOR',
+                'HALMAHERA',
+                'SERAM',
+                'SUMBAWA',
+                'FLORES',
+              ]
+          description: Island
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Status
+      responses:
+        '200':
+          description: Data provinsi berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinsiResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/provinsi/{id}:
+    put:
+      summary: Update province
+      description: Mengupdate data provinsi dengan validasi role-based access
+      tags:
+        - Settings - Provinsi
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Province ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProvinsiRequest'
+      responses:
+        '200':
+          description: Data provinsi berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProvinsiResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete province
+      description: Menghapus provinsi dengan validasi role-based access
+      tags:
+        - Settings - Provinsi
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Province ID
+      responses:
+        '200':
+          description: Provinsi berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # SETTINGS KABUPATEN/KOTA ENDPOINTS
+  # ============================================
+  /api/settings/kab-kota:
+    get:
+      summary: Get list of regencies/cities
+      description: Mendapatkan daftar kabupaten/kota dengan pagination, filtering, dan caching Redis
+      tags:
+        - Settings - Kabupaten/Kota
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city IDs (comma separated)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city codes (comma separated)
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province name
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at ASC'
+          description: Order by field
+      responses:
+        '200':
+          description: Daftar kabupaten/kota berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KabKotaListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new regency/city
+      description: Membuat kabupaten/kota baru dengan validasi lengkap
+      tags:
+        - Settings - Kabupaten/Kota
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKabKotaRequest'
+      responses:
+        '200':
+          description: Kabupaten/kota berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateKabKotaResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kab-kota/single:
+    get:
+      summary: Get single regency/city
+      description: Mendapatkan data satu kabupaten/kota dengan caching Redis
+      tags:
+        - Settings - Kabupaten/Kota
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: integer
+          description: Regency/city ID
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city code
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Province name
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Status
+      responses:
+        '200':
+          description: Data kabupaten/kota berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KabKotaResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kab-kota/{id}:
+    put:
+      summary: Update regency/city
+      description: Mengupdate data kabupaten/kota dengan validasi role-based access
+      tags:
+        - Settings - Kabupaten/Kota
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Regency/city ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKabKotaRequest'
+      responses:
+        '200':
+          description: Data kabupaten/kota berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateKabKotaResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete regency/city
+      description: Menghapus kabupaten/kota dengan validasi role-based access
+      tags:
+        - Settings - Kabupaten/Kota
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Regency/city ID
+      responses:
+        '200':
+          description: Kabupaten/kota berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # SETTINGS KECAMATAN ENDPOINTS
+  # ============================================
+  /api/settings/kecamatan:
+    get:
+      summary: Get list of districts
+      description: Mendapatkan daftar kecamatan dengan pagination, filtering, dan caching Redis
+      tags:
+        - Settings - Kecamatan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district IDs (comma separated)
+        - name: kode_kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district codes (comma separated)
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city IDs (comma separated)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city codes (comma separated)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city name
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province name
+        - name: kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at ASC'
+          description: Order by field
+      responses:
+        '200':
+          description: Daftar kecamatan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KecamatanListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new district
+      description: Membuat kecamatan baru dengan validasi lengkap
+      tags:
+        - Settings - Kecamatan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKecamatanRequest'
+      responses:
+        '200':
+          description: Kecamatan berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateKecamatanResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kecamatan/single:
+    get:
+      summary: Get single district
+      description: Mendapatkan data satu kecamatan dengan caching Redis
+      tags:
+        - Settings - Kecamatan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kecamatan
+          in: query
+          schema:
+            type: integer
+          description: District ID
+        - name: kode_kecamatan
+          in: query
+          schema:
+            type: string
+          description: District code
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city IDs (comma separated)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city codes (comma separated)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city name
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Province name
+        - name: kecamatan
+          in: query
+          schema:
+            type: string
+          description: District name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Status
+      responses:
+        '200':
+          description: Data kecamatan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KecamatanResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kecamatan/{id}:
+    put:
+      summary: Update district
+      description: Mengupdate data kecamatan dengan validasi role-based access
+      tags:
+        - Settings - Kecamatan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: District ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKecamatanRequest'
+      responses:
+        '200':
+          description: Data kecamatan berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateKecamatanResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete district
+      description: Menghapus kecamatan dengan validasi role-based access
+      tags:
+        - Settings - Kecamatan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: District ID
+      responses:
+        '200':
+          description: Kecamatan berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # SETTINGS KELURAHAN ENDPOINTS
+  # ============================================
+  /api/settings/kelurahan:
+    get:
+      summary: Get list of villages
+      description: Mendapatkan daftar kelurahan dengan pagination, filtering, dan caching Redis
+      tags:
+        - Settings - Kelurahan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village IDs (comma separated)
+        - name: kode_kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village codes (comma separated)
+        - name: ids_kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district IDs (comma separated)
+        - name: kode_kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district codes (comma separated)
+        - name: kecamatan
+          in: query
+          schema:
+            type: string
+          description: Filter by district name
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city IDs (comma separated)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city codes (comma separated)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Filter by regency/city name
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Filter by province name
+        - name: kelurahan
+          in: query
+          schema:
+            type: string
+          description: Filter by village name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            default: 'created_at ASC'
+          description: Order by field
+      responses:
+        '200':
+          description: Daftar kelurahan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KelurahanListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new village
+      description: Membuat kelurahan baru dengan validasi lengkap
+      tags:
+        - Settings - Kelurahan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKelurahanRequest'
+      responses:
+        '200':
+          description: Kelurahan berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateKelurahanResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kelurahan/single:
+    get:
+      summary: Get single village
+      description: Mendapatkan data satu kelurahan dengan caching Redis
+      tags:
+        - Settings - Kelurahan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kelurahan
+          in: query
+          schema:
+            type: integer
+          description: Village ID
+        - name: kode_kelurahan
+          in: query
+          schema:
+            type: string
+          description: Village code
+        - name: ids_kecamatan
+          in: query
+          schema:
+            type: string
+          description: District IDs (comma separated)
+        - name: kode_kecamatan
+          in: query
+          schema:
+            type: string
+          description: District codes (comma separated)
+        - name: kecamatan
+          in: query
+          schema:
+            type: string
+          description: District name
+        - name: ids_kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city IDs (comma separated)
+        - name: kode_kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city codes (comma separated)
+        - name: kabkota
+          in: query
+          schema:
+            type: string
+          description: Regency/city name
+        - name: ids_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province IDs (comma separated)
+        - name: kode_provinsi
+          in: query
+          schema:
+            type: string
+          description: Province codes (comma separated)
+        - name: provinsi
+          in: query
+          schema:
+            type: string
+          description: Province name
+        - name: kelurahan
+          in: query
+          schema:
+            type: string
+          description: Village name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Status
+      responses:
+        '200':
+          description: Data kelurahan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KelurahanResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/settings/kelurahan/{id}:
+    put:
+      summary: Update village
+      description: Mengupdate data kelurahan dengan validasi role-based access
+      tags:
+        - Settings - Kelurahan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Village ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKelurahanRequest'
+      responses:
+        '200':
+          description: Data kelurahan berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateKelurahanResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete village
+      description: Menghapus kelurahan dengan validasi role-based access
+      tags:
+        - Settings - Kelurahan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Village ID
+      responses:
+        '200':
+          description: Kelurahan berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
@@ -1146,6 +2638,880 @@ components:
             total_duplicate_errors:
               type: integer
 
+    # Schema untuk profile management
+    ProfileListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ProfileResponse:
+      type: object
+      properties:
+        id_profile:
+          type: integer
+        id_user:
+          type: integer
+        username:
+          type: string
+        ids_level:
+          type: integer
+        level:
+          type: string
+        tingkat:
+          type: integer
+        ids_grup:
+          type: integer
+        grup:
+          type: string
+        nama_lengkap:
+          type: string
+        jenis_kelamin:
+          type: string
+          enum: ['LAKI-LAKI', 'PEREMPUAN']
+        ids_kelurahan:
+          type: integer
+        kode_kelurahan:
+          type: string
+        kelurahan:
+          type: string
+        ids_kecamatan:
+          type: integer
+        kode_kecamatan:
+          type: string
+        kecamatan:
+          type: string
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        pulau:
+          type: string
+        rw:
+          type: string
+        rt:
+          type: string
+        alamat:
+          type: string
+        nmr_tlpn:
+          type: string
+        foto:
+          type: string
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProfileData:
+      type: object
+      properties:
+        id_profile:
+          type: integer
+        id_user:
+          type: integer
+        username:
+          type: string
+        ids_level:
+          type: integer
+        level:
+          type: string
+        tingkat:
+          type: integer
+        ids_grup:
+          type: integer
+        grup:
+          type: string
+        nama_lengkap:
+          type: string
+        jenis_kelamin:
+          type: string
+          enum: ['LAKI-LAKI', 'PEREMPUAN']
+        ids_kelurahan:
+          type: integer
+        kode_kelurahan:
+          type: string
+        kelurahan:
+          type: string
+        ids_kecamatan:
+          type: integer
+        kode_kecamatan:
+          type: string
+        kecamatan:
+          type: string
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        pulau:
+          type: string
+        rw:
+          type: string
+        rt:
+          type: string
+        alamat:
+          type: string
+        nmr_tlpn:
+          type: string
+        foto:
+          type: string
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateProfileRequest:
+      type: object
+      required:
+        - nama_lengkap
+        - jenis_kelamin
+      properties:
+        nama_lengkap:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: 'Budi Santoso'
+        jenis_kelamin:
+          type: string
+          enum: ['LAKI-LAKI', 'PEREMPUAN']
+          example: 'LAKI-LAKI'
+        ids_kelurahan:
+          type: integer
+          example: 123
+        rw:
+          type: string
+          minLength: 1
+          maxLength: 5
+          example: '02'
+        rt:
+          type: string
+          minLength: 1
+          maxLength: 5
+          example: '03'
+        alamat:
+          type: string
+          example: 'Jl. Merdeka No. 1, Kelurahan Contoh, Kecamatan Contoh'
+        nmr_tlpn:
+          type: string
+          minLength: 10
+          maxLength: 20
+          example: '081234567890'
+        foto:
+          type: string
+          example: 'https://example.com/foto.jpg'
+        created_by:
+          type: integer
+          description: Untuk admin level tinggi
+
+    CreateProfileResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        id_profile:
+          type: integer
+          example: 456
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        nama_lengkap:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: 'Budi Santoso Updated'
+        jenis_kelamin:
+          type: string
+          enum: ['LAKI-LAKI', 'PEREMPUAN']
+          example: 'LAKI-LAKI'
+        ids_kelurahan:
+          type: integer
+          example: 123
+        rw:
+          type: string
+          minLength: 1
+          maxLength: 5
+          example: '02'
+        rt:
+          type: string
+          minLength: 1
+          maxLength: 5
+          example: '03'
+        alamat:
+          type: string
+          example: 'Jl. Merdeka No. 1 Updated, Kelurahan Contoh, Kecamatan Contoh'
+        nmr_tlpn:
+          type: string
+          minLength: 10
+          maxLength: 20
+          example: '081234567890'
+        foto:
+          type: string
+          example: 'https://example.com/foto-updated.jpg'
+
+    UpdateProfileResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        id_profile:
+          type: integer
+          example: 456
+
+    # Schema untuk settings provinsi
+    ProvinsiListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProvinsiData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ProvinsiResponse:
+      type: object
+      properties:
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        pulau:
+          type: string
+          enum:
+            [
+              'PAPUA',
+              'KALIMANTAN',
+              'SUMATERA',
+              'SULAWESI',
+              'JAWA',
+              'TIMOR',
+              'HALMAHERA',
+              'SERAM',
+              'SUMBAWA',
+              'FLORES',
+            ]
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProvinsiData:
+      type: object
+      properties:
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        pulau:
+          type: string
+          enum:
+            [
+              'PAPUA',
+              'KALIMANTAN',
+              'SUMATERA',
+              'SULAWESI',
+              'JAWA',
+              'TIMOR',
+              'HALMAHERA',
+              'SERAM',
+              'SUMBAWA',
+              'FLORES',
+            ]
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateProvinsiRequest:
+      type: object
+      required:
+        - kode_provinsi
+        - provinsi
+        - pulau
+        - status
+      properties:
+        kode_provinsi:
+          type: string
+          minLength: 1
+          maxLength: 5
+          example: '31'
+          description: Kode provinsi (max 5 karakter)
+        provinsi:
+          type: string
+          example: 'DKI JAKARTA'
+          description: Nama provinsi
+        pulau:
+          type: string
+          enum:
+            [
+              'PAPUA',
+              'KALIMANTAN',
+              'SUMATERA',
+              'SULAWESI',
+              'JAWA',
+              'TIMOR',
+              'HALMAHERA',
+              'SERAM',
+              'SUMBAWA',
+              'FLORES',
+            ]
+          example: 'JAWA'
+          description: Pulau tempat provinsi berada
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    CreateProvinsiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_provinsi:
+          type: integer
+          example: 1
+
+    UpdateProvinsiRequest:
+      type: object
+      properties:
+        kode_provinsi:
+          type: string
+          minLength: 1
+          maxLength: 5
+          example: '31'
+          description: Kode provinsi (max 5 karakter)
+        provinsi:
+          type: string
+          example: 'DKI JAKARTA Updated'
+          description: Nama provinsi
+        pulau:
+          type: string
+          enum:
+            [
+              'PAPUA',
+              'KALIMANTAN',
+              'SUMATERA',
+              'SULAWESI',
+              'JAWA',
+              'TIMOR',
+              'HALMAHERA',
+              'SERAM',
+              'SUMBAWA',
+              'FLORES',
+            ]
+          example: 'JAWA'
+          description: Pulau tempat provinsi berada
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    UpdateProvinsiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_provinsi:
+          type: integer
+          example: 1
+
+    # Schema untuk settings kabupaten/kota
+    KabKotaListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KabKotaData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    KabKotaResponse:
+      type: object
+      properties:
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        kabkota:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    KabKotaData:
+      type: object
+      properties:
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        kabkota:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateKabKotaRequest:
+      type: object
+      required:
+        - kode_kabkota
+        - ids_provinsi
+        - kabkota
+        - status
+      properties:
+        kode_kabkota:
+          type: string
+          minLength: 1
+          maxLength: 10
+          example: '31.01'
+          description: Kode kabupaten/kota (max 10 karakter)
+        ids_provinsi:
+          type: integer
+          example: 1
+          description: ID provinsi (foreign key)
+        kabkota:
+          type: string
+          example: 'KABUPATEN ADM. KEPULAUAN SERIBU'
+          description: Nama kabupaten/kota
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    CreateKabKotaResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_kabkota:
+          type: integer
+          example: 1
+
+    UpdateKabKotaRequest:
+      type: object
+      properties:
+        kode_kabkota:
+          type: string
+          minLength: 1
+          maxLength: 10
+          example: '31.01'
+          description: Kode kabupaten/kota (max 10 karakter)
+        ids_provinsi:
+          type: integer
+          example: 1
+          description: ID provinsi (foreign key)
+        kabkota:
+          type: string
+          example: 'KABUPATEN ADM. KEPULAUAN SERIBU Updated'
+          description: Nama kabupaten/kota
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    UpdateKabKotaResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_kabkota:
+          type: integer
+          example: 1
+
+    # Schema untuk settings kecamatan
+    KecamatanListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KecamatanData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    KecamatanResponse:
+      type: object
+      properties:
+        ids_kecamatan:
+          type: integer
+        kode_kecamatan:
+          type: string
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        kecamatan:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    KecamatanData:
+      type: object
+      properties:
+        ids_kecamatan:
+          type: integer
+        kode_kecamatan:
+          type: string
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        kecamatan:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateKecamatanRequest:
+      type: object
+      required:
+        - kode_kecamatan
+        - ids_kabkota
+        - kecamatan
+        - status
+      properties:
+        kode_kecamatan:
+          type: string
+          minLength: 1
+          maxLength: 10
+          example: '31.01.01'
+          description: Kode kecamatan (max 10 karakter)
+        ids_kabkota:
+          type: integer
+          example: 1
+          description: ID kabupaten/kota (foreign key)
+        kecamatan:
+          type: string
+          example: 'KEPULAUAN SERIBU SELATAN'
+          description: Nama kecamatan
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    CreateKecamatanResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_kecamatan:
+          type: integer
+          example: 1
+
+    UpdateKecamatanRequest:
+      type: object
+      properties:
+        kode_kecamatan:
+          type: string
+          minLength: 1
+          maxLength: 10
+          example: '31.01.01'
+          description: Kode kecamatan (max 10 karakter)
+        ids_kabkota:
+          type: integer
+          example: 1
+          description: ID kabupaten/kota (foreign key)
+        kecamatan:
+          type: string
+          example: 'KEPULAUAN SERIBU SELATAN Updated'
+          description: Nama kecamatan
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    UpdateKecamatanResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_kecamatan:
+          type: integer
+          example: 1
+
+    # Schema untuk settings kelurahan
+    KelurahanListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KelurahanData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    KelurahanResponse:
+      type: object
+      properties:
+        ids_kelurahan:
+          type: integer
+        kode_kelurahan:
+          type: string
+        ids_kecamatan:
+          type: integer
+        kode_kecamatan:
+          type: string
+        kecamatan:
+          type: string
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        kelurahan:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    KelurahanData:
+      type: object
+      properties:
+        ids_kelurahan:
+          type: integer
+        kode_kelurahan:
+          type: string
+        ids_kecamatan:
+          type: integer
+        kode_kecamatan:
+          type: string
+        kecamatan:
+          type: string
+        ids_kabkota:
+          type: integer
+        kode_kabkota:
+          type: string
+        kabkota:
+          type: string
+        ids_provinsi:
+          type: integer
+        kode_provinsi:
+          type: string
+        provinsi:
+          type: string
+        kelurahan:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateKelurahanRequest:
+      type: object
+      required:
+        - kode_kelurahan
+        - ids_kecamatan
+        - kelurahan
+        - status
+      properties:
+        kode_kelurahan:
+          type: string
+          minLength: 1
+          maxLength: 15
+          example: '31.01.01.1001'
+          description: Kode kelurahan (max 15 karakter)
+        ids_kecamatan:
+          type: integer
+          example: 1
+          description: ID kecamatan (foreign key)
+        kelurahan:
+          type: string
+          example: 'PULAU TIDUNG'
+          description: Nama kelurahan
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    CreateKelurahanResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_kelurahan:
+          type: integer
+          example: 1
+
+    UpdateKelurahanRequest:
+      type: object
+      properties:
+        kode_kelurahan:
+          type: string
+          minLength: 1
+          maxLength: 15
+          example: '31.01.01.1001'
+          description: Kode kelurahan (max 15 karakter)
+        ids_kecamatan:
+          type: integer
+          example: 1
+          description: ID kecamatan (foreign key)
+        kelurahan:
+          type: string
+          example: 'PULAU TIDUNG Updated'
+          description: Nama kelurahan
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+          description: Status aktif/tidak aktif
+
+    UpdateKelurahanResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_kelurahan:
+          type: integer
+          example: 1
+
+    # Schema untuk pagination
     Pagination:
       type: object
       properties:
@@ -1162,6 +3528,7 @@ components:
         to:
           type: integer
 
+    # Schema untuk success response
     SuccessResponse:
       type: object
       properties:
@@ -1169,6 +3536,7 @@ components:
           type: string
           example: 'Data changed successfully.'
 
+    # Schema untuk request excel
     ExcelTemplateRequest:
       type: object
       properties:
