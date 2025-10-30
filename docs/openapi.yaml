@@ -1,22 +1,31 @@
 openapi: 3.0.3
 info:
   title: API PPBI - Persatuan Penggemar Bonsai Indonesia
-  version: 1.15.0
+  version: 1.16.0
   description: |
     API untuk sistem Persatuan Penggemar Bonsai Indonesia (PPBI)
     Menyediakan layanan autentikasi, manajemen pengguna, event, dan berbagai fitur terkait bonsai.
   contact:
     name: PPBI Support
   x-changelog:
-    version: '1.15.0'
+    version: '1.16.0'
     date: '2025-01-23'
     changes:
-      - 'ADDED: Modul Settings Kelas dengan CRUD operations lengkap'
-      - 'ADDED: Validasi lengkap untuk data kelas (nama kelas, status)'
-      - 'ADDED: Redis caching untuk data kelas dengan berbagai filter'
-      - 'ADDED: Role-based access control untuk operasi kelas'
-      - 'ENHANCED: Pagination dan filtering untuk data master kelas'
+      - 'ADDED: Modul AWS S3 file upload dengan support multiple file types'
+      - 'ADDED: Endpoint upload file dengan validasi type dan size'
+      - 'ADDED: Endpoint delete file dari S3 bucket'
+      - 'ADDED: Support untuk upload image, document, dan file umum'
+      - 'ADDED: Security validation untuk operasi file upload'
+      - 'ENHANCED: Error handling untuk operasi S3'
     previous_versions:
+      - version: '1.15.0'
+        date: '2025-01-23'
+        changes:
+          - 'ADDED: Modul Settings Kelas dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data kelas (nama kelas, status)'
+          - 'ADDED: Redis caching untuk data kelas dengan berbagai filter'
+          - 'ADDED: Role-based access control untuk operasi kelas'
+          - 'ENHANCED: Pagination dan filtering untuk data master kelas'
       - version: '1.14.0'
         date: '2024-07-03'
         changes:
@@ -55,6 +64,8 @@ tags:
     description: Endpoint dokumentasi API
   - name: Authentication
     description: Operasi terkait autentikasi dan autorisasi
+  - name: AWS S3 / MinIO
+    description: Manajemen file dengan AWS S3/MinIO
   - name: Users
     description: Manajemen data pengguna
   - name: Profile
@@ -3992,6 +4003,80 @@ paths:
         '500':
           $ref: '#/components/schemas/ErrorResponse'
 
+  # ============================================
+  # AWS S3 FILE UPLOAD ENDPOINTS
+  # ============================================
+  /api/aws/upload:
+    post:
+      summary: Upload file to S3 bucket
+      description: Mengupload file ke AWS S3 bucket dengan validasi type dan size file
+      tags:
+        - AWS S3 / MinIO
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File yang akan diupload
+                type:
+                  type: string
+                  enum: ['image', 'document', 'file']
+                  default: 'file'
+                  description: Tipe file untuk validasi
+      responses:
+        '200':
+          description: File berhasil diupload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AwsUploadResponse'
+        '400':
+          description: Validasi gagal atau file tidak sesuai
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/aws/delete:
+    delete:
+      summary: Delete file from S3 bucket
+      description: Menghapus file dari AWS S3 bucket
+      tags:
+        - AWS S3 / MinIO
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: file_path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Path file di S3 yang akan dihapus
+      responses:
+        '200':
+          description: File berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: File path tidak valid
+        '401':
+          description: Akses ditolak
+        '404':
+          description: File tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     # Schema untuk responses umum
@@ -6469,6 +6554,29 @@ components:
         ids_kelas:
           type: integer
           example: 1
+
+    # Schema untuk AWS file upload
+    AwsUploadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'File uploaded successfully.'
+        file_path:
+          type: string
+          example: 'uploads/images/2025/01/12345-image.jpg'
+        file_url:
+          type: string
+          example: 'https://ppbi-bucket.s3.amazonaws.com/uploads/images/2025/01/12345-image.jpg'
+        file_name:
+          type: string
+          example: 'image.jpg'
+        file_size:
+          type: integer
+          example: 102400
+        file_type:
+          type: string
+          example: 'image/jpeg'
 
     # Schema untuk success response
     SuccessResponse:
