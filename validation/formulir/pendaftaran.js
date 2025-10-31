@@ -5,9 +5,6 @@ const isEmpty = require('../is-empty');
 module.exports = function validateInput(method, path, data) {
   let errors = {};
 
-  console.log(data);
-  console.log(data.id_event);
-
   // Normalisasi data - konversi ke string kosong jika undefined/null
   data.id_event = !isEmpty(data.id_event) ? data.id_event : '';
   data.nomor_sertifikat = !isEmpty(data.nomor_sertifikat) ? data.nomor_sertifikat : '';
