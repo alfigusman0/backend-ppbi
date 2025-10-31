@@ -641,7 +641,7 @@ Controller.update = async (req, res) => {
         const data = {
           jenis: 'Suiseki',
           nama_lengkap: profile[0].nama_lengkap,
-          no_registrasi: no_registrasi,
+          no_registrasi: checkData[0].no_registrasi,
           jenis_bonsai: suiseki[0].jenis_suiseki,
           nama_acara: event[0].nama_acara,
           harga: kategori[0].uang,
