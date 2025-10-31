@@ -1,23 +1,44 @@
 openapi: 3.0.3
 info:
   title: API PPBI - Persatuan Penggemar Bonsai Indonesia
-  version: 1.16.0
+  version: 1.19.0
   description: |
     API untuk sistem Persatuan Penggemar Bonsai Indonesia (PPBI)
     Menyediakan layanan autentikasi, manajemen pengguna, event, dan berbagai fitur terkait bonsai.
   contact:
     name: PPBI Support
   x-changelog:
-    version: '1.16.0'
+    version: '1.19.0'
     date: '2025-01-23'
     changes:
-      - 'ADDED: Modul AWS S3 file upload dengan support multiple file types'
-      - 'ADDED: Endpoint upload file dengan validasi type dan size'
-      - 'ADDED: Endpoint delete file dari S3 bucket'
-      - 'ADDED: Support untuk upload image, document, dan file umum'
-      - 'ADDED: Security validation untuk operasi file upload'
-      - 'ENHANCED: Error handling untuk operasi S3'
+      - 'ADDED: Modul Suiseki dengan CRUD operations lengkap'
+      - 'ADDED: Validasi lengkap untuk data suiseki (nama, jenis, kelas, status)'
+      - 'ADDED: Filtering untuk data suiseki dengan multiple criteria'
+      - 'ADDED: Role-based access control untuk operasi suiseki'
     previous_versions:
+      - version: '1.18.0'
+        date: '2025-01-23'
+        changes:
+          - 'ADDED: Modul Pohon dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data pohon (nama, jenis, kelas, status)'
+          - 'ADDED: Filtering untuk data pohon dengan multiple criteria'
+          - 'ADDED: Role-based access control untuk operasi pohon'
+      - version: '1.17.0'
+        date: '2025-01-23'
+        changes:
+          - 'ADDED: Modul KTA (Kartu Tanda Anggota) dengan CRUD operations lengkap'
+          - 'ADDED: Validasi lengkap untuk data KTA (no_kta, id_anggota, status)'
+          - 'ADDED: Filtering dan pagination untuk data KTA'
+          - 'ADDED: Role-based access control untuk operasi KTA'
+      - version: '1.16.0'
+        date: '2025-01-23'
+        changes:
+          - 'ADDED: Modul AWS S3 file upload dengan support multiple file types'
+          - 'ADDED: Endpoint upload file dengan validasi type dan size'
+          - 'ADDED: Endpoint delete file dari S3 bucket'
+          - 'ADDED: Support untuk upload image, document, dan file umum'
+          - 'ADDED: Security validation untuk operasi file upload'
+          - 'ENHANCED: Error handling untuk operasi S3'
       - version: '1.15.0'
         date: '2025-01-23'
         changes:
@@ -26,25 +47,6 @@ info:
           - 'ADDED: Redis caching untuk data kelas dengan berbagai filter'
           - 'ADDED: Role-based access control untuk operasi kelas'
           - 'ENHANCED: Pagination dan filtering untuk data master kelas'
-      - version: '1.14.0'
-        date: '2024-07-03'
-        changes:
-          - 'ADDED: Modul Settings Jenis Bonsai dengan CRUD operations lengkap'
-          - 'ADDED: Validasi lengkap untuk data jenis bonsai (nama jenis, status)'
-          - 'ADDED: Redis caching untuk data jenis bonsai dengan berbagai filter'
-          - 'ADDED: Role-based access control untuk operasi jenis bonsai'
-          - 'ADDED: Support untuk katalog jenis-jenis bonsai dalam sistem'
-          - 'ENHANCED: Pagination dan filtering untuk data master jenis bonsai'
-      - version: '1.13.0'
-        date: '2024-07-02'
-        changes:
-          - 'ADDED: Modul Settings Profile Cabang dengan CRUD operations lengkap'
-          - 'ADDED: Validasi lengkap untuk data profile cabang (nama, kontak, alamat, status)'
-          - 'ADDED: Redis caching untuk data profile cabang dengan berbagai filter'
-          - 'ADDED: Role-based access control untuk operasi profile cabang'
-          - 'ADDED: Foreign key relationship dengan tabel cabang dan geografis'
-          - 'ADDED: Support untuk informasi kontak dan alamat lengkap cabang'
-          - 'ENHANCED: Pagination dan filtering untuk data profile cabang'
 
 servers:
   - url: http://localhost:5000/api
@@ -4083,6 +4085,565 @@ paths:
         '500':
           $ref: '#/components/schemas/ErrorResponse'
 
+  # ============================================
+  # KTA (KARTU TANDA ANGGOTA) ENDPOINTS
+  # ============================================
+  /api/kta:
+    get:
+      summary: Get list of KTA
+      description: Mendapatkan daftar Kartu Tanda Anggota dengan pagination dan filtering
+      tags:
+        - KTA
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kta
+          in: query
+          schema:
+            type: string
+          description: Filter by KTA IDs (comma separated)
+        - name: no_kta
+          in: query
+          schema:
+            type: string
+          description: Filter by nomor KTA
+        - name: id_anggota
+          in: query
+          schema:
+            type: string
+          description: Filter by ID anggota
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Daftar KTA berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KtaListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new KTA
+      description: Membuat Kartu Tanda Anggota baru dengan validasi lengkap
+      tags:
+        - KTA
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKtaRequest'
+      responses:
+        '200':
+          description: KTA berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateKtaResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/kta/single:
+    get:
+      summary: Get single KTA
+      description: Mendapatkan data satu Kartu Tanda Anggota
+      tags:
+        - KTA
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_kta
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: KTA ID
+      responses:
+        '200':
+          description: Data KTA berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KtaResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/kta/{id}:
+    put:
+      summary: Update KTA
+      description: Mengupdate data Kartu Tanda Anggota
+      tags:
+        - KTA
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: KTA ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKtaRequest'
+      responses:
+        '200':
+          description: Data KTA berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateKtaResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete KTA
+      description: Menghapus Kartu Tanda Anggota
+      tags:
+        - KTA
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: KTA ID
+      responses:
+        '200':
+          description: KTA berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # POHON BONSAI ENDPOINTS
+  # ============================================
+  /api/pohon:
+    get:
+      summary: Get list of trees
+      description: Mendapatkan daftar pohon bonsai dengan pagination dan filtering
+      tags:
+        - Pohon
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_pohon
+          in: query
+          schema:
+            type: string
+          description: Filter by tree IDs (comma separated)
+        - name: id_jenis_bonsai
+          in: query
+          schema:
+            type: string
+          description: Filter by jenis bonsai ID
+        - name: id_kelas
+          in: query
+          schema:
+            type: string
+          description: Filter by kelas ID
+        - name: id_anggota
+          in: query
+          schema:
+            type: string
+          description: Filter by anggota ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Daftar pohon berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PohonListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new tree
+      description: Membuat data pohon bonsai baru dengan validasi lengkap
+      tags:
+        - Pohon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePohonRequest'
+      responses:
+        '200':
+          description: Pohon berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePohonResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/pohon/single:
+    get:
+      summary: Get single tree
+      description: Mendapatkan data satu pohon bonsai
+      tags:
+        - Pohon
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_pohon
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Tree ID
+      responses:
+        '200':
+          description: Data pohon berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PohonResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/pohon/{id}:
+    put:
+      summary: Update tree
+      description: Mengupdate data pohon bonsai
+      tags:
+        - Pohon
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Tree ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePohonRequest'
+      responses:
+        '200':
+          description: Data pohon berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePohonResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete tree
+      description: Menghapus data pohon bonsai
+      tags:
+        - Pohon
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Tree ID
+      responses:
+        '200':
+          description: Pohon berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # SUISEKI ENDPOINTS
+  # ============================================
+  /api/suiseki:
+    get:
+      summary: Get list of suiseki
+      description: Mendapatkan daftar suiseki dengan pagination dan filtering
+      tags:
+        - Suiseki
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_suiseki
+          in: query
+          schema:
+            type: string
+          description: Filter by suiseki IDs (comma separated)
+        - name: id_jenis_suiseki
+          in: query
+          schema:
+            type: string
+          description: Filter by jenis suiseki ID
+        - name: id_kelas
+          in: query
+          schema:
+            type: string
+          description: Filter by kelas ID
+        - name: id_anggota
+          in: query
+          schema:
+            type: string
+          description: Filter by anggota ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['YA', 'TIDAK']
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Daftar suiseki berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuisekiListResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new suiseki
+      description: Membuat data suiseki baru dengan validasi lengkap
+      tags:
+        - Suiseki
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSuisekiRequest'
+      responses:
+        '200':
+          description: Suiseki berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSuisekiResponse'
+        '400':
+          description: Validasi gagal atau data sudah ada
+        '401':
+          description: Akses ditolak
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/suiseki/single:
+    get:
+      summary: Get single suiseki
+      description: Mendapatkan data satu suiseki
+      tags:
+        - Suiseki
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids_suiseki
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Suiseki ID
+      responses:
+        '200':
+          description: Data suiseki berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuisekiResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/suiseki/{id}:
+    put:
+      summary: Update suiseki
+      description: Mengupdate data suiseki
+      tags:
+        - Suiseki
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Suiseki ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSuisekiRequest'
+      responses:
+        '200':
+          description: Data suiseki berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateSuisekiResponse'
+        '400':
+          description: Validasi gagal atau data tidak berubah
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete suiseki
+      description: Menghapus data suiseki
+      tags:
+        - Suiseki
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Suiseki ID
+      responses:
+        '200':
+          description: Suiseki berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Akses ditolak
+        '404':
+          description: Data tidak ditemukan
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     # Schema untuk responses umum
@@ -6583,6 +7144,385 @@ components:
         file_type:
           type: string
           example: 'image/jpeg'
+
+    # Schema untuk KTA
+    KtaListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KtaData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    KtaResponse:
+      type: object
+      properties:
+        ids_kta:
+          type: integer
+        no_kta:
+          type: string
+        id_anggota:
+          type: integer
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    KtaData:
+      type: object
+      properties:
+        ids_kta:
+          type: integer
+        no_kta:
+          type: string
+        id_anggota:
+          type: integer
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateKtaRequest:
+      type: object
+      required:
+        - no_kta
+        - id_anggota
+        - status
+      properties:
+        no_kta:
+          type: string
+          example: 'KTA-2025-001'
+        id_anggota:
+          type: integer
+          example: 1
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+
+    CreateKtaResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_kta:
+          type: integer
+          example: 1
+
+    UpdateKtaRequest:
+      type: object
+      properties:
+        no_kta:
+          type: string
+          example: 'KTA-2025-001-UPDATED'
+        id_anggota:
+          type: integer
+          example: 1
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+
+    UpdateKtaResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_kta:
+          type: integer
+          example: 1
+
+    # Schema untuk Pohon
+    PohonListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PohonData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PohonResponse:
+      type: object
+      properties:
+        ids_pohon:
+          type: integer
+        nama_pohon:
+          type: string
+        id_jenis_bonsai:
+          type: integer
+        id_kelas:
+          type: integer
+        id_anggota:
+          type: integer
+        deskripsi:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PohonData:
+      type: object
+      properties:
+        ids_pohon:
+          type: integer
+        nama_pohon:
+          type: string
+        id_jenis_bonsai:
+          type: integer
+        id_kelas:
+          type: integer
+        id_anggota:
+          type: integer
+        deskripsi:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreatePohonRequest:
+      type: object
+      required:
+        - nama_pohon
+        - id_jenis_bonsai
+        - id_kelas
+        - id_anggota
+        - status
+      properties:
+        nama_pohon:
+          type: string
+          example: 'Bonsai Beringin Seribu Akar'
+        id_jenis_bonsai:
+          type: integer
+          example: 1
+        id_kelas:
+          type: integer
+          example: 1
+        id_anggota:
+          type: integer
+          example: 1
+        deskripsi:
+          type: string
+          example: 'Bonsai beringin dengan akar yang indah'
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+
+    CreatePohonResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_pohon:
+          type: integer
+          example: 1
+
+    UpdatePohonRequest:
+      type: object
+      properties:
+        nama_pohon:
+          type: string
+          example: 'Bonsai Beringin Seribu Akar Updated'
+        id_jenis_bonsai:
+          type: integer
+          example: 1
+        id_kelas:
+          type: integer
+          example: 1
+        id_anggota:
+          type: integer
+          example: 1
+        deskripsi:
+          type: string
+          example: 'Bonsai beringin dengan akar yang indah - updated'
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+
+    UpdatePohonResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_pohon:
+          type: integer
+          example: 1
+
+    # Schema untuk Suiseki
+    SuisekiListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuisekiData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    SuisekiResponse:
+      type: object
+      properties:
+        ids_suiseki:
+          type: integer
+        nama_suiseki:
+          type: string
+        id_jenis_suiseki:
+          type: integer
+        id_kelas:
+          type: integer
+        id_anggota:
+          type: integer
+        deskripsi:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SuisekiData:
+      type: object
+      properties:
+        ids_suiseki:
+          type: integer
+        nama_suiseki:
+          type: string
+        id_jenis_suiseki:
+          type: integer
+        id_kelas:
+          type: integer
+        id_anggota:
+          type: integer
+        deskripsi:
+          type: string
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateSuisekiRequest:
+      type: object
+      required:
+        - nama_suiseki
+        - id_jenis_suiseki
+        - id_kelas
+        - id_anggota
+        - status
+      properties:
+        nama_suiseki:
+          type: string
+          example: 'Batu Gunung Merapi'
+        id_jenis_suiseki:
+          type: integer
+          example: 1
+        id_kelas:
+          type: integer
+          example: 1
+        id_anggota:
+          type: integer
+          example: 1
+        deskripsi:
+          type: string
+          example: 'Batu alam dari Gunung Merapi dengan bentuk yang unik'
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+
+    CreateSuisekiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data added successfully.'
+        ids_suiseki:
+          type: integer
+          example: 1
+
+    UpdateSuisekiRequest:
+      type: object
+      properties:
+        nama_suiseki:
+          type: string
+          example: 'Batu Gunung Merapi Updated'
+        id_jenis_suiseki:
+          type: integer
+          example: 1
+        id_kelas:
+          type: integer
+          example: 1
+        id_anggota:
+          type: integer
+          example: 1
+        deskripsi:
+          type: string
+          example: 'Batu alam dari Gunung Merapi dengan bentuk yang unik - updated'
+        status:
+          type: string
+          enum: ['YA', 'TIDAK']
+          example: 'YA'
+
+    UpdateSuisekiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Data changed successfully.'
+        ids_suiseki:
+          type: integer
+          example: 1
 
     # Schema untuk success response
     SuccessResponse:
