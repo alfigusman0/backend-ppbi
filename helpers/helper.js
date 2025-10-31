@@ -6,20 +6,18 @@ const fs = require('fs');
 const chmodr = require('chmodr');
 const mv = require('mv');
 const moment = require('moment-timezone');
-const multer = require("multer");
-const multerS3 = require("multer-s3");
-const s3Client = require("../config/aws");
-const path = require("path");
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const s3Client = require('../config/aws');
+const path = require('path');
 const winston = require('winston');
 const axios = require('axios');
 const DailyRotateFile = require('winston-daily-rotate-file');
-const {
-  DeleteObjectCommand
-} = require("@aws-sdk/client-s3");
+const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 /* Logger */
 const logger = winston.createLogger({
-  level: "info",
+  level: 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.ms(),
@@ -30,12 +28,12 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({}),
     new DailyRotateFile({
-      filename: "./logs/log-%DATE%.log",
+      filename: './logs/log-%DATE%.log',
       zippedArchive: true,
-      maxSize: "100m",
-      maxFiles: "14d"
+      maxSize: '100m',
+      maxFiles: '14d',
     }),
-  ]
+  ],
 });
 
 const helper = {};
@@ -72,68 +70,68 @@ helper.getPagination = (value, limit, currentpage) => {
   };
 };
 
-helper.checkFolder = async (path) => {
+helper.checkFolder = async path => {
   try {
     /* create a folder recursively, if the folder is not already available */
     if (!fs.existsSync(path)) {
       fs.mkdirSync(path, {
-        recursive: true
+        recursive: true,
       });
-      chmodr(path, 0o777, (err) => {
+      chmodr(path, 0o777, err => {
         if (err) throw new Error(err);
         console.log('Success change permission.');
       });
     } else {
-      console.log("folder is already available");
+      console.log('folder is already available');
     }
     return true;
   } catch (e) {
     console.error(e);
     return false;
   }
-}
+};
 
 helper.uploadFile = async (oldpath, newpath) => {
   try {
-    mv(oldpath, newpath, (err) => {
+    mv(oldpath, newpath, err => {
       if (err) throw new Error(err);
-      console.log("file transfer successful.");
+      console.log('file transfer successful.');
     });
-    return true
+    return true;
   } catch (e) {
     console.error(e);
     return false;
   }
-}
+};
 
-helper.deleteFile = async (path) => {
+helper.deleteFile = async path => {
   try {
     if (fs.existsSync(path)) {
-      fs.unlink(path, (err) => {
+      fs.unlink(path, err => {
         if (err) throw err;
-        console.log("successfully deleted file");
+        console.log('successfully deleted file');
       });
     } else {
-      console.log("file not found");
+      console.log('file not found');
     }
     return true;
   } catch (e) {
     console.error(e);
     return false;
   }
-}
+};
 
 helper.id = async () => {
   let response = Date.now() + 1;
-  return response
+  return response;
 };
 
 helper.uuid = () => {
   let sqlQueryUUID = {
-    sql: "SELECT UUID() as uuidLong"
-  }
-  let response = helper.runSQL(sqlQueryUUID)
-  return response
+    sql: 'SELECT UUID() as uuidLong',
+  };
+  let response = helper.runSQL(sqlQueryUUID);
+  return response;
 };
 
 helper.gmailconfig = (method, url, token) => {
@@ -142,23 +140,23 @@ helper.gmailconfig = (method, url, token) => {
     url: url,
     headers: {
       Authorization: `Bearer ${token} `,
-      "Content-type": "application/json"
+      'Content-type': 'application/json',
     },
   };
-}
+};
 
 /* Upload file to S3 */
-const upload = (folder = "", allowedFileTypes = null) => {
+const upload = (folder = '', allowedFileTypes = null) => {
   return multer({
     storage: multerS3({
       s3: s3Client,
       bucket: process.env.AWS_BUCKET_NAME,
-      acl: "public-read", // Atur akses file agar bisa diakses publik
+      acl: 'public-read', // Atur akses file agar bisa diakses publik
       key: (req, file, cb) => {
-        const folderPath = folder ? `${folder}/` : ""; // Jika folder ada, tambahkan prefix
+        const folderPath = folder ? `${folder}/` : ''; // Jika folder ada, tambahkan prefix
         const ext = path.extname(file.originalname); // Ambil ekstensi file
         console.log(`File extension: ${ext}`); // Debugging
-        const fileName = `${folderPath}${Date.now()+1}${ext}`;
+        const fileName = `${folderPath}${Date.now() + 1}${ext}`;
         cb(null, fileName);
       },
     }),
@@ -176,7 +174,7 @@ const upload = (folder = "", allowedFileTypes = null) => {
 helper.upload = upload;
 
 // Fungsi hapus file dari S3
-helper.deleteFile = async (fileUrl) => {
+helper.deleteFile = async fileUrl => {
   try {
     // Ambil nama bucket dari ENV
     const bucketName = process.env.AWS_BUCKET_NAME;
@@ -185,7 +183,7 @@ helper.deleteFile = async (fileUrl) => {
     const filePath = fileUrl.split(`/${bucketName}/`)[1];
 
     if (!filePath) {
-      throw new Error("Invalid file URL");
+      throw new Error('Invalid file URL');
     }
 
     // Perintah hapus file
@@ -198,18 +196,18 @@ helper.deleteFile = async (fileUrl) => {
 
     return {
       success: true,
-      message: "File deleted successfully"
+      message: 'File deleted successfully',
     };
   } catch (error) {
     return {
       success: false,
-      message: "Failed to delete file",
-      error: error.message
+      message: 'Failed to delete file',
+      error: error.message,
     };
   }
 };
 
-helper.deleteKeysByPattern = async (patterns) => {
+helper.deleteKeysByPattern = async patterns => {
   if (process.env.REDIS_ACTIVE !== 'ON') {
     console.log('Redis is not active, skipping cache deletion.');
     return 0;
@@ -224,23 +222,30 @@ helper.deleteKeysByPattern = async (patterns) => {
       for (const node of nodes) {
         const stream = node.scanStream({
           match: patterns,
-          count: 100000
+          count: 100000,
         });
 
-        console.log(`Scanning keys in node ${node.options.host}:${node.options.port} with pattern: ${patterns}`);
+        console.log(
+          `Scanning keys in node ${node.options.host}:${node.options.port} with pattern: ${patterns}`
+        );
 
-        stream.on('data', async (keys) => {
+        stream.on('data', async keys => {
           if (keys.length > 0) {
             const pipeline = node.pipeline();
             keys.forEach(key => pipeline.del(key));
             await pipeline.exec();
             deletedCount += keys.length;
-            console.log(`Deleted ${keys.length} keys from node ${node.options.host}:${node.options.port}`);
+            console.log(
+              `Deleted ${keys.length} keys from node ${node.options.host}:${node.options.port}`
+            );
           }
         });
 
-        stream.on('error', (err) => {
-          console.error(`Error scanning keys on node ${node.options.host}:${node.options.port}:`, err);
+        stream.on('error', err => {
+          console.error(
+            `Error scanning keys on node ${node.options.host}:${node.options.port}:`,
+            err
+          );
         });
 
         await new Promise(resolve => stream.on('end', resolve));
@@ -249,10 +254,10 @@ helper.deleteKeysByPattern = async (patterns) => {
       // Mode Standalone: Memindai instance tunggal
       const stream = redis.scanStream({
         match: patterns,
-        count: 100000
+        count: 100000,
       });
 
-      stream.on('data', async (keys) => {
+      stream.on('data', async keys => {
         if (keys.length > 0) {
           const pipeline = redis.pipeline();
           keys.forEach(key => pipeline.del(key));
@@ -262,7 +267,7 @@ helper.deleteKeysByPattern = async (patterns) => {
         }
       });
 
-      stream.on('error', (err) => {
+      stream.on('error', err => {
         console.error('Error scanning keys in standalone Redis:', err);
       });
 
@@ -278,9 +283,9 @@ helper.deleteKeysByPattern = async (patterns) => {
 };
 
 // convert date to string format YYYY-MM-DD
-helper.convertoDate = (date) => {
+helper.convertoDate = date => {
   if (date) {
-    let dateFormat = moment(date).tz('Asia/Jakarta').format("YYYY-MM-DD");
+    let dateFormat = moment(date).tz('Asia/Jakarta').format('YYYY-MM-DD');
     /* let dateFormat = moment(date).format("YYYY-MM-DD"); */
     return dateFormat;
   } else {
@@ -288,7 +293,7 @@ helper.convertoDate = (date) => {
   }
 };
 
-helper.convertoDateTime = (date) => {
+helper.convertoDateTime = date => {
   if (!date) return null;
 
   // Log input untuk debugging
@@ -324,7 +329,7 @@ helper.convertoDateTime = (date) => {
 helper.httpRequest = async function (options) {
   try {
     const config = {
-      method: options.method || "GET",
+      method: options.method || 'GET',
       url: options.url,
       headers: options.headers || {},
       params: options.params || {},
@@ -348,11 +353,13 @@ helper.httpRequest = async function (options) {
     return {
       success: false,
       message: error.message,
-      error: error.response ? {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers,
-      } : null,
+      error: error.response
+        ? {
+            status: error.response.status,
+            data: error.response.data,
+            headers: error.response.headers,
+          }
+        : null,
     };
   }
 };
