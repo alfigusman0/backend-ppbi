@@ -1,6 +1,6 @@
 {
   "name": "api-ppbi",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Api PPBI",
   "main": "server.js",
   "scripts": {
