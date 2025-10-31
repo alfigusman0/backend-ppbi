@@ -21,6 +21,9 @@ module.exports = function validateInput(method, path, data) {
   data.meja = !isEmpty(data.meja) ? data.meja : '';
   data.foto = !isEmpty(data.foto) ? data.foto : '';
   data.id_pengantar = !isEmpty(data.id_pengantar) ? data.id_pengantar : '';
+  data.total = !isEmpty(data.total) ? data.total : '';
+  data.kriteria = !isEmpty(data.kriteria) ? data.kriteria : '';
+  data.keterangan = !isEmpty(data.keterangan) ? data.keterangan : '';
 
   const validateScore = (value, fieldName) => {
     if (Validator.isEmpty(value)) {
