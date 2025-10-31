@@ -339,4 +339,172 @@ Controller.cj3 = async (req, res) => {
   }
 };
 
+/* Akumulasi Penilaian */
+Controller.cj4 = async (req, res) => {
+  try {
+    let count_processed_bonsai = 0;
+    let count_processed_suiseki = 0;
+    const updateFormulirValues = [];
+
+    // Ambil semua formulir yang sudah memiliki penilaian
+    const formulirList = await helper.runSQL({
+      sql: `SELECT DISTINCT f.id_formulir, f.id_kategori, f.id_pohon, f.id_suiseki FROM tbl_formulir f WHERE EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir)`,
+      param: [],
+    });
+
+    if (formulirList.length === 0) {
+      return response.sc200(
+        'No formulir with assessments found.',
+        {
+          processed_bonsai: 0,
+          processed_suiseki: 0,
+        },
+        res
+      );
+    }
+
+    // Proses setiap formulir
+    for (const formulir of formulirList) {
+      if (formulir.id_pohon) {
+        // Process BONSAI
+        const bonsaiAssessments = await helper.runSQL({
+          sql: `SELECT penampilan, gerak_dasar, keserasian, kematangan FROM view_penilaian_pohon WHERE id_formulir = ?`,
+          param: [formulir.id_formulir],
+        });
+
+        if (bonsaiAssessments.length >= 3) {
+          // Ekstrak nilai untuk setiap kriteria
+          const penampilanScores = bonsaiAssessments.map(a => parseFloat(a.penampilan));
+          const gerakDasarScores = bonsaiAssessments.map(a => parseFloat(a.gerak_dasar));
+          const keserasianScores = bonsaiAssessments.map(a => parseFloat(a.keserasian));
+          const kematanganScores = bonsaiAssessments.map(a => parseFloat(a.kematangan));
+
+          let totalPenampilan, totalGerakDasar, totalKeserasian, totalKematangan;
+
+          if (bonsaiAssessments.length === 5) {
+            // Untuk 5 juri: buang nilai tertinggi dan terendah, lalu rata-rata 3 nilai tengah
+            totalPenampilan = calculateAverageRemoveExtremes(penampilanScores);
+            totalGerakDasar = calculateAverageRemoveExtremes(gerakDasarScores);
+            totalKeserasian = calculateAverageRemoveExtremes(keserasianScores);
+            totalKematangan = calculateAverageRemoveExtremes(kematanganScores);
+          } else {
+            // Untuk 3 juri atau lainnya: langsung rata-ratakan
+            totalPenampilan = calculateAverage(penampilanScores);
+            totalGerakDasar = calculateAverage(gerakDasarScores);
+            totalKeserasian = calculateAverage(keserasianScores);
+            totalKematangan = calculateAverage(kematanganScores);
+          }
+
+          // Total akhir = jumlah semua rata-rata kriteria
+          const finalScore = totalPenampilan + totalGerakDasar + totalKeserasian + totalKematangan;
+
+          // Tentukan kriteria berdasarkan skor final
+          let kriteria = 'D';
+          if (finalScore >= 321 && finalScore <= 400) {
+            kriteria = 'A';
+          } else if (finalScore >= 281 && finalScore <= 320) {
+            kriteria = 'B';
+          } else if (finalScore >= 241 && finalScore <= 280) {
+            kriteria = 'C';
+          }
+
+          updateFormulirValues.push({
+            id_formulir: formulir.id_formulir,
+            total: Math.round(finalScore),
+            kriteria: kriteria,
+          });
+          count_processed_bonsai++;
+        }
+      } else if (formulir.id_suiseki) {
+        // Process SUISEKI
+        const suisekiAssessments = await helper.runSQL({
+          sql: `SELECT penampilan, keselarasan FROM view_penilaian_suiseki WHERE id_formulir = ?`,
+          param: [formulir.id_formulir],
+        });
+
+        if (suisekiAssessments.length >= 3) {
+          // Ekstrak nilai untuk setiap kriteria
+          const penampilanScores = suisekiAssessments.map(a => parseFloat(a.penampilan));
+          const keselarasanScores = suisekiAssessments.map(a => parseFloat(a.keselarasan));
+
+          let totalPenampilan, totalKeselarasan;
+
+          if (suisekiAssessments.length === 5) {
+            // Untuk 5 juri: buang nilai tertinggi dan terendah, lalu rata-rata 3 nilai tengah
+            totalPenampilan = calculateAverageRemoveExtremes(penampilanScores);
+            totalKeselarasan = calculateAverageRemoveExtremes(keselarasanScores);
+          } else {
+            // Untuk 3 juri atau lainnya: langsung rata-ratakan
+            totalPenampilan = calculateAverage(penampilanScores);
+            totalKeselarasan = calculateAverage(keselarasanScores);
+          }
+
+          // Pembobotan: Penampilan 80%, Keselarasan 20%
+          const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
+
+          // Tentukan kriteria berdasarkan skor final
+          let kriteria = 'D';
+          if (finalScore >= 161 && finalScore <= 200) {
+            kriteria = 'A';
+          } else if (finalScore >= 141 && finalScore <= 160) {
+            kriteria = 'B';
+          } else if (finalScore >= 121 && finalScore <= 140) {
+            kriteria = 'C';
+          }
+
+          updateFormulirValues.push({
+            id_formulir: formulir.id_formulir,
+            total: Math.round(finalScore),
+            kriteria: kriteria,
+          });
+          count_processed_suiseki++;
+        }
+      }
+    }
+
+    // Update database dengan hasil akumulasi
+    for (const updateData of updateFormulirValues) {
+      await helper
+        .runSQL({
+          sql: `UPDATE tbl_formulir SET total = ?, kriteria = ? WHERE id_formulir = ?`,
+          param: [updateData.total, updateData.kriteria, updateData.id_formulir],
+        })
+        .catch(error => {
+          console.error('Error updating formulir:', error);
+          throw error;
+        });
+    }
+
+    return response.sc200(
+      'Auto accumulation of assessments completed successfully.',
+      {
+        processed_bonsai: count_processed_bonsai,
+        processed_suiseki: count_processed_suiseki,
+        total_processed: count_processed_bonsai + count_processed_suiseki,
+      },
+      res
+    );
+  } catch (error) {
+    console.log(error);
+    return handleError(error, res);
+  }
+};
+
+// Helper function untuk menghitung rata-rata dengan menghilangkan nilai tertinggi dan terendah
+function calculateAverageRemoveExtremes(scores) {
+  if (scores.length < 3) return calculateAverage(scores);
+
+  const sorted = [...scores].sort((a, b) => a - b);
+  // Hilangkan nilai terendah (index 0) dan tertinggi (index terakhir)
+  const middleScores = sorted.slice(1, -1);
+  return calculateAverage(middleScores);
+}
+
+// Helper function untuk menghitung rata-rata biasa
+function calculateAverage(scores) {
+  if (scores.length === 0) return 0;
+  const sum = scores.reduce((total, score) => total + score, 0);
+  return sum / scores.length;
+}
+
 module.exports = Controller;

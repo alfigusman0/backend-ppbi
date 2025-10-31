@@ -526,6 +526,8 @@ Controller.update = async (req, res) => {
       meja,
       foto,
       id_pengantar,
+      total,
+      kriteria,
       keterangan,
     } = req.body;
 
@@ -565,6 +567,8 @@ Controller.update = async (req, res) => {
       addUpdate('arena', arena);
       addUpdate('meja', meja);
       addUpdate('id_pengantar', id_pengantar);
+      addUpdate('total', total);
+      addUpdate('kriteria', kriteria);
       addUpdate('keterangan', keterangan);
     }
 
