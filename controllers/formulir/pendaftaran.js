@@ -601,7 +601,7 @@ Controller.update = async (req, res) => {
 
     if (!isEmpty(bayar) && bayar === 'SUDAH') {
       let message;
-      const template = `Halo *[Nama Peserta]*\n\nTerima kasih bonsai anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis [Jenis]: *[Jenis Bonsai]*\ntelah melakukan pembayaran sebesar *[Harga]* pada *[Nama Event]*.\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
+      const template = `Halo *[Nama Peserta]*\n\nTerima kasih [Jenis] anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis [Jenis]: *[Jenis Bonsai]*\ntelah melakukan pembayaran sebesar *[Harga]* pada Pameran *[Nama Event]*.\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
       /* Get Event */
       const event = await helper.runSQL({
         sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
