@@ -120,8 +120,8 @@ Controller.create = async (req, res) => {
       logger.error('Failed to delete Redis cache in create:', redisError);
     }
 
-    // Template dalam 1 baris dengan \n
-    const template = `Halo [Nama Peserta]\n\nSelamat [Jenis] anda :\nNomor Registrasi: [Nomor Registrasi]\nJenis [Jenis]: [Jenis Bonsai]\ntelah terdaftar pada [Nama Event] \n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPameran [Nama Event]\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
+    // Template
+    const template = `Halo *[Nama Peserta]*\n\nSelamat [Jenis] anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis [Jenis]: *[Jenis Bonsai]*\ntelah terdaftar pada Pameran *[Nama Event]* \n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
     /* Get Event */
     const event = await helper.runSQL({
       sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
@@ -530,7 +530,7 @@ Controller.update = async (req, res) => {
     } = req.body;
 
     /* Check existing data */
-    let sql = 'SELECT id_formulir FROM `tbl_formulir` WHERE id_formulir = ?';
+    let sql = 'SELECT * FROM `tbl_formulir` WHERE id_formulir = ?';
     const param = [id];
     if (req.authTingkat > 5) {
       sql += ' AND created_by = ?';
@@ -597,6 +597,65 @@ Controller.update = async (req, res) => {
       await helper.deleteKeysByPattern(redisPrefix + '*');
     } catch (redisError) {
       logger.error('Failed to delete Redis cache in update:', redisError);
+    }
+
+    if (!isEmpty(bayar) && bayar === 'SUDAH') {
+      let message;
+      const template = `Halo *[Nama Peserta]*\n\nTerima kasih bonsai anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis Bonsai: *[Jenis Bonsai]*\ntelah melakukan pembayaran sebesar *[Harga]* pada *[Nama Event]*.\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
+      /* Get Event */
+      const event = await helper.runSQL({
+        sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
+        param: [checkData[0].id_event],
+      });
+      /* Get Profile */
+      const profile = await helper.runSQL({
+        sql: 'SELECT * FROM view_profile WHERE created_by = ? LIMIT 1',
+        param: [checkData[0].created_by],
+      });
+      /* Get Kategori */
+      const kategori = await helper.runSQL({
+        sql: 'SELECT * FROM view_kategori WHERE id_kategori = ? LIMIT 1',
+        param: [checkData[0].id_kategori],
+      });
+
+      /* Get Jenis */
+      if (!isEmpty(checkData[0].id_pohon)) {
+        const pohon = await helper.runSQL({
+          sql: 'SELECT * FROM view_pohon WHERE id_pohon = ? LIMIT 1',
+          param: [checkData[0].id_pohon],
+        });
+        const data = {
+          jenis: 'Bonsai',
+          nama_lengkap: profile[0].nama_lengkap,
+          no_registrasi: no_registrasi,
+          jenis_bonsai: pohon[0].jenis_bonsai,
+          nama_acara: event[0].nama_acara,
+          harga: kategori[0].uang,
+        };
+        message = replaceMessage(template, data);
+      } else {
+        const suiseki = await helper.runSQL({
+          sql: 'SELECT * FROM view_suiseki WHERE id_suiseki = ? LIMIT 1',
+          param: [checkData[0].id_suiseki],
+        });
+        const data = {
+          jenis: 'Suiseki',
+          nama_lengkap: profile[0].nama_lengkap,
+          no_registrasi: no_registrasi,
+          jenis_bonsai: suiseki[0].jenis_suiseki,
+          nama_acara: event[0].nama_acara,
+          harga: kategori[0].uang,
+        };
+        message = replaceMessage(template, data);
+      }
+
+      const target = profile[0].nmr_tlpn;
+      /* Send Notification Whatsapp */
+      const fb = await whatsapp.sendMessage(id_event, { target, message, delay });
+      if (!fb.success) {
+        const statusCode = fb.errorType === 'TOKEN_ERROR' ? 401 : 500;
+        console.log(`Error Whatsapp : ${statusCode} : ${fb.message}`);
+      }
     }
 
     return response.sc200('Data changed successfully.', json, res);
@@ -978,7 +1037,22 @@ function replaceMessage(template, data) {
     .replace(/\[Nama Peserta\]/g, data.nama_lengkap || '')
     .replace(/\[Nomor Registrasi\]/g, data.no_registrasi || '')
     .replace(/\[Jenis Bonsai\]/g, data.jenis_bonsai || '')
-    .replace(/\[Nama Event\]/g, data.nama_acara || '');
+    .replace(/\[Nama Event\]/g, data.nama_acara || '')
+    .replace(/\[Harga\]/g, formatRupiah(data.harga) || '');
+}
+
+// Function untuk format Rupiah
+function formatRupiah(harga) {
+  if (!harga) return 'Rp 0';
+
+  // Konversi ke number jika string
+  const numberHarga = typeof harga === 'string' ? parseInt(harga.replace(/\D/g, '')) : harga;
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(numberHarga);
 }
 
 module.exports = Controller;
