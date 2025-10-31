@@ -651,7 +651,7 @@ Controller.update = async (req, res) => {
 
       const target = profile[0].nmr_tlpn;
       /* Send Notification Whatsapp */
-      const fb = await whatsapp.sendMessage(id_event, { target, message, delay });
+      const fb = await whatsapp.sendMessage(checkData[0].id_event, { target, message, delay });
       if (!fb.success) {
         const statusCode = fb.errorType === 'TOKEN_ERROR' ? 401 : 500;
         console.log(`Error Whatsapp : ${statusCode} : ${fb.message}`);
