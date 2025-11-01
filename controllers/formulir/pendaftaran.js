@@ -121,7 +121,7 @@ Controller.create = async (req, res) => {
     }
 
     // Template
-    const template = `Halo *[Nama Peserta]*\n\nSelamat [Jenis] anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis [Jenis]: *[Jenis Bonsai]*\ntelah terdaftar pada Pameran *[Nama Event]* \n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
+    const template = `Halo *[Nama Peserta]*\n\nSelamat [Jenis] anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis [Jenis]: *[Jenis Bonsai]*\ntelah terdaftar pada *[Nama Event]* \n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
     /* Get Event */
     const event = await helper.runSQL({
       sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
