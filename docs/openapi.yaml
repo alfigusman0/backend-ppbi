@@ -49,15 +49,15 @@ info:
           - 'ENHANCED: Pagination dan filtering untuk data master kelas'
 
 servers:
-  - url: http://localhost:5000/api
+  - url: http://localhost:5000
     description: Lokal Development Server
     variables:
       port:
         default: '5000'
-  - url: https://apps.ppbindonesia.com/api
+  - url: https://apps.ppbindonesia.com
     description: Development Server
     x-environment: development
-  - url: https://apps.ppbindonesia.org/api
+  - url: https://apps.ppbindonesia.org
     description: Production Server
     x-environment: production
 
