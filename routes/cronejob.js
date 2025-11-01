@@ -6,5 +6,6 @@ const Controller = require('../controllers/cronejob');
 router.get('/cj1', Controller.cj1);
 router.get('/cj2', Controller.cj2);
 router.get('/cj3', Controller.cj3);
+router.get('/cj4', Controller.cj4);
 
 module.exports = router;
