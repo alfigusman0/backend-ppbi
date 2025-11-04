@@ -118,6 +118,8 @@ Controller.read_bonsai = async (req, res) => {
       id_penilaian,
       id_formulir,
       nomor_sertifikat,
+      no_registrasi,
+      no_juri,
       id_event,
       nama_acara,
       ids_cabang,
@@ -201,6 +203,8 @@ Controller.read_bonsai = async (req, res) => {
     addCondition('id_penilaian', id_penilaian, 'IN');
     addCondition('id_formulir', id_formulir, 'IN');
     addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+    addCondition('no_registrasi', no_registrasi, 'LIKE');
+    addCondition('no_juri', no_juri);
     addCondition('id_event', id_event, 'IN');
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang, 'IN');
@@ -285,6 +289,8 @@ Controller.read_suiseki = async (req, res) => {
       id_penilaian,
       id_formulir,
       nomor_sertifikat,
+      no_registrasi,
+      no_juri,
       id_event,
       nama_acara,
       ids_cabang,
@@ -368,6 +374,8 @@ Controller.read_suiseki = async (req, res) => {
     addCondition('id_penilaian', id_penilaian, 'IN');
     addCondition('id_formulir', id_formulir, 'IN');
     addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
+    addCondition('no_registrasi', no_registrasi, 'LIKE');
+    addCondition('no_juri', no_juri);
     addCondition('id_event', id_event, 'IN');
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang, 'IN');
