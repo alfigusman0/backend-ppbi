@@ -558,7 +558,7 @@ Controller.update = async (req, res) => {
       }
     };
 
-    if (req.authTingkat < 5) {
+    if (req.authTingkat <= 5) {
       addUpdate('id_event', id_event);
       addUpdate('nomor_sertifikat', nomor_sertifikat);
       addUpdate('no_registrasi', no_registrasi);
