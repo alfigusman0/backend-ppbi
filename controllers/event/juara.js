@@ -59,13 +59,15 @@ Controller.create = async (req, res) => {
 
     const created_by =
       req.authTingkat <= 5 ? req.body.created_by || req.authIdUser : req.authIdUser;
+    const ids_kelas = req.body.ids_kelas || null;
+    const ids_jenis_pohon = req.body.ids_jenis_pohon || null;
     const jumlah = req.body.jumlah || 0;
     const { id_event, nama_juara, status } = req.body;
 
     /* SQL Insert Data */
     const result = await helper.runSQL({
-      sql: 'INSERT INTO `tbl_juara` (`id_event`, `nama_juara`, `jumlah`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?)',
-      param: [id_event, nama_juara, jumlah, status, created_by],
+      sql: 'INSERT INTO `tbl_juara` (`id_event`, `nama_juara`, `ids_kelas`, `ids_jenis_pohon`, `jumlah`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      param: [id_event, nama_juara, ids_kelas, ids_jenis_pohon, jumlah, status, created_by],
     });
 
     const json = {
@@ -215,7 +217,7 @@ Controller.update = async (req, res) => {
     }
 
     const id = req.params.id;
-    const { id_event, nama_juara, jumlah, status } = req.body;
+    const { id_event, nama_juara, ids_kelas, ids_jenis_pohon, jumlah, status } = req.body;
 
     /* Check existing data */
     let sql = 'SELECT id_juara FROM `tbl_juara` WHERE id_juara = ?';
@@ -246,6 +248,8 @@ Controller.update = async (req, res) => {
 
     addUpdate('id_event', id_event);
     addUpdate('nama_juara', nama_juara);
+    addUpdate('ids_kelas', ids_kelas);
+    addUpdate('ids_jenis_pohon', ids_jenis_pohon);
     addUpdate('jumlah', jumlah);
     addUpdate('status', status);
 
