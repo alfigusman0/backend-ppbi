@@ -210,6 +210,8 @@ Controller.read_bonsai = async (req, res) => {
       cetak,
       arena,
       meja,
+      id_juri,
+      juri_nama,
     } = req.query;
 
     // Check Redis cache
@@ -291,6 +293,8 @@ Controller.read_bonsai = async (req, res) => {
     addCondition('cetak', cetak);
     addCondition('arena', arena);
     addCondition('meja', meja);
+    addCondition('id_juri', id_juri, 'IN');
+    addCondition('juri_nama', juri_nama, 'LIKE');
     addCondition('created_by', created_by);
 
     sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -529,6 +533,7 @@ Controller.update = async (req, res) => {
       total,
       kriteria,
       keterangan,
+      id_profile_juri,
     } = req.body;
 
     /* Check existing data */
@@ -570,6 +575,7 @@ Controller.update = async (req, res) => {
       addUpdate('total', total);
       addUpdate('kriteria', kriteria);
       addUpdate('keterangan', keterangan);
+      addUpdate('id_profile_juri', id_profile_juri);
     }
 
     addUpdate('id_pohon', id_pohon);
@@ -754,6 +760,8 @@ Controller.single_bonsai = async (req, res) => {
       cetak,
       arena,
       meja,
+      id_juri,
+      juri_nama,
     } = req.query;
 
     // Check Redis cache
@@ -823,6 +831,8 @@ Controller.single_bonsai = async (req, res) => {
     addCondition('cetak', cetak);
     addCondition('arena', arena);
     addCondition('meja', meja);
+    addCondition('id_juri', id_juri);
+    addCondition('juri_nama', juri_nama, 'LIKE');
     addCondition('created_by', created_by);
 
     // Limit to 1 row
