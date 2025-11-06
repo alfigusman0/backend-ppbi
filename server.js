@@ -30,19 +30,21 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: [
           "'self'",
-          "'unsafe-inline'", // Untuk inline script di redoc.html
-          'https://cdn.jsdelivr.net', // Allow jsdelivr CDN
-          'https://redoc.ly', // Allow redoc official CDN jika ada
+          "'unsafe-inline'", // Untuk inline script di swagger.html
+          "'unsafe-eval'", // Diperlukan untuk Swagger UI
+          'https://cdn.jsdelivr.net',
+          'https://unpkg.com', // Untuk Swagger UI
         ],
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
           'https://cdn.jsdelivr.net',
           'https://fonts.googleapis.com',
+          'https://unpkg.com',
         ],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+        connectSrc: ["'self'"],
       },
     },
     frameguard: { action: 'deny' },
@@ -111,35 +113,6 @@ app.use(
 );
 
 /**
- * Route utama untuk dokumentasi API dengan Swagger UI
- */
-app.get('/docs', (req, res) => {
-  try {
-    const htmlPath = path.join(__dirname, 'docs', 'swagger.html');
-
-    if (!fs.existsSync(htmlPath)) {
-      console.error(`[ERROR] File swagger.html tidak ditemukan: ${htmlPath}`);
-      return res.status(404).json({
-        code: 404,
-        status: 'error',
-        message: 'File dokumentasi tidak ditemukan di folder docs/',
-      });
-    }
-
-    res.header('Content-Type', 'text/html; charset=utf-8');
-    res.header('Cache-Control', 'public, max-age=3600');
-    res.sendFile(htmlPath);
-  } catch (error) {
-    console.error(`[ERROR] Gagal melayani dokumentasi:`, error.message);
-    res.status(500).json({
-      code: 500,
-      status: 'error',
-      message: 'Terjadi kesalahan saat menampilkan dokumentasi',
-    });
-  }
-});
-
-/**
  * Route untuk serve OpenAPI specification
  */
 app.get('/api-spec', (req, res) => {
@@ -193,15 +166,18 @@ app.get('/docs-health', (req, res) => {
         swagger_html: {
           status: swaggerExists ? '✓ Available' : '✗ Missing',
           size: swaggerStats ? `${(swaggerStats.size / 1024).toFixed(2)} KB` : 'N/A',
+          file: 'swagger.html',
         },
         openapi_yaml: {
           status: yamlExists ? '✓ Available' : '✗ Missing',
           size: yamlStats ? `${(yamlStats.size / 1024).toFixed(2)} KB` : 'N/A',
+          file: 'openapi.yaml',
         },
       },
       access_urls: {
         docs: `http://localhost:${process.env.PORT || 5000}/docs`,
         api_spec: `http://localhost:${process.env.PORT || 5000}/api-spec`,
+        health_check: `http://localhost:${process.env.PORT || 5000}/docs-health`,
       },
     };
 
@@ -217,54 +193,6 @@ app.get('/docs-health', (req, res) => {
 });
 
 // ============================================
-// ROOT ENDPOINT
-// ============================================
-
-app.get('/', (req, res) => {
-  const port = process.env.PORT || 5000;
-  res.status(200).json({
-    status: 'success',
-    message: 'API PPBI - Persatuan Penggemar Bonsai Indonesia',
-    version: '1.1.0',
-    documentation: `http://localhost:${port}/docs`,
-    api_base: `http://localhost:${port}/api`,
-  });
-});
-
-// ============================================
-// IP WHITELIST (PRODUCTION)
-// ============================================
-
-if (process.env.NODE_ENV === 'production') {
-  app.use('/api', (req, res, next) => {
-    try {
-      const allowedIps = process.env.ALLOWED_IPS?.split(',') || [];
-      const clientIp = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip)
-        .split(',')[0]
-        .trim();
-
-      if (allowedIps.length === 0 || allowedIps.includes(clientIp)) {
-        next();
-      } else {
-        console.warn(`[WARN] IP tidak diizinkan: ${clientIp}`);
-        res.status(403).json({
-          code: 403,
-          status: 'error',
-          message: `IP tidak diizinkan`,
-        });
-      }
-    } catch (error) {
-      console.error(`[ERROR] Terjadi kesalahan pada IP whitelist:`, error.message);
-      res.status(500).json({
-        code: 500,
-        status: 'error',
-        message: 'Terjadi kesalahan validasi akses',
-      });
-    }
-  });
-}
-
-// ============================================
 // ROOT ENDPOINT - INFORMASI DOKUMENTASI
 // ============================================
 
@@ -276,10 +204,12 @@ app.get('/', (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'API PPBI - Persatuan Penggemar Bonsai Indonesia',
-    version: '1.1.0',
+    version: '1.2.3',
     documentation: {
       url: `http://localhost:${port}/docs`,
-      description: 'Buka URL di atas untuk melihat dokumentasi API interaktif menggunakan Redoc',
+      description:
+        'Buka URL di atas untuk melihat dokumentasi API interaktif menggunakan Swagger UI',
+      type: 'Swagger UI',
     },
     endpoints: {
       docs: `http://localhost:${port}/docs`,
@@ -287,6 +217,7 @@ app.get('/', (req, res) => {
       health_check: `http://localhost:${port}/docs-health`,
       api_base: `http://localhost:${port}/api`,
     },
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -479,12 +410,12 @@ app.listen(PORT, () => {
    API Endpoint  : http://localhost:${PORT}/api
 
 📚 Dokumentasi API
-   Redoc UI      : http://localhost:${PORT}/docs
+   Swagger UI    : http://localhost:${PORT}/docs
    OpenAPI Spec  : http://localhost:${PORT}/api-spec
    Health Check  : http://localhost:${PORT}/docs-health
 
 🗂️  File Lokasi
-   Redoc HTML    : ./docs/redoc.html
+   Swagger HTML  : ./docs/swagger.html
    OpenAPI YAML  : ./docs/openapi.yaml
 
 ⚙️  Environment

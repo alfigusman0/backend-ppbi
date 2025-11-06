@@ -1,6 +1,5 @@
 /* Libraries */
 const isEmpty = require('../is-empty');
-const moment = require('moment-timezone');
 
 module.exports = function validateImportExcelData(rows) {
   let errors = [];
