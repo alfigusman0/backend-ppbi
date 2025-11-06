@@ -238,10 +238,28 @@ Controller.cj3 = async (req, res) => {
     let count_update = 0;
     const insertValues = [];
 
+    // Daftar kode kelas yang dikecualikan dari penjurian (dinamis)
+    const excludedClasses = ['A1', 'C1']; // A1 = Bahan, C1 = Bintang
+
+    // Bisa ditambahkan kelas lain di sini jika diperlukan, contoh:
+    // const excludedClasses = ['A1', 'C1', 'B1', 'B2'];
+
     // Ambil semua data juri dan formulir dengan JOIN untuk mendapatkan pasangan yang perlu diproses
+    // Tambahkan filter untuk mengecualikan kelas tertentu
     const juriFormulirPairs = await helper.runSQL({
-      sql: `SELECT DISTINCT j.id_juri, j.id_profile, j.id_event, f.id_formulir FROM tbl_juri j INNER JOIN tbl_formulir f ON j.id_event = f.id_event WHERE j.penilaian = 'BELUM' ORDER BY j.id_juri, f.id_formulir`,
-      param: [],
+      sql: `SELECT DISTINCT
+              j.id_juri,
+              j.id_profile,
+              j.id_event,
+              f.id_formulir
+            FROM tbl_juri j
+            INNER JOIN tbl_formulir f ON j.id_event = f.id_event
+            INNER JOIN tbl_kategori k ON f.id_kategori = k.id_kategori
+            INNER JOIN tbs_kelas tk ON k.ids_kelas = tk.ids_kelas
+            WHERE j.penilaian = 'BELUM'
+              AND tk.kode NOT IN (${excludedClasses.map(() => '?').join(',')})
+            ORDER BY j.id_juri, f.id_formulir`,
+      param: excludedClasses,
     });
 
     if (juriFormulirPairs.length === 0) {
@@ -282,7 +300,7 @@ Controller.cj3 = async (req, res) => {
           0.0, // gerak_dasar (default 0)
           0.0, // keserasian (default 0)
           0.0, // kematangan (default 0)
-          0.0, // total (default 0)
+          null, // keterangan (default null)
           1, // created_by
         ]);
         count_create++;
@@ -297,7 +315,7 @@ Controller.cj3 = async (req, res) => {
       const placeholders = insertValues.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(',');
       await helper
         .runSQL({
-          sql: `INSERT INTO tbl_penilaian (id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, total, created_by) VALUES ${placeholders}`,
+          sql: `INSERT INTO tbl_penilaian (id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, keterangan, created_by) VALUES ${placeholders}`,
           param: insertValues.flat(),
         })
         .catch(error => {
@@ -329,7 +347,10 @@ Controller.cj3 = async (req, res) => {
       {
         created: count_create,
         updated: count_update,
-        message: `${count_create} penilaian forms created, ${count_update} jury status updated`,
+        excluded_classes: excludedClasses,
+        message: `${count_create} penilaian forms created, ${count_update} jury status updated. Excluded classes: ${excludedClasses.join(
+          ', '
+        )}`,
       },
       res
     );
