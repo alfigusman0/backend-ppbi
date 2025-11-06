@@ -4,17 +4,12 @@ const DailyRotateFile = require('winston-daily-rotate-file');
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
-
 /* Helpers */
 const helper = require('../../helpers/helper');
 const response = require('../../helpers/response');
-
+const UsersImportService = require('../../helpers/import/users');
 /* Validation */
 const validateImportExcelData = require('../../validation/import/users');
-
-/* Service */
-const UsersImportService = require('../../helpers/import/users');
-
 /* Logger */
 const logger = winston.createLogger({
   level: 'info',
@@ -38,112 +33,27 @@ const logger = winston.createLogger({
 
 const Controller = {};
 
-/**
- * Import Excel ke Database
- * POST /api/users/import/excel
- */
-Controller.importExcel = async (req, res) => {
-  let uploadedFile = null;
-  try {
-    if (!req.file) {
-      return response.sc400('File tidak ditemukan, silakan upload file Excel', {}, res);
-    }
-
-    uploadedFile = req.file.path;
-
-    const workbook = XLSX.readFile(uploadedFile);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    if (rows.length === 0) {
-      return response.sc400('File Excel kosong', {}, res);
-    }
-
-    // Validasi struktur data
-    const validation = validateImportExcelData(rows);
-    if (!validation.isValid || validation.errors.length > 0) {
-      return response.sc400(
-        'Data tidak valid',
-        { total_errors: validation.errors.length, errors: validation.errors },
-        res
-      );
-    }
-
-    const validatedData = validation.validatedData;
-
-    // Cek duplikasi
-    const dupCheck = await UsersImportService.checkDuplication(validatedData, helper);
-    if (dupCheck.errors.length > 0) {
-      return response.sc400(
-        'Data duplikasi ditemukan.',
-        { total_errors: dupCheck.errors.length, errors: dupCheck.errors },
-        res
-      );
-    }
-
-    const dataToImport = dupCheck.data;
-
-    // Validasi foreign keys
-    if (Array.isArray(dataToImport) && dataToImport.length > 0) {
-      const fkErrors = await UsersImportService.validateForeignKeys(dataToImport, helper);
-      if (fkErrors && fkErrors.length > 0) {
-        return response.sc400(
-          'Referensi data tidak ditemukan.',
-          { total_errors: fkErrors.length, errors: fkErrors },
-          res
-        );
-      }
-    }
-
-    // Import data ke database
-    const createdBy = req.user ? req.user.id_user : 1;
-    const importResult = await UsersImportService.importDataToDatabase(
-      dataToImport,
-      createdBy,
-      helper
-    );
-
-    // Hapus file setelah selesai
-    if (fs.existsSync(uploadedFile)) {
-      fs.unlinkSync(uploadedFile);
-    }
-
-    return response.sc200(
-      'Import data berhasil',
-      {
-        success: importResult.successCount,
-        failed: importResult.failureCount,
-        details: importResult.details,
-      },
-      res
-    );
-  } catch (error) {
-    logger.error('Error in importExcel:', error);
-    if (uploadedFile && fs.existsSync(uploadedFile)) {
-      fs.unlinkSync(uploadedFile);
-    }
-    return response.sc500('Terjadi kesalahan saat import data', {}, res);
-  }
+// Helper function to check access rights
+const checkAccess = async (req, action) => {
+  const sql = {
+    sql: 'SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?',
+    param: [req.authIdsLevel, 2, `%${action}%`],
+  };
+  const result = await helper.runSQL(sql);
+  return result.length > 0;
 };
 
-/**
- * Preview Excel sebelum import
- * POST /api/users/import/preview
- */
-Controller.previewExcel = async (req, res) => {
+const handleError = (error, res) => {
+  logger.error(error);
+  return response.sc500('An error occurred in the system, please try again.', {}, res);
+};
+
+Controller.preview = async (req, res) => {
   let uploadedFile = null;
-
   try {
-    // Check access
-    const sql = {
-      sql: 'SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?',
-      param: [req.authIdsLevel, 2, '%read%'],
-    };
-    const hasAccess = (await helper.runSQL(sql)).length > 0;
-
+    const hasAccess = await checkAccess(req, 'import');
     if (!hasAccess) {
-      return response.sc401('Akses ditolak.', {}, res);
+      return response.sc401('Access denied.', {}, res);
     }
 
     if (!req.file) {
@@ -284,8 +194,7 @@ Controller.previewExcel = async (req, res) => {
 
     return response.sc200('Preview file Excel berhasil.', json, res);
   } catch (error) {
-    logger.error('Error in previewExcel:', error);
-    return response.sc500('Terjadi kesalahan pada sistem, silakan coba lagi.', {}, res);
+    return handleError(error, res);
   } finally {
     if (uploadedFile && fs.existsSync(uploadedFile)) {
       fs.unlink(uploadedFile, err => {
@@ -295,11 +204,96 @@ Controller.previewExcel = async (req, res) => {
   }
 };
 
-/**
- * Download template Excel
- * GET /api/users/import/download-template
- */
-Controller.downloadTemplate = async (req, res) => {
+Controller.process = async (req, res) => {
+  let uploadedFile = null;
+  try {
+    const hasAccess = await checkAccess(req, 'import');
+    if (!hasAccess) {
+      return response.sc401('Access denied.', {}, res);
+    }
+
+    if (!req.file) {
+      return response.sc400('File tidak ditemukan, silakan upload file Excel', {}, res);
+    }
+
+    uploadedFile = req.file.path;
+
+    const workbook = XLSX.readFile(uploadedFile);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    if (rows.length === 0) {
+      return response.sc400('File Excel kosong', {}, res);
+    }
+
+    // Validasi struktur data
+    const validation = validateImportExcelData(rows);
+    if (!validation.isValid || validation.errors.length > 0) {
+      return response.sc400(
+        'Data tidak valid',
+        { total_errors: validation.errors.length, errors: validation.errors },
+        res
+      );
+    }
+
+    const validatedData = validation.validatedData;
+
+    // Cek duplikasi
+    const dupCheck = await UsersImportService.checkDuplication(validatedData, helper);
+    if (dupCheck.errors.length > 0) {
+      return response.sc400(
+        'Data duplikasi ditemukan.',
+        { total_errors: dupCheck.errors.length, errors: dupCheck.errors },
+        res
+      );
+    }
+
+    const dataToImport = dupCheck.data;
+
+    // Validasi foreign keys
+    if (Array.isArray(dataToImport) && dataToImport.length > 0) {
+      const fkErrors = await UsersImportService.validateForeignKeys(dataToImport, helper);
+      if (fkErrors && fkErrors.length > 0) {
+        return response.sc400(
+          'Referensi data tidak ditemukan.',
+          { total_errors: fkErrors.length, errors: fkErrors },
+          res
+        );
+      }
+    }
+
+    // Import data ke database
+    const createdBy = req.user ? req.user.id_user : 1;
+    const importResult = await UsersImportService.importDataToDatabase(
+      dataToImport,
+      createdBy,
+      helper
+    );
+
+    // Hapus file setelah selesai
+    if (fs.existsSync(uploadedFile)) {
+      fs.unlinkSync(uploadedFile);
+    }
+
+    return response.sc200(
+      'Import data berhasil',
+      {
+        success: importResult.successCount,
+        failed: importResult.failureCount,
+        details: importResult.details,
+      },
+      res
+    );
+  } catch (error) {
+    if (uploadedFile && fs.existsSync(uploadedFile)) {
+      fs.unlinkSync(uploadedFile);
+    }
+    return handleError(error, res);
+  }
+};
+
+Controller.template = async (req, res) => {
   try {
     // Prepare data untuk template
     const headers = [
@@ -419,8 +413,7 @@ Controller.downloadTemplate = async (req, res) => {
 
     logger.info(`Template Excel downloaded by user ${req.authIdUser}`);
   } catch (error) {
-    logger.error('Error in downloadTemplate:', error);
-    return response.sc500('Terjadi kesalahan saat download template.', {}, res);
+    return handleError(error, res);
   }
 };
 

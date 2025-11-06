@@ -130,7 +130,7 @@ Controller.cj1 = async (req, res) => {
   }
 };
 
-/* Create Event Settings */
+/* Event - Create Settings */
 Controller.cj2 = async (req, res) => {
   try {
     let count_create = 0;
@@ -231,7 +231,7 @@ Controller.cj2 = async (req, res) => {
   }
 };
 
-/* Create Event - Penjurian */
+/* Event - Create Penjurian */
 Controller.cj3 = async (req, res) => {
   try {
     let count_create = 0;
@@ -360,7 +360,7 @@ Controller.cj3 = async (req, res) => {
   }
 };
 
-/* Akumulasi Penilaian */
+/* Formulir - Akumulasi Penilaian */
 Controller.cj4 = async (req, res) => {
   try {
     let count_processed_bonsai = 0;
