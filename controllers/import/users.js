@@ -37,7 +37,6 @@ const logger = winston.createLogger({
 });
 
 const Controller = {};
-const redisPrefix = process.env.REDIS_PREFIX + 'users:';
 
 /**
  * Import Excel ke Database

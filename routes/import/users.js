@@ -6,7 +6,7 @@ const Controller = require('../../controllers/import/users');
 
 /* Middleware */
 const isAuth = require('../../middleware/isAuth');
-const upload = require('../../middleware/import/users');
+const upload = require('../../middleware/import.js');
 
 /**
  * POST /api/users/import/excel
