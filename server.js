@@ -204,7 +204,7 @@ app.get('/', (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'API PPBI - Persatuan Penggemar Bonsai Indonesia',
-    version: '1.2.3',
+    version: '1.2.4',
     documentation: {
       url: `http://localhost:${port}/docs`,
       description:
