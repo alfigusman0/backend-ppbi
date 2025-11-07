@@ -57,7 +57,7 @@ Controller.create = async (req, res) => {
     }
 
     const ketua = req.body.ketua || null;
-    const sekeretaris = req.body.sekeretaris || null;
+    const sekertaris = req.body.sekertaris || null;
     const bendahara = req.body.bendahara || null;
     const profile = req.body.profile || null;
     const visi = req.body.visi || null;
@@ -79,11 +79,11 @@ Controller.create = async (req, res) => {
     }
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbs_profile_cabang`(`ids_cabang`, `ketua`, `sekeretaris`, `bendahara`, `profile`, `visi`, `misi`, `program`, `nomor_sk`, `masa_aktif`, `file_sk`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbs_profile_cabang`(`ids_cabang`, `ketua`, `sekertaris`, `bendahara`, `profile`, `visi`, `misi`, `program`, `nomor_sk`, `masa_aktif`, `file_sk`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         ids_cabang,
         ketua,
-        sekeretaris,
+        sekertaris,
         bendahara,
         profile,
         visi,
@@ -261,7 +261,7 @@ Controller.update = async (req, res) => {
     const {
       ids_cabang,
       ketua,
-      sekeretaris,
+      sekertaris,
       bendahara,
       profile,
       visi,
@@ -295,7 +295,7 @@ Controller.update = async (req, res) => {
 
     addUpdate('ids_cabang', ids_cabang);
     addUpdate('ketua', ketua);
-    addUpdate('sekeretaris', sekeretaris);
+    addUpdate('sekertaris', sekertaris);
     addUpdate('bendahara', bendahara);
     addUpdate('profile', profile);
     addUpdate('visi', visi);
