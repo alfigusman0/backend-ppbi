@@ -2,7 +2,6 @@
 const redis = require('../../config/redis');
 /* Libraries */
 const md5 = require('md5');
-const moment = require('moment');
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 
@@ -91,7 +90,7 @@ Controller.create = async (req, res) => {
             param: [ids_cabang, nama_acara, slug_event, proposal, tgl_awal_acara, tgl_akhir_acara, ids_kelurahan, rw, rt, alamat, poster, bukti_bayar, jenis, status, created_by]
         });
 
-        json = {
+        const json = {
             id_event: result.insertId,
         }
 

@@ -234,10 +234,9 @@ Controller.login = async (req, res, next) => {
                 });
             }
 
-            json = {
+            return response.sc200("", {
                 token: token
-            };
-            return response.sc200("", json, res);
+            }, res);
         } else {
             return response.sc400('Password is wrong.', {}, res);
         }
@@ -264,7 +263,6 @@ Controller.register = async (req, res, next) => {
             return response.sc400('Username already exist.', {}, res);
         }
 
-        /* Hash Password */
         const hashedPassword = await encrypt.Hash(password);
 
         /* Save to Database */
@@ -302,7 +300,7 @@ Controller.logout = async (req, res, next) => {
                 console.error('Session delete redis error:', redisError);
             }
         }
-        return response.sc200('You have successfully logged out!', json, res);
+        return response.sc200('You have successfully logged out!', {}, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -345,10 +343,9 @@ Controller.createToken = async (req, res, next) => {
             });
         }
 
-        json = {
+        return response.sc200('', {
             token: token
-        };
-        return response.sc200('', json, res);
+        }, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -366,6 +363,8 @@ Controller.refreshToken = async (req, res, next) => {
         if (!payload) {
             return response.sc400('Payload is missing.', {}, res);
         }
+
+        let expire_at = moment().add(process.env.JWT_EXPIRED_IN, 'days').format("YYYY-MM-DD HH:mm:ss");
 
         // Generate Token
         const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -394,10 +393,9 @@ Controller.refreshToken = async (req, res, next) => {
             });
         }
 
-        json = {
+        return response.sc200('Token has been refreshed successfully', {
             token: token
-        };
-        return response.sc200('Token has been refreshed successfully', json, res);
+        }, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);
@@ -445,7 +443,7 @@ Controller.deleteToken = async (req, res, next) => {
                 console.error('Session delete redis error:', redisError);
             }
         }
-        return response.sc200('Your token has been deleted!', json, res);
+        return response.sc200('Your token has been deleted!', {}, res);
     } catch (error) {
         console.log(error);
         return handleError(error, res);

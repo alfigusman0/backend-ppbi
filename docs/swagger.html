@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>API PPBI - Dokumentasi Swagger UI</title>
+
+    <!-- Swagger UI CSS -->
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.5/swagger-ui.css"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.5/favicon-32x32.png"
+      sizes="32x32"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.5/favicon-16x16.png"
+      sizes="16x16"
+    />
+
+    <style>
+      html {
+        box-sizing: border-box;
+        overflow: -moz-scrollbars-vertical;
+        overflow-y: scroll;
+      }
+
+      *,
+      *:before,
+      *:after {
+        box-sizing: inherit;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: #fafafa;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+          sans-serif;
+      }
+
+      /* Custom Header */
+      .custom-header {
+        background: linear-gradient(135deg, #1a5f3d 0%, #2d8659 100%);
+        color: white;
+        padding: 20px 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .custom-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .custom-header .version-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
+      }
+
+      .custom-header .version-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .custom-header .back-link {
+        color: white;
+        text-decoration: none;
+        font-size: 14px;
+        opacity: 0.9;
+        transition: opacity 0.2s;
+      }
+
+      .custom-header .back-link:hover {
+        opacity: 1;
+        text-decoration: underline;
+      }
+
+      /* Loading overlay */
+      .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+
+      .loading-overlay.hidden {
+        display: none;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #2d8659;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-text {
+        margin-top: 20px;
+        color: #666;
+        font-size: 16px;
+      }
+
+      /* Error display */
+      .error-container {
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 30px;
+        background: #fff3f3;
+        border: 2px solid #ffcccc;
+        border-radius: 8px;
+        display: none;
+      }
+
+      .error-container.show {
+        display: block;
+      }
+
+      .error-container h2 {
+        color: #d32f2f;
+        margin-top: 0;
+      }
+
+      .error-container pre {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+
+      /* Swagger UI container */
+      #swagger-ui {
+        max-width: 1460px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Custom Header -->
+    <div class="custom-header">
+      <h1>
+        <span>🌳</span>
+        <span>API PPBI Documentation</span>
+      </h1>
+      <div class="version-info">
+        <div class="version-badge">v1.2.3</div>
+        <a href="/" class="back-link">← Kembali ke API</a>
+      </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Memuat dokumentasi API...</div>
+    </div>
+
+    <!-- Error Container -->
+    <div id="error-container" class="error-container">
+      <h2>❌ Terjadi Kesalahan</h2>
+      <p>Gagal memuat dokumentasi API. Silakan coba lagi atau hubungi administrator.</p>
+      <pre id="error-details"></pre>
+    </div>
+
+    <!-- Swagger UI Container -->
+    <div id="swagger-ui"></div>
+
+    <!-- Swagger UI Bundle -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.5/swagger-ui-bundle.js"
+      charset="UTF-8"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.5/swagger-ui-standalone-preset.js"
+      charset="UTF-8"
+    ></script>
+
+    <script>
+      // Function to hide loading overlay
+      function hideLoading() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+          loadingOverlay.classList.add('hidden');
+        }
+      }
+
+      // Function to show error
+      function showError(message, details) {
+        hideLoading();
+        const errorContainer = document.getElementById('error-container');
+        const errorDetails = document.getElementById('error-details');
+
+        if (errorContainer && errorDetails) {
+          errorContainer.classList.add('show');
+          errorDetails.textContent = details || message;
+        }
+
+        console.error('Swagger UI Error:', message, details);
+      }
+
+      // Wait for DOM to be fully loaded
+      document.addEventListener('DOMContentLoaded', function () {
+        try {
+          // Check if SwaggerUIBundle is available
+          if (typeof SwaggerUIBundle === 'undefined') {
+            throw new Error('SwaggerUIBundle tidak tersedia. Library gagal dimuat dari CDN.');
+          }
+
+          // Initialize Swagger UI
+          const ui = SwaggerUIBundle({
+            url: '/docs/openapi.yaml',
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+            plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+            layout: 'StandaloneLayout',
+            tryItOutEnabled: true,
+            filter: true,
+            persistAuthorization: true,
+            displayRequestDuration: true,
+            docExpansion: 'list',
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 1,
+            requestInterceptor: function (request) {
+              // Add custom headers if needed
+              request.headers['Content-Type'] = 'application/json';
+              return request;
+            },
+            onComplete: function () {
+              console.log('✅ Swagger UI berhasil dimuat');
+              hideLoading();
+            },
+            onFailure: function (error) {
+              console.error('❌ Gagal memuat OpenAPI spec:', error);
+              showError(
+                'Gagal memuat OpenAPI specification',
+                'Error: ' +
+                  error.message +
+                  '\n\nPastikan file openapi.yaml tersedia di /docs/openapi.yaml'
+              );
+            },
+          });
+
+          // Store UI instance globally
+          window.ui = ui;
+
+          // Set timeout to hide loading if it takes too long
+          setTimeout(function () {
+            if (!document.getElementById('loading-overlay').classList.contains('hidden')) {
+              console.warn('⚠️ Loading timeout - memaksa hide loading overlay');
+              hideLoading();
+            }
+          }, 10000);
+        } catch (error) {
+          showError('Error inisialisasi Swagger UI', error.message + '\n\n' + error.stack);
+        }
+      });
+
+      // Handle script load errors
+      window.addEventListener(
+        'error',
+        function (e) {
+          if (e.target && (e.target.src || e.target.href)) {
+            const resource = e.target.src || e.target.href;
+            if (resource.includes('swagger-ui')) {
+              showError(
+                'Gagal memuat resource Swagger UI',
+                'Resource: ' +
+                  resource +
+                  '\n\nPastikan koneksi internet Anda stabil atau coba refresh halaman.'
+              );
+            }
+          }
+        },
+        true
+      );
+    </script>
+  </body>
+</html>

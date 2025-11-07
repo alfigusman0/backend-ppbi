@@ -1,7 +1,4 @@
 /* Helpers */
-const {
-    json
-} = require('body-parser');
 const response = require('../helpers/response');
 /* Validation */
 const validation = require('../validation/pengantar');

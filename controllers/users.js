@@ -3,7 +3,6 @@ const encrypt = require('../config/encrypt');
 const redis = require('../config/redis');
 /* Libraries */
 const md5 = require('md5');
-const moment = require('moment');
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 
@@ -84,7 +83,7 @@ Controller.create = async (req, res) => {
             param: [ids_grup, username, hashedPassword, reset, created_by]
         });
 
-        json = {
+        const json = {
             id_user: result.insertId,
         }
 

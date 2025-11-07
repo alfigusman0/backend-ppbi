@@ -1,6 +1,3 @@
-/* Config */
-const database = require('../config/database');
-
 /* Libraries */
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
@@ -113,7 +110,9 @@ notification.create = async (params) => {
             message: error.message,
             id_notif: null,
             data: null,
-            error: { message: error.message }
+            error: {
+                message: error.message
+            }
         };
     }
 };
@@ -161,11 +160,15 @@ notification.updateWhatsappStatus = async (idNotif, status, updatedBy = null) =>
         const result = await helper.runSQL(sql);
 
         if (!result || result.affectedRows === 0) {
-            logger.warn('Notifikasi tidak ditemukan untuk update', { idNotif });
+            logger.warn('Notifikasi tidak ditemukan untuk update', {
+                idNotif
+            });
             return {
                 success: false,
                 message: 'Notifikasi tidak ditemukan',
-                error: { message: 'Notifikasi tidak ditemukan' }
+                error: {
+                    message: 'Notifikasi tidak ditemukan'
+                }
             };
         }
 
@@ -191,7 +194,9 @@ notification.updateWhatsappStatus = async (idNotif, status, updatedBy = null) =>
         return {
             success: false,
             message: error.message,
-            error: { message: error.message }
+            error: {
+                message: error.message
+            }
         };
     }
 };
@@ -207,7 +212,9 @@ notification.getPendingWhatsapp = async (limit = 100) => {
             limit = 100;
         }
 
-        logger.info('Mengambil notifikasi pending WhatsApp', { limit });
+        logger.info('Mengambil notifikasi pending WhatsApp', {
+            limit
+        });
 
         const sql = {
             sql: `SELECT 
@@ -376,7 +383,9 @@ notification.markAsRead = async (idNotif) => {
             return {
                 success: false,
                 message: 'Notifikasi tidak ditemukan',
-                error: { message: 'Notifikasi tidak ditemukan' }
+                error: {
+                    message: 'Notifikasi tidak ditemukan'
+                }
             };
         }
 
@@ -395,7 +404,9 @@ notification.markAsRead = async (idNotif) => {
         return {
             success: false,
             message: error.message,
-            error: { message: error.message }
+            error: {
+                message: error.message
+            }
         };
     }
 };
@@ -439,7 +450,9 @@ notification.markMultipleAsRead = async (notifIds) => {
             success: false,
             message: error.message,
             affectedRows: 0,
-            error: { message: error.message }
+            error: {
+                message: error.message
+            }
         };
     }
 };
