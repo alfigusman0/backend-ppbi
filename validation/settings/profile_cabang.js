@@ -8,7 +8,7 @@ module.exports = function validateInput(method, path, data) {
   // Normalisasi data - konversi ke string kosong jika undefined/null
   data.ids_cabang = !isEmpty(data.ids_cabang) ? data.ids_cabang : '';
   data.ketua = !isEmpty(data.ketua) ? data.ketua : '';
-  data.sekretaris = !isEmpty(data.sekretaris) ? data.sekretaris : '';
+  data.sekertaris = !isEmpty(data.sekertaris) ? data.sekertaris : '';
   data.bendahara = !isEmpty(data.bendahara) ? data.bendahara : '';
   data.profile = !isEmpty(data.profile) ? data.profile : '';
   data.visi = !isEmpty(data.visi) ? data.visi : '';
@@ -36,10 +36,10 @@ module.exports = function validateInput(method, path, data) {
       }
     }
 
-    // Validasi field sekretaris (opsional, tapi jika diisi harus integer)
-    if (!Validator.isEmpty(data.sekretaris)) {
-      if (!Validator.isInt(data.sekretaris)) {
-        errors.sekretaris = 'ids sekretaris tidak valid.';
+    // Validasi field sekertaris (opsional, tapi jika diisi harus integer)
+    if (!Validator.isEmpty(data.sekertaris)) {
+      if (!Validator.isInt(data.sekertaris)) {
+        errors.sekertaris = 'ids sekertaris tidak valid.';
       }
     }
 
@@ -126,10 +126,10 @@ module.exports = function validateInput(method, path, data) {
       }
     }
 
-    // Validasi sekretaris jika diisi
-    if (!Validator.isEmpty(data.sekretaris)) {
-      if (!Validator.isInt(data.sekretaris)) {
-        errors.sekretaris = 'ids sekretaris tidak valid.';
+    // Validasi sekertaris jika diisi
+    if (!Validator.isEmpty(data.sekertaris)) {
+      if (!Validator.isInt(data.sekertaris)) {
+        errors.sekertaris = 'ids sekertaris tidak valid.';
       }
     }
 
