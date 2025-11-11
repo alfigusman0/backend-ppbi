@@ -69,6 +69,7 @@ Controller.create = async (req, res) => {
     const id_suiseki = isEmpty(req.body.id_suiseki) ? null : req.body.id_suiseki;
     const id_pengantar = isEmpty(req.body.id_pengantar) ? null : req.body.id_pengantar;
     const keterangan = isEmpty(req.body.keterangan) ? null : req.body.keterangan;
+    const diskon = isEmpty(req.body.diskon) ? 0 : req.body.diskon;
     const { id_event, id_kategori, ukuran, foto } = req.body;
 
     /* Get Data Kelas */
@@ -94,7 +95,7 @@ Controller.create = async (req, res) => {
     }
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `foto`, `id_pengantar`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `diskon`, `foto`, `id_pengantar`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         id_event,
         no_registrasi,
@@ -102,6 +103,7 @@ Controller.create = async (req, res) => {
         id_suiseki,
         id_kategori,
         ukuran,
+        diskon,
         foto,
         id_pengantar,
         keterangan,
@@ -118,55 +120,6 @@ Controller.create = async (req, res) => {
       await helper.deleteKeysByPattern(redisPrefix + '*');
     } catch (redisError) {
       logger.error('Failed to delete Redis cache in create:', redisError);
-    }
-
-    // Template
-    const template = `Halo *[Nama Peserta]*\n\nSelamat [Jenis] anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis [Jenis]: *[Jenis Bonsai]*\ntelah terdaftar pada *[Nama Event]* \n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
-    /* Get Event */
-    const event = await helper.runSQL({
-      sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
-      param: [id_event],
-    });
-    /* Get Profile */
-    const profile = await helper.runSQL({
-      sql: 'SELECT * FROM view_profile WHERE created_by = ? LIMIT 1',
-      param: [created_by],
-    });
-    let message;
-    if (!isEmpty(id_pohon)) {
-      const pohon = await helper.runSQL({
-        sql: 'SELECT * FROM view_pohon WHERE id_pohon = ? LIMIT 1',
-        param: [id_pohon],
-      });
-      const data = {
-        jenis: 'Bonsai',
-        nama_lengkap: profile[0].nama_lengkap,
-        no_registrasi: no_registrasi,
-        jenis_bonsai: pohon[0].jenis_bonsai,
-        nama_acara: event[0].nama_acara,
-      };
-      message = replaceMessage(template, data);
-    } else {
-      const suiseki = await helper.runSQL({
-        sql: 'SELECT * FROM view_suiseki WHERE id_suiseki = ? LIMIT 1',
-        param: [id_suiseki],
-      });
-      const data = {
-        jenis: 'Suiseki',
-        nama_lengkap: profile[0].nama_lengkap,
-        no_registrasi: no_registrasi,
-        jenis_bonsai: suiseki[0].jenis_suiseki,
-        nama_acara: event[0].nama_acara,
-      };
-      message = replaceMessage(template, data);
-    }
-
-    const target = profile[0].nmr_tlpn;
-    /* Send Notification Whatsapp */
-    const fb = await whatsapp.sendMessage(id_event, { target, message, delay });
-    if (!fb.success) {
-      const statusCode = fb.errorType === 'TOKEN_ERROR' ? 401 : 500;
-      console.log(`Error Whatsapp : ${statusCode} : ${fb.message}`);
     }
 
     return response.sc200('Data added successfully.', json, res);
@@ -523,6 +476,7 @@ Controller.update = async (req, res) => {
       id_suiseki,
       id_kategori,
       ukuran,
+      diskon,
       bukti_bayar,
       bayar,
       cetak,
@@ -530,7 +484,10 @@ Controller.update = async (req, res) => {
       meja,
       foto,
       id_pengantar,
-      total,
+      penampilan,
+      gerak_dasar,
+      keserasian,
+      kematangan,
       kriteria,
       keterangan,
       id_profile_juri,
@@ -568,11 +525,15 @@ Controller.update = async (req, res) => {
       addUpdate('nomor_sertifikat', nomor_sertifikat);
       addUpdate('no_registrasi', no_registrasi);
       addUpdate('no_juri', no_juri);
+      addUpdate('diskon', diskon);
       addUpdate('bayar', bayar);
       addUpdate('arena', arena);
       addUpdate('meja', meja);
       addUpdate('id_pengantar', id_pengantar);
-      addUpdate('total', total);
+      addUpdate('penampilan', penampilan);
+      addUpdate('gerak_dasar', gerak_dasar);
+      addUpdate('keserasian', keserasian);
+      addUpdate('kematangan', kematangan);
       addUpdate('kriteria', kriteria);
       addUpdate('keterangan', keterangan);
       addUpdate('id_profile_juri', id_profile_juri);
@@ -1005,6 +966,58 @@ Controller.single_suiseki = async (req, res) => {
     }
 
     return response.sc200('', json, res);
+  } catch (error) {
+    console.log(error);
+    return handleError(error, res);
+  }
+};
+
+/* Send Notification Bulk Formulir to WhatsApp */
+Controller.send_notification = async (req, res) => {
+  try {
+    const hasAccess = await checkAccess(req, 'read');
+    if (!hasAccess) {
+      return response.sc401('Access denied.', {}, res);
+    }
+
+    const { id_event, created_by } = req.body;
+
+    /* Check existing data for event */
+    const event = await helper.runSQL({
+      sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
+      param: [id_event],
+    });
+    if (!event.length) {
+      return response.sc404('Event not found.', {}, res);
+    }
+
+    /* Get Data Formulir */
+    let getData;
+    if (event[0].jenis === 'Bonsai') {
+      getData = await helper.runSQL({
+        sql: 'SELECT * FROM view_formulir_pohon WHERE id_event = ? AND bayar = ? AND created_by = ?',
+        param: [id_event, 'BELUM', created_by],
+      });
+    } else {
+      getData = await helper.runSQL({
+        sql: 'SELECT * FROM view_formulir_suiseki WHERE id_event = ? AND bayar = ? AND created_by = ?',
+        param: [id_event, 'BELUM', created_by],
+      });
+    }
+    if (!getData.length) {
+      return response.sc404('No participants found for notification.', {}, res);
+    }
+
+    /* Get Data Profile */
+    const profile = await helper.runSQL({
+      sql: 'SELECT * FROM view_profile WHERE created_by = ? LIMIT 1',
+      param: [created_by],
+    });
+    if (!profile.length) {
+      return response.sc404('Profile not found.', {}, res);
+    }
+
+    /* Template */
   } catch (error) {
     console.log(error);
     return handleError(error, res);
