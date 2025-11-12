@@ -85,7 +85,7 @@ Controller.create = async (req, res) => {
       );
     }
 
-    const no_registrasi = await Controller.getNoRegistrasi(id_event, getKelas[0].ids_kelas);
+    const no_registrasi = await Controller.getNoRegistrasiByEvent(id_event);
     if (!no_registrasi) {
       return response.sc400(
         'Failed to generate registration number. Please check event and class data.',
@@ -977,47 +977,97 @@ Controller.send_notification = async (req, res) => {
   try {
     const hasAccess = await checkAccess(req, 'read');
     if (!hasAccess) {
-      return response.sc401('Access denied.', {}, res);
+      return response.sc401('Akses ditolak.', {}, res);
     }
 
     const { id_event, created_by } = req.body;
 
-    /* Check existing data for event */
+    /* Cek data event */
     const event = await helper.runSQL({
       sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
       param: [id_event],
     });
     if (!event.length) {
-      return response.sc404('Event not found.', {}, res);
+      return response.sc404('Event tidak ditemukan.', {}, res);
     }
 
-    /* Get Data Formulir */
-    let getData;
+    /* Ambil data formulir yang belum bayar untuk user */
+    let formulirData;
     if (event[0].jenis === 'Bonsai') {
-      getData = await helper.runSQL({
+      formulirData = await helper.runSQL({
         sql: 'SELECT * FROM view_formulir_pohon WHERE id_event = ? AND bayar = ? AND created_by = ?',
         param: [id_event, 'BELUM', created_by],
       });
     } else {
-      getData = await helper.runSQL({
+      formulirData = await helper.runSQL({
         sql: 'SELECT * FROM view_formulir_suiseki WHERE id_event = ? AND bayar = ? AND created_by = ?',
         param: [id_event, 'BELUM', created_by],
       });
     }
-    if (!getData.length) {
-      return response.sc404('No participants found for notification.', {}, res);
+
+    if (!formulirData.length) {
+      return response.sc404('Tidak ada peserta yang ditemukan untuk notifikasi.', {}, res);
     }
 
-    /* Get Data Profile */
+    /* Ambil data profile peserta */
     const profile = await helper.runSQL({
       sql: 'SELECT * FROM view_profile WHERE created_by = ? LIMIT 1',
       param: [created_by],
     });
     if (!profile.length) {
-      return response.sc404('Profile not found.', {}, res);
+      return response.sc404('Profil tidak ditemukan.', {}, res);
     }
 
-    /* Template */
+    // Format template pesan multiple formulir
+    const templateMultiple = (namaPeserta, jenis, namaEvent, formulirList, total) => {
+      let daftarFormulir = formulirList
+        .map(
+          (form, index) =>
+            `${index + 1}. ${form.nama_kelas} - ${
+              form.jenis_bonsai || form.jenis_suiseki
+            } : *${formatRupiah(form.total_harga)}*`
+        )
+        .join('\n');
+
+      return `Halo *${namaPeserta}*\n\nSelamat ${jenis} anda:\n${daftarFormulir}\n\nTotal: *${formatRupiah(
+        total
+      )}*\n\nTelah terdaftar pada *${namaEvent}*\n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPanitia Pameran *${namaEvent}*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
+    };
+
+    // Hitung total harga dari field total_harga yang sudah ada di view
+    let totalHarga = 0;
+    const listFormulir = [];
+
+    for (const form of formulirData) {
+      totalHarga += form.total_harga;
+
+      listFormulir.push({
+        nama_kelas: form.nama_kelas,
+        jenis_bonsai: form.jenis_bonsai,
+        jenis_suiseki: form.jenis_suiseki,
+        total_harga: form.total_harga, // Gunakan field total_harga yang sudah ada
+      });
+    }
+
+    // Compose pesan dengan multiple formulir
+    const message = templateMultiple(
+      profile[0].nama_lengkap,
+      event[0].jenis,
+      event[0].nama_acara,
+      listFormulir,
+      totalHarga
+    );
+
+    const target = profile[0].nmr_tlpn;
+
+    // Kirim pesan WhatsApp dengan delay
+    const fb = await whatsapp.sendMessage(id_event, { target, message, delay });
+    if (!fb.success) {
+      console.log(`Error Whatsapp: ${fb.message}`);
+      return response.sc500('Gagal mengirim notifikasi WhatsApp.', {}, res);
+    }
+
+    return response.sc200('Notifikasi berhasil dikirim.', {}, res);
   } catch (error) {
     console.log(error);
     return handleError(error, res);
@@ -1053,6 +1103,37 @@ Controller.getNoRegistrasi = async (id_event, ids_kelas) => {
   } catch (error) {
     console.log(error);
     logger.error('Error getting registration number:', error);
+    return null;
+  }
+};
+
+/* Get Nomor Urut Registrasi Berdasarkan Event Saja */
+Controller.getNoRegistrasiByEvent = async id_event => {
+  try {
+    // Cari nomor registrasi terakhir untuk event ini
+    const result = await helper.runSQL({
+      sql: 'SELECT no_registrasi FROM tbl_formulir WHERE id_event = ? ORDER BY CAST(no_registrasi AS UNSIGNED) DESC LIMIT 1',
+      param: [id_event],
+    });
+
+    if (!result.length) {
+      return '1'; // Mulai dari 1 jika belum ada data
+    }
+
+    const lastNo = result[0].no_registrasi;
+
+    // Pastikan nomor adalah angka valid
+    const lastNumber = parseInt(lastNo);
+
+    if (isNaN(lastNumber)) {
+      return '1'; // Kembali ke 1 jika format tidak valid
+    }
+
+    const newNumber = lastNumber + 1;
+    return newNumber.toString();
+  } catch (error) {
+    console.log(error);
+    logger.error('Error getting registration number by event:', error);
     return null;
   }
 };
