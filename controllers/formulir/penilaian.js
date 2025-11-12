@@ -131,6 +131,7 @@ Controller.read_bonsai = async (req, res) => {
       ids_jenis_bonsai,
       jenis_bonsai,
       ids_kelas,
+      ids_kelas_not_in,
       nama_kelas,
       id_kategori,
       nama_kategori,
@@ -216,6 +217,7 @@ Controller.read_bonsai = async (req, res) => {
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
     addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
     addCondition('ids_kelas', ids_kelas, 'IN');
+    addCondition('ids_kelas', ids_kelas_not_in, 'NOT IN');
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('id_kategori', id_kategori, 'IN');
     addCondition('nama_kategori', nama_kategori, 'LIKE');
@@ -302,6 +304,7 @@ Controller.read_suiseki = async (req, res) => {
       ids_jenis_suiseki,
       jenis_suiseki,
       ids_kelas,
+      ids_kelas_not_in,
       nama_kelas,
       id_kategori,
       nama_kategori,
@@ -387,6 +390,7 @@ Controller.read_suiseki = async (req, res) => {
     addCondition('ids_jenis_suiseki', ids_jenis_suiseki, 'IN');
     addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
     addCondition('ids_kelas', ids_kelas, 'IN');
+    addCondition('ids_kelas', ids_kelas_not_in, 'NOT IN');
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('id_kategori', id_kategori, 'IN');
     addCondition('nama_kategori', nama_kategori, 'LIKE');
