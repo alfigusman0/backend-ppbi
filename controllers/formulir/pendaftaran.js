@@ -666,6 +666,24 @@ Controller.delete = async (req, res) => {
       return response.sc400('Data tidak dapat dihapus karena sudah dibayar.', {}, res);
     }
 
+    /* Check existing penghargaan */
+    const checkPenghargaan = await helper.runSQL({
+      sql: 'SELECT id_penghargaan FROM tbl_penghargaan WHERE id_formulir = ? LIMIT 1',
+      param: [id],
+    });
+    if (checkPenghargaan.length) {
+      return response.sc400('Data tidak dapat dihapus karena sudah ada penghargaan.', {}, res);
+    }
+
+    /* Check existing penialain */
+    const checkPenilaian = await helper.runSQL({
+      sql: 'SELECT id_penilaian FROM tbl_penilaian WHERE id_formulir = ? LIMIT 1',
+      param: [id],
+    });
+    if (checkPenilaian.length) {
+      return response.sc400('Data tidak dapat dihapus karena sudah ada penilaian.', {}, res);
+    }
+
     // SQL Delete Data
     const sqlDelete = {
       sql: 'DELETE FROM `tbl_formulir` WHERE id_formulir = ?',
