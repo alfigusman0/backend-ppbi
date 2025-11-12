@@ -520,6 +520,17 @@ Controller.update = async (req, res) => {
       }
     };
 
+    if (!isEmpty(no_juri)) {
+      /* Check unique no_juri */
+      const checkNoJuri = await helper.runSQL({
+        sql: 'SELECT id_formulir FROM `tbl_formulir` WHERE no_juri = ? AND id_event = ?',
+        param: [no_juri, checkData[0].id_event],
+      });
+      if (checkNoJuri.length) {
+        return response.sc400('No juri already exists.', {}, res);
+      }
+    }
+
     if (req.authTingkat <= 5) {
       addUpdate('id_event', id_event);
       addUpdate('nomor_sertifikat', nomor_sertifikat);
