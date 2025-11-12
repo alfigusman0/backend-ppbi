@@ -529,14 +529,15 @@ Controller.cj5 = async (req, res) => {
 
         // Pembobotan: Penampilan 80%, Keselarasan 20%
         const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
+        const finalScoreKiteria = (4 / 5) * totalPenampilan * 2 + (1 / 5) * totalKeselarasan * 2;
 
         // Tentukan kriteria tahap 1 berdasarkan skor final
         let kriteriaTahap1 = 'D';
-        if (finalScore >= 161 && finalScore <= 200) {
+        if (finalScoreKiteria >= 161 && finalScoreKiteria <= 200) {
           kriteriaTahap1 = 'A';
-        } else if (finalScore >= 141 && finalScore <= 160) {
+        } else if (finalScoreKiteria >= 141 && finalScoreKiteria <= 160) {
           kriteriaTahap1 = 'B';
-        } else if (finalScore >= 121 && finalScore <= 140) {
+        } else if (finalScoreKiteria >= 121 && finalScoreKiteria <= 140) {
           kriteriaTahap1 = 'C';
         }
 
@@ -627,14 +628,15 @@ Controller.cj6 = async (req, res) => {
 
         // Pembobotan: Penampilan 80%, Keselarasan 20%
         const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
+        const finalScoreKiteria = (4 / 5) * totalPenampilan * 2 + (1 / 5) * totalKeselarasan * 2;
 
-        // Tentukan kriteria tahap 2 berdasarkan skor final
+        // Tentukan kriteria tahap 1 berdasarkan skor final
         let kriteriaTahap2 = 'D';
-        if (finalScore >= 161 && finalScore <= 200) {
+        if (finalScoreKiteria >= 161 && finalScoreKiteria <= 200) {
           kriteriaTahap2 = 'A';
-        } else if (finalScore >= 141 && finalScore <= 160) {
+        } else if (finalScoreKiteria >= 141 && finalScoreKiteria <= 160) {
           kriteriaTahap2 = 'B';
-        } else if (finalScore >= 121 && finalScore <= 140) {
+        } else if (finalScoreKiteria >= 121 && finalScoreKiteria <= 140) {
           kriteriaTahap2 = 'C';
         }
 
@@ -730,14 +732,15 @@ Controller.cj7 = async (req, res) => {
 
         // Pembobotan: Penampilan 80%, Keselarasan 20%
         const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
+        const finalScoreKiteria = (4 / 5) * totalPenampilan * 2 + (1 / 5) * totalKeselarasan * 2;
 
-        // Tentukan kriteria tahap 3 berdasarkan skor final
+        // Tentukan kriteria tahap 1 berdasarkan skor final
         let kriteriaTahap3 = 'D';
-        if (finalScore >= 161 && finalScore <= 200) {
+        if (finalScoreKiteria >= 161 && finalScoreKiteria <= 200) {
           kriteriaTahap3 = 'A';
-        } else if (finalScore >= 141 && finalScore <= 160) {
+        } else if (finalScoreKiteria >= 141 && finalScoreKiteria <= 160) {
           kriteriaTahap3 = 'B';
-        } else if (finalScore >= 121 && finalScore <= 140) {
+        } else if (finalScoreKiteria >= 121 && finalScoreKiteria <= 140) {
           kriteriaTahap3 = 'C';
         }
 
