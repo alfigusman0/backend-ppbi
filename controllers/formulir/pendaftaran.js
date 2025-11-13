@@ -70,7 +70,7 @@ Controller.create = async (req, res) => {
     const id_pengantar = isEmpty(req.body.id_pengantar) ? null : req.body.id_pengantar;
     const keterangan = isEmpty(req.body.keterangan) ? null : req.body.keterangan;
     const diskon = isEmpty(req.body.diskon) ? 0 : req.body.diskon;
-    const { id_event, id_kategori, ukuran, foto } = req.body;
+    const { id_event, id_kategori, ukuran, meja, foto } = req.body;
 
     /* Get Data Kelas */
     const getKelas = await helper.runSQL({
@@ -95,7 +95,7 @@ Controller.create = async (req, res) => {
     }
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `diskon`, `foto`, `id_pengantar`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `diskon`, `meja`, `foto`, `id_pengantar`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         id_event,
         no_registrasi,
@@ -104,6 +104,7 @@ Controller.create = async (req, res) => {
         id_kategori,
         ukuran,
         diskon,
+        meja,
         foto,
         id_pengantar,
         keterangan,
