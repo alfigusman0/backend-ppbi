@@ -536,6 +536,25 @@ Controller.update = async (req, res) => {
       }
     }
 
+    // Logika untuk menghitung kriteria otomatis jika id_pohon tidak null (Bonsai)
+    let calculatedKriteria = kriteria;
+    if (isEmpty(kriteria) && (!isEmpty(id_pohon) || !isEmpty(checkData[0].id_pohon))) {
+      // Gunakan nilai dari body jika ada, jika tidak gunakan nilai dari database
+      const finalScore =
+        (isEmpty(penampilan) ? checkData[0].penampilan : penampilan) +
+        (isEmpty(gerak_dasar) ? checkData[0].gerak_dasar : gerak_dasar) +
+        (isEmpty(keserasian) ? checkData[0].keserasian : keserasian) +
+        (isEmpty(kematangan) ? checkData[0].kematangan : kematangan);
+
+      if (finalScore >= 321 && finalScore <= 400) {
+        calculatedKriteria = 'A';
+      } else if (finalScore >= 281 && finalScore <= 320) {
+        calculatedKriteria = 'B';
+      } else if (finalScore >= 241 && finalScore <= 280) {
+        calculatedKriteria = 'C';
+      }
+    }
+
     if (req.authTingkat <= 5) {
       addUpdate('id_event', id_event);
       addUpdate('nomor_sertifikat', nomor_sertifikat);
@@ -550,7 +569,7 @@ Controller.update = async (req, res) => {
       addUpdate('gerak_dasar', gerak_dasar);
       addUpdate('keserasian', keserasian);
       addUpdate('kematangan', kematangan);
-      addUpdate('kriteria', kriteria);
+      addUpdate('kriteria', calculatedKriteria);
       addUpdate('keterangan', keterangan);
       addUpdate('id_profile_juri', id_profile_juri);
     }
