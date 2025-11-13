@@ -130,6 +130,7 @@ Controller.read_bonsai = async (req, res) => {
       uuid_bonsai,
       ids_jenis_bonsai,
       jenis_bonsai,
+      spesies,
       ids_kelas,
       ids_kelas_not_in,
       nama_kelas,
@@ -216,6 +217,7 @@ Controller.read_bonsai = async (req, res) => {
     addCondition('uuid_bonsai', uuid_bonsai);
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
     addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
+    addCondition('spesies', spesies);
     addCondition('ids_kelas', ids_kelas, 'IN');
     addCondition('ids_kelas', ids_kelas_not_in, 'NOT IN');
     addCondition('nama_kelas', nama_kelas, 'LIKE');
@@ -603,6 +605,7 @@ Controller.single_bonsai = async (req, res) => {
       uuid_bonsai,
       ids_jenis_bonsai,
       jenis_bonsai,
+      spesies,
       ids_kelas,
       nama_kelas,
       id_kategori,
@@ -673,6 +676,7 @@ Controller.single_bonsai = async (req, res) => {
     addCondition('uuid_bonsai', uuid_bonsai);
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai);
     addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
+    addCondition('spesies', spesies);
     addCondition('ids_kelas', ids_kelas);
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('id_kategori', id_kategori);
