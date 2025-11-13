@@ -386,7 +386,7 @@ Controller.cj4 = async (req, res) => {
     // Ambil hanya formulir BONSAI yang sudah memiliki penilaian
     const formulirList = await helper.runSQL({
       sql: `SELECT DISTINCT f.id_formulir FROM tbl_formulir f
-            WHERE f.id_pohon IS NOT NULL
+            WHERE f.id_pohon IS NOT NULL AND f.sync = 0
             AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir)`,
       param: [],
     });
@@ -457,7 +457,7 @@ Controller.cj4 = async (req, res) => {
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET penampilan = ?, gerak_dasar = ?, keserasian = ?, kematangan = ?, kriteria = ? WHERE id_formulir = ?`,
+          sql: `UPDATE tbl_formulir SET penampilan = ?, gerak_dasar = ?, keserasian = ?, kematangan = ?, kriteria = ?, sync = 1 WHERE id_formulir = ?`,
           param: [
             updateData.penampilan,
             updateData.gerak_dasar,
@@ -496,7 +496,7 @@ Controller.cj5 = async (req, res) => {
     const formulirList = await helper.runSQL({
       sql: `SELECT DISTINCT f.id_formulir, f.keterangan, f.kriteria
             FROM tbl_formulir f
-            WHERE f.id_suiseki IS NOT NULL
+            WHERE f.id_suiseki IS NOT NULL AND f.sync = 0
             AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir AND p.tahapan = 1)`,
       param: [],
     });
@@ -558,7 +558,7 @@ Controller.cj5 = async (req, res) => {
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET gerak_dasar = ?, keterangan = ?, kriteria = ? WHERE id_formulir = ?`,
+          sql: `UPDATE tbl_formulir SET gerak_dasar = ?, keterangan = ?, kriteria = ?, sync = 1 WHERE id_formulir = ?`,
           param: [
             updateData.gerak_dasar,
             updateData.keterangan,
@@ -595,7 +595,7 @@ Controller.cj6 = async (req, res) => {
     const formulirList = await helper.runSQL({
       sql: `SELECT DISTINCT f.id_formulir, f.keterangan, f.kriteria
             FROM tbl_formulir f
-            WHERE f.id_suiseki IS NOT NULL
+            WHERE f.id_suiseki IS NOT NULL AND f.sync = 1
             AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir AND p.tahapan = 2)`,
       param: [],
     });
@@ -662,7 +662,7 @@ Controller.cj6 = async (req, res) => {
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET keserasian = ?, keterangan = ?, kriteria = ? WHERE id_formulir = ?`,
+          sql: `UPDATE tbl_formulir SET keserasian = ?, keterangan = ?, kriteria = ?, sync = 2 WHERE id_formulir = ?`,
           param: [
             updateData.keserasian,
             updateData.keterangan,
@@ -699,7 +699,7 @@ Controller.cj7 = async (req, res) => {
     const formulirList = await helper.runSQL({
       sql: `SELECT DISTINCT f.id_formulir, f.keterangan, f.kriteria
             FROM tbl_formulir f
-            WHERE f.id_suiseki IS NOT NULL
+            WHERE f.id_suiseki IS NOT NULL AND f.sync = 2
             AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir AND p.tahapan = 3)`,
       param: [],
     });
@@ -766,7 +766,7 @@ Controller.cj7 = async (req, res) => {
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET kematangan = ?, keterangan = ?, kriteria = ? WHERE id_formulir = ?`,
+          sql: `UPDATE tbl_formulir SET kematangan = ?, keterangan = ?, kriteria = ?, sync = 3 WHERE id_formulir = ?`,
           param: [
             updateData.kematangan,
             updateData.keterangan,
