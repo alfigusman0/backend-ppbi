@@ -43,6 +43,7 @@ const checkAccess = async (req, action) => {
 
 // Helper function to handle errors
 const handleError = (error, res) => {
+  console.error(error);
   logger.error(error);
   return response.sc500('An error occurred in the system, please try again.', {}, res);
 };
@@ -94,7 +95,7 @@ Controller.process = async (req, res) => {
 Controller.template = async (req, res) => {
   try {
     // Prepare data untuk template
-    const headers = ['no_registrasi', 'jenis_bonsai', 'nama_kategori', 'nama_kelas'];
+    const headers = ['no_juri', 'jenis_bonsai', 'nama_kategori', 'nama_kelas'];
 
     const templateData = [
       headers,

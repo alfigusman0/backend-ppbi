@@ -77,17 +77,17 @@ PenghargaanImportService.preview = async req => {
     // Validasi setiap baris data
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const no_registrasi = row['no_registrasi'] || row['nomor_registrasi'] || row['no_reg'] || '';
+      const no_juri = row['no_juri'] || row['nomor_juri'] || '';
 
       const validationResult = await PenghargaanImportService.validateRow({
-        no_registrasi,
+        no_juri,
         id_juara,
         id_event_juara,
       });
 
       results.data.push({
         row_number: i + 2,
-        no_registrasi,
+        no_juri,
         ...validationResult,
       });
 
@@ -182,11 +182,11 @@ PenghargaanImportService.process = async req => {
     // Proses setiap baris data
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const no_registrasi = row['no_registrasi'] || row['nomor_registrasi'] || row['no_reg'] || '';
+      const no_juri = row['no_juri'] || row['nomor_juri'] || '';
 
       try {
         const validationResult = await PenghargaanImportService.validateRow({
-          no_registrasi,
+          no_juri,
           id_juara,
           id_event_juara,
         });
@@ -202,7 +202,7 @@ PenghargaanImportService.process = async req => {
           results.success_data++;
           results.details.push({
             row_number: i + 2,
-            no_registrasi,
+            no_juri,
             status: 'SUCCESS',
             message: 'Data berhasil diimport',
             id_formulir: validationResult.id_formulir,
@@ -211,7 +211,7 @@ PenghargaanImportService.process = async req => {
           results.failed_data++;
           results.details.push({
             row_number: i + 2,
-            no_registrasi,
+            no_juri,
             status: 'FAILED',
             message: validationResult.message,
           });
@@ -220,7 +220,7 @@ PenghargaanImportService.process = async req => {
         results.failed_data++;
         results.details.push({
           row_number: i + 2,
-          no_registrasi,
+          no_juri,
           status: 'FAILED',
           message: error.message || 'Terjadi kesalahan saat memproses data',
         });
@@ -243,17 +243,17 @@ PenghargaanImportService.process = async req => {
 };
 
 PenghargaanImportService.validateRow = async data => {
-  const { no_registrasi, id_juara, id_event_juara } = data;
+  const { no_juri, id_juara, id_event_juara } = data;
 
-  // Validasi no_registrasi wajib menggunakan Validator
-  if (isEmpty(no_registrasi)) {
+  // Validasi no_juri wajib menggunakan Validator
+  if (isEmpty(no_juri)) {
     return {
       status: 'INVALID',
       message: 'No Registrasi wajib diisi',
     };
   }
 
-  if (!Validator.isLength(no_registrasi, { min: 1, max: 20 })) {
+  if (!Validator.isLength(no_juri, { min: 1, max: 20 })) {
     return {
       status: 'INVALID',
       message: 'No Registrasi harus antara 1-20 karakter',
@@ -261,19 +261,19 @@ PenghargaanImportService.validateRow = async data => {
   }
 
   try {
-    // Cari formulir berdasarkan no_registrasi DAN id_event yang sesuai dengan juara
+    // Cari formulir berdasarkan no_juri DAN id_event yang sesuai dengan juara
     const formulir = await helper.runSQL({
       sql: `
         SELECT
           f.id_formulir,
-          f.no_registrasi,
+          f.no_juri,
           f.id_event,
           e.nama_acara
         FROM tbl_formulir f
         INNER JOIN tbl_event e ON f.id_event = e.id_event
-        WHERE f.no_registrasi = ? AND f.id_event = ?
+        WHERE f.no_juri = ? AND f.id_event = ?
       `,
-      param: [no_registrasi, id_event_juara],
+      param: [no_juri, id_event_juara],
     });
 
     if (formulir.length === 0) {
@@ -283,21 +283,21 @@ PenghargaanImportService.validateRow = async data => {
           SELECT f.id_event, e.nama_acara
           FROM tbl_formulir f
           INNER JOIN tbl_event e ON f.id_event = e.id_event
-          WHERE f.no_registrasi = ?
+          WHERE f.no_juri = ?
         `,
-        param: [no_registrasi],
+        param: [no_juri],
       });
 
       if (formulirLain.length > 0) {
         const eventLain = formulirLain.map(f => f.nama_acara).join(', ');
         return {
           status: 'INVALID',
-          message: `Formulir dengan no registrasi ${no_registrasi} ditemukan di event lain: ${eventLain}. Pastikan memilih juara yang sesuai dengan event.`,
+          message: `Formulir dengan no registrasi ${no_juri} ditemukan di event lain: ${eventLain}. Pastikan memilih juara yang sesuai dengan event.`,
         };
       } else {
         return {
           status: 'INVALID',
-          message: `Formulir dengan no registrasi ${no_registrasi} tidak ditemukan`,
+          message: `Formulir dengan no registrasi ${no_juri} tidak ditemukan`,
         };
       }
     }
