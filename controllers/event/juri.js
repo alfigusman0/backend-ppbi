@@ -230,9 +230,6 @@ Controller.update = async (req, res) => {
     const id = req.params.id;
     const { id_event, id_profile, kelas, penilaian } = req.body;
 
-    console.log(id);
-    console.log(req.body);
-
     /* Check existing data */
     let sql = 'SELECT id_juri FROM `tbl_juri` WHERE id_juri = ?';
     const param = [id];
@@ -241,6 +238,8 @@ Controller.update = async (req, res) => {
       param.push(req.authIdUser);
     }
     sql += ' LIMIT 1';
+    console.log(sql);
+    console.log(param);
     const checkData = await helper.runSQL({
       sql,
       param,
