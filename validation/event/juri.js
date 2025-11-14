@@ -68,12 +68,12 @@ module.exports = function validateInput(method, path, data) {
     }
 
     // Validasi field kelas (bisa null, jika diisi harus format: 1 atau 1,5,6)
-    if (!Validator.isEmpty(data.kelas)) {
+    /* if (!Validator.isEmpty(data.kelas)) {
       const kelasPattern = /^(\d+(,\d+)*)?$/;
       if (!kelasPattern.test(data.kelas)) {
         errors.kelas = 'Format kelas tidak valid. Gunakan format seperti: 1 atau 1,5,6';
       }
-    }
+    } */
 
     // Validasi penilaian jika diisi
     if (!Validator.isEmpty(data.penilaian)) {
