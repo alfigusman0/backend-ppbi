@@ -540,6 +540,7 @@ Controller.update = async (req, res) => {
 
     // Logika untuk menghitung kriteria otomatis jika id_pohon tidak null (Bonsai)
     let calculatedKriteria = kriteria;
+    console.log({ kriteria, id_pohon, checkData });
     if (isEmpty(kriteria) && (!isEmpty(id_pohon) || !isEmpty(checkData[0].id_pohon))) {
       // Gunakan nilai dari body jika ada, jika tidak gunakan nilai dari database
       const finalScore =
