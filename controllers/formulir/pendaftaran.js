@@ -542,19 +542,17 @@ Controller.update = async (req, res) => {
     let calculatedKriteria = kriteria;
     const update_nilai =
       !isEmpty(penampilan) || !isEmpty(gerak_dasar) || !isEmpty(keserasian) || !isEmpty(kematangan);
-    console.log({ update_nilai });
-    console.log({ kriteria, id_pohon, checkData });
-    console.log(isEmpty(kriteria), !isEmpty(id_pohon), !isEmpty(checkData[0].id_pohon));
-    if (isEmpty(kriteria) && (!isEmpty(id_pohon) || !isEmpty(checkData[0].id_pohon))) {
+    if (
+      isEmpty(kriteria) &&
+      (!isEmpty(id_pohon) || !isEmpty(checkData[0].id_pohon)) &&
+      update_nilai
+    ) {
       // Gunakan nilai dari body jika ada, jika tidak gunakan nilai dari database
       const finalScore =
-        (isEmpty(penampilan) ? checkData[0].penampilan : penampilan) +
-        (isEmpty(gerak_dasar) ? checkData[0].gerak_dasar : gerak_dasar) +
-        (isEmpty(keserasian) ? checkData[0].keserasian : keserasian) +
-        (isEmpty(kematangan) ? checkData[0].kematangan : kematangan);
-
-      console.log({ finalScore });
-      console.log('update kriteria based on finalScore');
+        parseFloat(isEmpty(penampilan) ? checkData[0].penampilan : penampilan || 0) +
+        parseFloat(isEmpty(gerak_dasar) ? checkData[0].gerak_dasar : gerak_dasar || 0) +
+        parseFloat(isEmpty(keserasian) ? checkData[0].keserasian : keserasian || 0) +
+        parseFloat(isEmpty(kematangan) ? checkData[0].kematangan : kematangan || 0);
 
       if (finalScore >= 321 && finalScore <= 400) {
         calculatedKriteria = 'A';
