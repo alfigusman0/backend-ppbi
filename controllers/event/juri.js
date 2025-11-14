@@ -230,6 +230,9 @@ Controller.update = async (req, res) => {
     const id = req.params.id;
     const { id_event, id_profile, kelas, penilaian } = req.body;
 
+    console.log(id);
+    console.log(req.body);
+
     /* Check existing data */
     let sql = 'SELECT id_juri FROM `tbl_juri` WHERE id_juri = ?';
     const param = [id];
@@ -256,9 +259,6 @@ Controller.update = async (req, res) => {
         params.push(value);
       }
     };
-
-    console.log(req.body);
-    console.log(id_event, id_profile, kelas, penilaian);
 
     addUpdate('id_event', id_event);
     addUpdate('id_profile', id_profile);
