@@ -96,11 +96,6 @@ Controller.process = async (req, res) => {
 Controller.template = async (req, res) => {
   let templatePath = null;
   try {
-    const hasAccess = await checkAccess(req, 'import');
-    if (!hasAccess) {
-      return response.sc401('Access denied.', {}, res);
-    }
-
     const { id_event } = req.query;
     if (isEmpty(id_event)) {
       return response.sc400('id_event harus diisi', {}, res);
