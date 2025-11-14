@@ -11,6 +11,8 @@ module.exports = function validateInput(method, path, data) {
   data.kelas = !isEmpty(data.kelas) ? data.kelas : '';
   data.penilaian = !isEmpty(data.penilaian) ? data.penilaian : '';
 
+  console.log(data);
+
   // Validasi untuk method POST (Create)
   if (method === 'POST') {
     // Validasi field id_event (wajib diisi dan harus integer)
