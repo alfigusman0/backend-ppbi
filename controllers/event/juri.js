@@ -238,6 +238,7 @@ Controller.update = async (req, res) => {
       param.push(req.authIdUser);
     }
     sql += ' LIMIT 1';
+    console.log(req.authIdsLevel);
     console.log(sql);
     console.log(param);
     const checkData = await helper.runSQL({
