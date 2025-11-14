@@ -38,6 +38,7 @@ const checkAccess = async (req, action) => {
     sql: 'SELECT * FROM tbs_hak_akses WHERE ids_level = ? AND ids_modul = ? AND permission LIKE ?',
     param: [req.authIdsLevel, 28, `%${action}%`],
   };
+  console.log(sql);
   const result = await helper.runSQL(sql);
   return result.length > 0;
 };

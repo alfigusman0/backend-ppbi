@@ -257,6 +257,9 @@ Controller.update = async (req, res) => {
       }
     };
 
+    console.log(req.body);
+    console.log(id_event, id_profile, kelas, penilaian);
+
     addUpdate('id_event', id_event);
     addUpdate('id_profile', id_profile);
     addUpdate('kelas', kelas);
