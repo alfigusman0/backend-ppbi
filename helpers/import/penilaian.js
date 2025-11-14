@@ -399,14 +399,25 @@ PenilaianImportService.validateRow = async data => {
         };
       }
 
-      // Cek apakah penilaian sudah ada untuk juri spesifik
+      // PERBAIKAN: Cek apakah penilaian sudah ada berdasarkan id_formulir, id_profile, dan tahapan
+      let existingQuery = `
+        SELECT id_penilaian
+        FROM tbl_penilaian
+        WHERE id_formulir = ? AND id_profile = ?
+      `;
+      let existingParams = [form.id_formulir, juriSpesifik.id_profile];
+
+      // Handle tahapan (bisa null atau nilai)
+      if (tahapan === null) {
+        existingQuery += ` AND (tahapan IS NULL OR tahapan = '')`;
+      } else {
+        existingQuery += ` AND tahapan = ?`;
+        existingParams.push(tahapan);
+      }
+
       const existing = await helper.runSQL({
-        sql: `
-          SELECT id_penilaian
-          FROM tbl_penilaian
-          WHERE id_formulir = ? AND id_profile = ? AND tahapan = ?
-        `,
-        param: [form.id_formulir, juriSpesifik.id_profile, tahapan],
+        sql: existingQuery,
+        param: existingParams,
       });
 
       const isExisting = existing.length > 0;
@@ -438,14 +449,25 @@ PenilaianImportService.validateRow = async data => {
       let total_new = 0;
 
       for (const juri of semua_juri) {
-        // Cek apakah penilaian sudah ada (berdasarkan id_formulir, id_profile, dan tahapan)
+        // PERBAIKAN: Cek apakah penilaian sudah ada berdasarkan id_formulir, id_profile, dan tahapan
+        let existingQuery = `
+          SELECT id_penilaian
+          FROM tbl_penilaian
+          WHERE id_formulir = ? AND id_profile = ?
+        `;
+        let existingParams = [form.id_formulir, juri.id_profile];
+
+        // Handle tahapan (bisa null atau nilai)
+        if (tahapan === null) {
+          existingQuery += ` AND (tahapan IS NULL OR tahapan = '')`;
+        } else {
+          existingQuery += ` AND tahapan = ?`;
+          existingParams.push(tahapan);
+        }
+
         const existing = await helper.runSQL({
-          sql: `
-            SELECT id_penilaian
-            FROM tbl_penilaian
-            WHERE id_formulir = ? AND id_profile = ? AND tahapan = ?
-          `,
-          param: [form.id_formulir, juri.id_profile, tahapan],
+          sql: existingQuery,
+          param: existingParams,
         });
 
         const isExisting = existing.length > 0;
@@ -510,13 +532,13 @@ PenilaianImportService.savePenilaianUntukJuriSpesifik = async data => {
   };
 
   try {
-    if (juri_spesifik.is_existing) {
-      // Update existing data
+    if (juri_spesifik.is_existing && juri_spesifik.existing_id) {
+      // PERBAIKAN: Update existing data dengan kondisi yang lebih spesifik
       await helper.runSQL({
         sql: `
           UPDATE tbl_penilaian
           SET penampilan = ?, gerak_dasar = ?, keserasian = ?, kematangan = ?,
-              updated_by = ?
+              tahapan = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id_penilaian = ?
         `,
         param: [
@@ -524,6 +546,7 @@ PenilaianImportService.savePenilaianUntukJuriSpesifik = async data => {
           gerak_dasar,
           keserasian,
           kematangan,
+          tahapan,
           created_by,
           juri_spesifik.existing_id,
         ],
@@ -537,33 +560,82 @@ PenilaianImportService.savePenilaianUntukJuriSpesifik = async data => {
         id_penilaian: juri_spesifik.existing_id,
       });
     } else {
-      // Insert new data
-      const insertResult = await helper.runSQL({
-        sql: `
-          INSERT INTO tbl_penilaian
-            (id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, tahapan, created_by, updated_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        param: [
-          id_formulir,
-          juri_spesifik.id_profile,
-          penampilan,
-          gerak_dasar,
-          keserasian,
-          kematangan,
-          tahapan,
-          created_by,
-          created_by,
-        ],
+      // PERBAIKAN: Insert new data dengan pengecean duplikat
+      // Cek sekali lagi untuk memastikan tidak ada duplikat
+      let checkQuery = `
+        SELECT id_penilaian
+        FROM tbl_penilaian
+        WHERE id_formulir = ? AND id_profile = ?
+      `;
+      let checkParams = [id_formulir, juri_spesifik.id_profile];
+
+      if (tahapan === null) {
+        checkQuery += ` AND (tahapan IS NULL OR tahapan = '')`;
+      } else {
+        checkQuery += ` AND tahapan = ?`;
+        checkParams.push(tahapan);
+      }
+
+      const finalCheck = await helper.runSQL({
+        sql: checkQuery,
+        param: checkParams,
       });
 
-      results.message = `Berhasil membuat penilaian baru untuk juri ${juri_spesifik.nama_juri}`;
-      results.detail_juri.push({
-        id_juri: juri_spesifik.id_juri,
-        nama_juri: juri_spesifik.nama_juri,
-        status: 'CREATED',
-        id_penilaian: insertResult.insertId,
-      });
+      if (finalCheck.length > 0) {
+        // Jika ternyata ada data, lakukan update
+        await helper.runSQL({
+          sql: `
+            UPDATE tbl_penilaian
+            SET penampilan = ?, gerak_dasar = ?, keserasian = ?, kematangan = ?,
+                updated_by = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id_penilaian = ?
+          `,
+          param: [
+            penampilan,
+            gerak_dasar,
+            keserasian,
+            kematangan,
+            created_by,
+            finalCheck[0].id_penilaian,
+          ],
+        });
+
+        results.message = `Berhasil mengupdate penilaian untuk juri ${juri_spesifik.nama_juri} (duplikat terdeteksi)`;
+        results.detail_juri.push({
+          id_juri: juri_spesifik.id_juri,
+          nama_juri: juri_spesifik.nama_juri,
+          status: 'UPDATED',
+          id_penilaian: finalCheck[0].id_penilaian,
+        });
+      } else {
+        // Insert new data
+        const insertResult = await helper.runSQL({
+          sql: `
+            INSERT INTO tbl_penilaian
+              (id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, tahapan, created_by, updated_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          param: [
+            id_formulir,
+            juri_spesifik.id_profile,
+            penampilan,
+            gerak_dasar,
+            keserasian,
+            kematangan,
+            tahapan,
+            created_by,
+            created_by,
+          ],
+        });
+
+        results.message = `Berhasil membuat penilaian baru untuk juri ${juri_spesifik.nama_juri}`;
+        results.detail_juri.push({
+          id_juri: juri_spesifik.id_juri,
+          nama_juri: juri_spesifik.nama_juri,
+          status: 'CREATED',
+          id_penilaian: insertResult.insertId,
+        });
+      }
     }
   } catch (error) {
     results.message = `Gagal memproses penilaian untuk juri ${juri_spesifik.nama_juri}: ${error.message}`;
@@ -600,16 +672,24 @@ PenilaianImportService.savePenilaianUntukSemuaJuri = async data => {
 
   for (const juri of semua_juri) {
     try {
-      if (juri.is_existing) {
+      if (juri.is_existing && juri.existing_id) {
         // Update existing data
         await helper.runSQL({
           sql: `
             UPDATE tbl_penilaian
             SET penampilan = ?, gerak_dasar = ?, keserasian = ?, kematangan = ?,
-                updated_by = ?
+                tahapan = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id_penilaian = ?
           `,
-          param: [penampilan, gerak_dasar, keserasian, kematangan, created_by, juri.existing_id],
+          param: [
+            penampilan,
+            gerak_dasar,
+            keserasian,
+            kematangan,
+            tahapan,
+            created_by,
+            juri.existing_id,
+          ],
         });
 
         results.detail_juri.push({
@@ -619,32 +699,79 @@ PenilaianImportService.savePenilaianUntukSemuaJuri = async data => {
           id_penilaian: juri.existing_id,
         });
       } else {
-        // Insert new data
-        const insertResult = await helper.runSQL({
-          sql: `
-            INSERT INTO tbl_penilaian
-              (id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, tahapan, created_by, updated_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `,
-          param: [
-            id_formulir,
-            juri.id_profile,
-            penampilan,
-            gerak_dasar,
-            keserasian,
-            kematangan,
-            tahapan,
-            created_by,
-            created_by,
-          ],
+        // PERBAIKAN: Cek sekali lagi untuk memastikan tidak ada duplikat sebelum insert
+        let checkQuery = `
+          SELECT id_penilaian
+          FROM tbl_penilaian
+          WHERE id_formulir = ? AND id_profile = ?
+        `;
+        let checkParams = [id_formulir, juri.id_profile];
+
+        if (tahapan === null) {
+          checkQuery += ` AND (tahapan IS NULL OR tahapan = '')`;
+        } else {
+          checkQuery += ` AND tahapan = ?`;
+          checkParams.push(tahapan);
+        }
+
+        const finalCheck = await helper.runSQL({
+          sql: checkQuery,
+          param: checkParams,
         });
 
-        results.detail_juri.push({
-          id_juri: juri.id_juri,
-          nama_juri: juri.nama_juri,
-          status: 'CREATED',
-          id_penilaian: insertResult.insertId,
-        });
+        if (finalCheck.length > 0) {
+          // Jika ternyata ada data, lakukan update
+          await helper.runSQL({
+            sql: `
+              UPDATE tbl_penilaian
+              SET penampilan = ?, gerak_dasar = ?, keserasian = ?, kematangan = ?,
+                  updated_by = ?, updated_at = CURRENT_TIMESTAMP
+              WHERE id_penilaian = ?
+            `,
+            param: [
+              penampilan,
+              gerak_dasar,
+              keserasian,
+              kematangan,
+              created_by,
+              finalCheck[0].id_penilaian,
+            ],
+          });
+
+          results.detail_juri.push({
+            id_juri: juri.id_juri,
+            nama_juri: juri.nama_juri,
+            status: 'UPDATED',
+            id_penilaian: finalCheck[0].id_penilaian,
+          });
+        } else {
+          // Insert new data
+          const insertResult = await helper.runSQL({
+            sql: `
+              INSERT INTO tbl_penilaian
+                (id_formulir, id_profile, penampilan, gerak_dasar, keserasian, kematangan, tahapan, created_by, updated_by)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            param: [
+              id_formulir,
+              juri.id_profile,
+              penampilan,
+              gerak_dasar,
+              keserasian,
+              kematangan,
+              tahapan,
+              created_by,
+              created_by,
+            ],
+          });
+
+          results.detail_juri.push({
+            id_juri: juri.id_juri,
+            nama_juri: juri.nama_juri,
+            status: 'CREATED',
+            id_penilaian: insertResult.insertId,
+          });
+        }
       }
 
       results.total_success++;
