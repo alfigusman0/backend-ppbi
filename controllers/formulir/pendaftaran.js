@@ -549,6 +549,9 @@ Controller.update = async (req, res) => {
         (isEmpty(keserasian) ? checkData[0].keserasian : keserasian) +
         (isEmpty(kematangan) ? checkData[0].kematangan : kematangan);
 
+      console.log({ finalScore });
+      console.log('update kriteria based on finalScore');
+
       if (finalScore >= 321 && finalScore <= 400) {
         calculatedKriteria = 'A';
       } else if (finalScore >= 281 && finalScore <= 320) {
