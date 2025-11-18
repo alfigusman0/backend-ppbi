@@ -101,7 +101,6 @@ Controller.read_bonsai = async (req, res) => {
     const {
       id_penghargaan,
       id_formulir,
-      nomor_sertifikat,
       id_event,
       nama_acara,
       ids_cabang,
@@ -180,7 +179,6 @@ Controller.read_bonsai = async (req, res) => {
 
     addCondition('id_penghargaan', id_penghargaan, 'IN');
     addCondition('id_formulir', id_formulir, 'IN');
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('id_event', id_event, 'IN');
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang, 'IN');
@@ -260,7 +258,6 @@ Controller.read_suiseki = async (req, res) => {
     const {
       id_penghargaan,
       id_formulir,
-      nomor_sertifikat,
       id_event,
       nama_acara,
       ids_cabang,
@@ -339,7 +336,6 @@ Controller.read_suiseki = async (req, res) => {
 
     addCondition('id_penghargaan', id_penghargaan, 'IN');
     addCondition('id_formulir', id_formulir, 'IN');
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('id_event', id_event, 'IN');
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang, 'IN');
@@ -414,7 +410,7 @@ Controller.update = async (req, res) => {
 
     const id = req.params.id;
 
-    const { id_formulir, id_juara } = req.body;
+    const { id_formulir, id_juara, sertifikat } = req.body;
 
     /* Check existing data */
     let sql = 'SELECT id_penghargaan FROM `tbl_penghargaan` WHERE id_penghargaan = ?';
@@ -449,6 +445,7 @@ Controller.update = async (req, res) => {
 
     addUpdate('id_formulir', id_formulir);
     addUpdate('id_juara', id_juara);
+    addUpdate('sertifikat', sertifikat);
 
     // Check Data Update
     if (isEmpty(params)) {
@@ -542,7 +539,6 @@ Controller.single_bonsai = async (req, res) => {
     const {
       id_penghargaan,
       id_formulir,
-      nomor_sertifikat,
       id_event,
       nama_acara,
       ids_cabang,
@@ -608,7 +604,6 @@ Controller.single_bonsai = async (req, res) => {
 
     addCondition('id_penghargaan', id_penghargaan);
     addCondition('id_formulir', id_formulir);
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('id_event', id_event);
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang);
@@ -676,7 +671,6 @@ Controller.single_suiseki = async (req, res) => {
     const {
       id_penghargaan,
       id_formulir,
-      nomor_sertifikat,
       id_event,
       nama_acara,
       ids_cabang,
@@ -742,7 +736,6 @@ Controller.single_suiseki = async (req, res) => {
 
     addCondition('id_penghargaan', id_penghargaan);
     addCondition('id_formulir', id_formulir);
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('id_event', id_event);
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang);
