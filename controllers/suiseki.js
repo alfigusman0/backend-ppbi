@@ -62,14 +62,16 @@ Controller.create = async (req, res) => {
     const panjang = req.body.panjang || null;
     const lebar = req.body.lebar || null;
     const tinggi = req.body.tinggi || null;
-    const { id_profile, ids_jenis_suiseki, ids_kelas, foto } = req.body;
+    const { id_profile, ids_jenis_suiseki, ids_kelas, asal_batu, judul_batu, foto } = req.body;
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_suiseki`(`id_profile`, `ids_jenis_suiseki`, `ids_kelas`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_suiseki`(`id_profile`, `ids_jenis_suiseki`, `ids_kelas`, `asal_batu`, `judul_batu`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         id_profile,
         ids_jenis_suiseki,
         ids_kelas,
+        asal_batu,
+        judul_batu,
         ukuran,
         panjang,
         lebar,
@@ -117,7 +119,12 @@ Controller.read = async (req, res) => {
       nama_latin,
       ids_kelas,
       nama_kelas,
+      asal_batu,
+      judul_batu,
       ukuran,
+      panjang,
+      lebar,
+      tinggi,
     } = req.query;
 
     // Check Redis cache
@@ -185,7 +192,12 @@ Controller.read = async (req, res) => {
     addCondition('nama_latin', nama_latin, 'LIKE');
     addCondition('ids_kelas', ids_kelas, 'IN');
     addCondition('nama_kelas', nama_kelas, 'LIKE');
+    addCondition('asal_batu', asal_batu, 'LIKE');
+    addCondition('judul_batu', judul_batu, 'LIKE');
     addCondition('ukuran', ukuran, '>=');
+    addCondition('panjang', panjang, '>=');
+    addCondition('lebar', lebar, '>=');
+    addCondition('tinggi', tinggi, '>=');
     addCondition('created_by', created_by);
 
     sqlRead += ` ORDER BY ${order_by} LIMIT ?, ?`;
@@ -242,8 +254,18 @@ Controller.update = async (req, res) => {
     }
 
     const id = req.params.id;
-    const { id_profile, ids_jenis_suiseki, ids_kelas, ukuran, panjang, lebar, tinggi, foto } =
-      req.body;
+    const {
+      id_profile,
+      ids_jenis_suiseki,
+      ids_kelas,
+      asal_batu,
+      judul_batu,
+      ukuran,
+      panjang,
+      lebar,
+      tinggi,
+      foto,
+    } = req.body;
 
     // Check existing data
     const checkData = await helper.runSQL({
@@ -269,6 +291,8 @@ Controller.update = async (req, res) => {
     addUpdate('id_profile', id_profile);
     addUpdate('ids_jenis_suiseki', ids_jenis_suiseki);
     addUpdate('ids_kelas', ids_kelas);
+    addUpdate('asal_batu', asal_batu);
+    addUpdate('judul_batu', judul_batu);
     addUpdate('ukuran', ukuran);
     addUpdate('panjang', panjang);
     addUpdate('lebar', lebar);
@@ -365,7 +389,12 @@ Controller.single = async (req, res) => {
       nama_latin,
       ids_kelas,
       nama_kelas,
+      asal_batu,
+      judul_batu,
       ukuran,
+      panjang,
+      lebar,
+      tinggi,
     } = req.query;
 
     // Check Redis cache
@@ -421,7 +450,12 @@ Controller.single = async (req, res) => {
     addCondition('nama_latin', nama_latin, 'LIKE');
     addCondition('ids_kelas', ids_kelas);
     addCondition('nama_kelas', nama_kelas, 'LIKE');
+    addCondition('asal_batu', asal_batu, 'LIKE');
+    addCondition('judul_batu', judul_batu, 'LIKE');
     addCondition('ukuran', ukuran, '>=');
+    addCondition('panjang', panjang, '>=');
+    addCondition('lebar', lebar, '>=');
+    addCondition('tinggi', tinggi, '>=');
     addCondition('created_by', created_by);
 
     // Limit to 1 row

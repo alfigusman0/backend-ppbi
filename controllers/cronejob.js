@@ -33,6 +33,23 @@ const handleError = (error, res) => {
   return response.sc500('An error occurred in the system, please try again.', {}, res);
 };
 
+// Helper function untuk menghitung rata-rata dengan menghilangkan nilai tertinggi dan terendah
+function calculateAverageRemoveExtremes(scores) {
+  if (scores.length < 3) return calculateAverage(scores);
+
+  const sorted = [...scores].sort((a, b) => a - b);
+  // Hilangkan nilai terendah (index 0) dan tertinggi (index terakhir)
+  const middleScores = sorted.slice(1, -1);
+  return calculateAverage(middleScores);
+}
+
+// Helper function untuk menghitung rata-rata biasa
+function calculateAverage(scores) {
+  if (scores.length === 0) return 0;
+  const sum = scores.reduce((total, score) => total + score, 0);
+  return sum / scores.length;
+}
+
 /* Create Hak Akses */
 Controller.cj1 = async (req, res) => {
   try {
@@ -231,7 +248,7 @@ Controller.cj2 = async (req, res) => {
   }
 };
 
-/* Event - Create Penjurian */
+/* Event - Create Penjurian Pohon Bonsai */
 Controller.cj3 = async (req, res) => {
   try {
     let count_create = 0;
@@ -256,7 +273,7 @@ Controller.cj3 = async (req, res) => {
             INNER JOIN tbl_formulir f ON j.id_event = f.id_event
             INNER JOIN tbl_kategori k ON f.id_kategori = k.id_kategori
             INNER JOIN tbs_kelas tk ON k.ids_kelas = tk.ids_kelas
-            WHERE j.penilaian = 'BELUM'
+            WHERE j.penilaian = 'BELUM' AND id_pohon IS NOT NULL AND bayar = 'SUDAH'
               AND tk.kode NOT IN (${excludedClasses.map(() => '?').join(',')})
             ORDER BY j.id_juri, f.id_formulir`,
       param: excludedClasses,
@@ -360,148 +377,106 @@ Controller.cj3 = async (req, res) => {
   }
 };
 
-/* Formulir - Akumulasi Penilaian */
+/* Formulir - Akumulasi Penilaian Pohon Bonsai */
 Controller.cj4 = async (req, res) => {
   try {
-    let count_processed_bonsai = 0;
-    let count_processed_suiseki = 0;
+    let count_processed = 0;
     const updateFormulirValues = [];
 
-    // Ambil semua formulir yang sudah memiliki penilaian
+    // Ambil hanya formulir BONSAI yang sudah memiliki penilaian
     const formulirList = await helper.runSQL({
-      sql: `SELECT DISTINCT f.id_formulir, f.id_kategori, f.id_pohon, f.id_suiseki FROM tbl_formulir f WHERE EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir)`,
+      sql: `SELECT DISTINCT f.id_formulir FROM tbl_formulir f
+            WHERE f.id_pohon IS NOT NULL AND f.sync = 0
+            AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir)`,
       param: [],
     });
 
     if (formulirList.length === 0) {
-      return response.sc200(
-        'No formulir with assessments found.',
-        {
-          processed_bonsai: 0,
-          processed_suiseki: 0,
-        },
-        res
-      );
+      return response.sc200('No bonsai formulir with assessments found.', { processed: 0 }, res);
     }
 
-    // Proses setiap formulir
+    // Proses setiap formulir bonsai
     for (const formulir of formulirList) {
-      if (formulir.id_pohon) {
-        // Process BONSAI
-        const bonsaiAssessments = await helper.runSQL({
-          sql: `SELECT penampilan, gerak_dasar, keserasian, kematangan FROM view_penilaian_pohon WHERE id_formulir = ?`,
-          param: [formulir.id_formulir],
-        });
+      const bonsaiAssessments = await helper.runSQL({
+        sql: `SELECT penampilan, gerak_dasar, keserasian, kematangan
+              FROM view_penilaian_pohon
+              WHERE id_formulir = ?`,
+        param: [formulir.id_formulir],
+      });
 
-        if (bonsaiAssessments.length >= 3) {
-          // Ekstrak nilai untuk setiap kriteria
-          const penampilanScores = bonsaiAssessments.map(a => parseFloat(a.penampilan));
-          const gerakDasarScores = bonsaiAssessments.map(a => parseFloat(a.gerak_dasar));
-          const keserasianScores = bonsaiAssessments.map(a => parseFloat(a.keserasian));
-          const kematanganScores = bonsaiAssessments.map(a => parseFloat(a.kematangan));
+      if (bonsaiAssessments.length >= 3) {
+        // Ekstrak nilai untuk setiap kriteria
+        const penampilanScores = bonsaiAssessments.map(a => parseFloat(a.penampilan));
+        const gerakDasarScores = bonsaiAssessments.map(a => parseFloat(a.gerak_dasar));
+        const keserasianScores = bonsaiAssessments.map(a => parseFloat(a.keserasian));
+        const kematanganScores = bonsaiAssessments.map(a => parseFloat(a.kematangan));
 
-          let totalPenampilan, totalGerakDasar, totalKeserasian, totalKematangan;
+        let totalPenampilan, totalGerakDasar, totalKeserasian, totalKematangan;
 
-          if (bonsaiAssessments.length === 5) {
-            // Untuk 5 juri: buang nilai tertinggi dan terendah, lalu rata-rata 3 nilai tengah
-            totalPenampilan = calculateAverageRemoveExtremes(penampilanScores);
-            totalGerakDasar = calculateAverageRemoveExtremes(gerakDasarScores);
-            totalKeserasian = calculateAverageRemoveExtremes(keserasianScores);
-            totalKematangan = calculateAverageRemoveExtremes(kematanganScores);
-          } else {
-            // Untuk 3 juri atau lainnya: langsung rata-ratakan
-            totalPenampilan = calculateAverage(penampilanScores);
-            totalGerakDasar = calculateAverage(gerakDasarScores);
-            totalKeserasian = calculateAverage(keserasianScores);
-            totalKematangan = calculateAverage(kematanganScores);
-          }
-
-          // Total akhir = jumlah semua rata-rata kriteria
-          const finalScore = totalPenampilan + totalGerakDasar + totalKeserasian + totalKematangan;
-
-          // Tentukan kriteria berdasarkan skor final
-          let kriteria = 'D';
-          if (finalScore >= 321 && finalScore <= 400) {
-            kriteria = 'A';
-          } else if (finalScore >= 281 && finalScore <= 320) {
-            kriteria = 'B';
-          } else if (finalScore >= 241 && finalScore <= 280) {
-            kriteria = 'C';
-          }
-
-          updateFormulirValues.push({
-            id_formulir: formulir.id_formulir,
-            total: Math.round(finalScore),
-            kriteria: kriteria,
-          });
-          count_processed_bonsai++;
+        if (bonsaiAssessments.length === 5) {
+          // Untuk 5 juri: buang nilai tertinggi dan terendah, lalu rata-rata 3 nilai tengah
+          totalPenampilan = calculateAverageRemoveExtremes(penampilanScores);
+          totalGerakDasar = calculateAverageRemoveExtremes(gerakDasarScores);
+          totalKeserasian = calculateAverageRemoveExtremes(keserasianScores);
+          totalKematangan = calculateAverageRemoveExtremes(kematanganScores);
+        } else {
+          // Untuk 3 juri atau lainnya: langsung rata-ratakan
+          totalPenampilan = calculateAverage(penampilanScores);
+          totalGerakDasar = calculateAverage(gerakDasarScores);
+          totalKeserasian = calculateAverage(keserasianScores);
+          totalKematangan = calculateAverage(kematanganScores);
         }
-      } else if (formulir.id_suiseki) {
-        // Process SUISEKI
-        const suisekiAssessments = await helper.runSQL({
-          sql: `SELECT penampilan, keselarasan FROM view_penilaian_suiseki WHERE id_formulir = ?`,
-          param: [formulir.id_formulir],
-        });
 
-        if (suisekiAssessments.length >= 3) {
-          // Ekstrak nilai untuk setiap kriteria
-          const penampilanScores = suisekiAssessments.map(a => parseFloat(a.penampilan));
-          const keselarasanScores = suisekiAssessments.map(a => parseFloat(a.keselarasan));
+        // Total akhir = jumlah semua rata-rata kriteria
+        const finalScore = totalPenampilan + totalGerakDasar + totalKeserasian + totalKematangan;
 
-          let totalPenampilan, totalKeselarasan;
-
-          if (suisekiAssessments.length === 5) {
-            // Untuk 5 juri: buang nilai tertinggi dan terendah, lalu rata-rata 3 nilai tengah
-            totalPenampilan = calculateAverageRemoveExtremes(penampilanScores);
-            totalKeselarasan = calculateAverageRemoveExtremes(keselarasanScores);
-          } else {
-            // Untuk 3 juri atau lainnya: langsung rata-ratakan
-            totalPenampilan = calculateAverage(penampilanScores);
-            totalKeselarasan = calculateAverage(keselarasanScores);
-          }
-
-          // Pembobotan: Penampilan 80%, Keselarasan 20%
-          const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
-
-          // Tentukan kriteria berdasarkan skor final
-          let kriteria = 'D';
-          if (finalScore >= 161 && finalScore <= 200) {
-            kriteria = 'A';
-          } else if (finalScore >= 141 && finalScore <= 160) {
-            kriteria = 'B';
-          } else if (finalScore >= 121 && finalScore <= 140) {
-            kriteria = 'C';
-          }
-
-          updateFormulirValues.push({
-            id_formulir: formulir.id_formulir,
-            total: Math.round(finalScore),
-            kriteria: kriteria,
-          });
-          count_processed_suiseki++;
+        // Tentukan kriteria berdasarkan skor final
+        let kriteria = 'D';
+        if (finalScore >= 321 && finalScore <= 400) {
+          kriteria = 'A';
+        } else if (finalScore >= 281 && finalScore <= 320) {
+          kriteria = 'B';
+        } else if (finalScore >= 241 && finalScore <= 280) {
+          kriteria = 'C';
         }
+
+        updateFormulirValues.push({
+          id_formulir: formulir.id_formulir,
+          penampilan: totalPenampilan,
+          gerak_dasar: totalGerakDasar,
+          keserasian: totalKeserasian,
+          kematangan: totalKematangan,
+          total: finalScore,
+          kriteria: kriteria,
+        });
+        count_processed++;
       }
     }
 
-    // Update database dengan hasil akumulasi
+    // Update database dengan hasil akumulasi bonsai
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET total = ?, kriteria = ? WHERE id_formulir = ?`,
-          param: [updateData.total, updateData.kriteria, updateData.id_formulir],
+          sql: `UPDATE tbl_formulir SET penampilan = ?, gerak_dasar = ?, keserasian = ?, kematangan = ?, kriteria = ?, sync = 1 WHERE id_formulir = ?`,
+          param: [
+            updateData.penampilan,
+            updateData.gerak_dasar,
+            updateData.keserasian,
+            updateData.kematangan,
+            updateData.kriteria,
+            updateData.id_formulir,
+          ],
         })
         .catch(error => {
-          console.error('Error updating formulir:', error);
+          console.error('Error updating bonsai formulir:', error);
           throw error;
         });
     }
 
     return response.sc200(
-      'Auto accumulation of assessments completed successfully.',
+      'Auto accumulation of bonsai assessments completed successfully.',
       {
-        processed_bonsai: count_processed_bonsai,
-        processed_suiseki: count_processed_suiseki,
-        total_processed: count_processed_bonsai + count_processed_suiseki,
+        processed: count_processed,
       },
       res
     );
@@ -511,21 +486,311 @@ Controller.cj4 = async (req, res) => {
   }
 };
 
-// Helper function untuk menghitung rata-rata dengan menghilangkan nilai tertinggi dan terendah
-function calculateAverageRemoveExtremes(scores) {
-  if (scores.length < 3) return calculateAverage(scores);
+/* Formulir - Akumulasi Penilaian Suiseki Tahap 1 */
+Controller.cj5 = async (req, res) => {
+  try {
+    let count_processed = 0;
+    const updateFormulirValues = [];
 
-  const sorted = [...scores].sort((a, b) => a - b);
-  // Hilangkan nilai terendah (index 0) dan tertinggi (index terakhir)
-  const middleScores = sorted.slice(1, -1);
-  return calculateAverage(middleScores);
-}
+    // Ambil hanya formulir SUISEKI yang sudah memiliki penilaian tahap 1
+    const formulirList = await helper.runSQL({
+      sql: `SELECT DISTINCT f.id_formulir, f.keterangan, f.kriteria
+            FROM tbl_formulir f
+            WHERE f.id_suiseki IS NOT NULL AND f.sync = 0
+            AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir AND p.tahapan = 1)`,
+      param: [],
+    });
 
-// Helper function untuk menghitung rata-rata biasa
-function calculateAverage(scores) {
-  if (scores.length === 0) return 0;
-  const sum = scores.reduce((total, score) => total + score, 0);
-  return sum / scores.length;
-}
+    if (formulirList.length === 0) {
+      return response.sc200(
+        'No suiseki formulir with stage 1 assessments found.',
+        { processed: 0 },
+        res
+      );
+    }
+
+    // Proses setiap formulir suiseki untuk tahap 1
+    for (const formulir of formulirList) {
+      const suisekiAssessments = await helper.runSQL({
+        sql: `SELECT penampilan, keselarasan
+              FROM view_penilaian_suiseki
+              WHERE id_formulir = ? AND tahapan = 1`,
+        param: [formulir.id_formulir],
+      });
+
+      if (suisekiAssessments.length >= 3) {
+        // Ekstrak nilai untuk setiap kriteria
+        const penampilanScores = suisekiAssessments.map(a => parseFloat(a.penampilan));
+        const keselarasanScores = suisekiAssessments.map(a => parseFloat(a.keselarasan));
+
+        // Hitung rata-rata langsung tanpa menghilangkan nilai ekstrem
+        const totalPenampilan = calculateAverage(penampilanScores);
+        const totalKeselarasan = calculateAverage(keselarasanScores);
+
+        // Pembobotan: Penampilan 80%, Keselarasan 20%
+        const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
+        const finalScoreKiteria = (4 / 5) * totalPenampilan * 2 + (1 / 5) * totalKeselarasan * 2;
+
+        // Tentukan kriteria tahap 1 berdasarkan skor final
+        let kriteriaTahap1 = 'D';
+        if (finalScoreKiteria >= 161 && finalScoreKiteria <= 200) {
+          kriteriaTahap1 = 'A';
+        } else if (finalScoreKiteria >= 141 && finalScoreKiteria <= 160) {
+          kriteriaTahap1 = 'B';
+        } else if (finalScoreKiteria >= 121 && finalScoreKiteria <= 140) {
+          kriteriaTahap1 = 'C';
+        }
+
+        // Update keterangan untuk tahap 1
+        const keteranganBaru = `Kriteria Tahapan 1 : ${kriteriaTahap1}`;
+
+        updateFormulirValues.push({
+          id_formulir: formulir.id_formulir,
+          gerak_dasar: finalScore, // Tahap 1 disimpan di gerak_dasar
+          keterangan: keteranganBaru,
+          kriteria: kriteriaTahap1, // Kriteria sementara untuk tahap 1
+        });
+        count_processed++;
+      }
+    }
+
+    // Update database dengan hasil akumulasi suiseki tahap 1
+    for (const updateData of updateFormulirValues) {
+      await helper
+        .runSQL({
+          sql: `UPDATE tbl_formulir SET gerak_dasar = ?, keterangan = ?, kriteria = ?, sync = 1 WHERE id_formulir = ?`,
+          param: [
+            updateData.gerak_dasar,
+            updateData.keterangan,
+            updateData.kriteria,
+            updateData.id_formulir,
+          ],
+        })
+        .catch(error => {
+          console.error('Error updating suiseki formulir tahap 1:', error);
+          throw error;
+        });
+    }
+
+    return response.sc200(
+      'Auto accumulation of suiseki stage 1 assessments completed successfully.',
+      {
+        processed: count_processed,
+      },
+      res
+    );
+  } catch (error) {
+    console.log(error);
+    return handleError(error, res);
+  }
+};
+
+/* Formulir - Akumulasi Penilaian Suiseki Tahap 2 */
+Controller.cj6 = async (req, res) => {
+  try {
+    let count_processed = 0;
+    const updateFormulirValues = [];
+
+    // Ambil hanya formulir SUISEKI yang sudah memiliki penilaian tahap 2
+    const formulirList = await helper.runSQL({
+      sql: `SELECT DISTINCT f.id_formulir, f.keterangan, f.kriteria
+            FROM tbl_formulir f
+            WHERE f.id_suiseki IS NOT NULL AND f.sync = 1
+            AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir AND p.tahapan = 2)`,
+      param: [],
+    });
+
+    if (formulirList.length === 0) {
+      return response.sc200(
+        'No suiseki formulir with stage 2 assessments found.',
+        { processed: 0 },
+        res
+      );
+    }
+
+    // Proses setiap formulir suiseki untuk tahap 2
+    for (const formulir of formulirList) {
+      const suisekiAssessments = await helper.runSQL({
+        sql: `SELECT penampilan, keselarasan
+              FROM view_penilaian_suiseki
+              WHERE id_formulir = ? AND tahapan = 2`,
+        param: [formulir.id_formulir],
+      });
+
+      if (suisekiAssessments.length >= 3) {
+        // Ekstrak nilai untuk setiap kriteria
+        const penampilanScores = suisekiAssessments.map(a => parseFloat(a.penampilan));
+        const keselarasanScores = suisekiAssessments.map(a => parseFloat(a.keselarasan));
+
+        // Hitung rata-rata langsung tanpa menghilangkan nilai ekstrem
+        const totalPenampilan = calculateAverage(penampilanScores);
+        const totalKeselarasan = calculateAverage(keselarasanScores);
+
+        // Pembobotan: Penampilan 80%, Keselarasan 20%
+        const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
+        const finalScoreKiteria = (4 / 5) * totalPenampilan * 2 + (1 / 5) * totalKeselarasan * 2;
+
+        // Tentukan kriteria tahap 1 berdasarkan skor final
+        let kriteriaTahap2 = 'D';
+        if (finalScoreKiteria >= 161 && finalScoreKiteria <= 200) {
+          kriteriaTahap2 = 'A';
+        } else if (finalScoreKiteria >= 141 && finalScoreKiteria <= 160) {
+          kriteriaTahap2 = 'B';
+        } else if (finalScoreKiteria >= 121 && finalScoreKiteria <= 140) {
+          kriteriaTahap2 = 'C';
+        }
+
+        // Update keterangan untuk tahap 2 (tambahkan ke keterangan yang sudah ada)
+        let keteranganBaru = formulir.keterangan || '';
+        if (keteranganBaru) {
+          keteranganBaru += `, Kriteria Tahapan 2 : ${kriteriaTahap2}`;
+        } else {
+          keteranganBaru = `Kriteria Tahapan 2 : ${kriteriaTahap2}`;
+        }
+
+        updateFormulirValues.push({
+          id_formulir: formulir.id_formulir,
+          keserasian: finalScore, // Tahap 2 disimpan di keserasian
+          keterangan: keteranganBaru,
+          kriteria: kriteriaTahap2, // Kriteria sementara untuk tahap 2
+        });
+        count_processed++;
+      }
+    }
+
+    // Update database dengan hasil akumulasi suiseki tahap 2
+    for (const updateData of updateFormulirValues) {
+      await helper
+        .runSQL({
+          sql: `UPDATE tbl_formulir SET keserasian = ?, keterangan = ?, kriteria = ?, sync = 2 WHERE id_formulir = ?`,
+          param: [
+            updateData.keserasian,
+            updateData.keterangan,
+            updateData.kriteria,
+            updateData.id_formulir,
+          ],
+        })
+        .catch(error => {
+          console.error('Error updating suiseki formulir tahap 2:', error);
+          throw error;
+        });
+    }
+
+    return response.sc200(
+      'Auto accumulation of suiseki stage 2 assessments completed successfully.',
+      {
+        processed: count_processed,
+      },
+      res
+    );
+  } catch (error) {
+    console.log(error);
+    return handleError(error, res);
+  }
+};
+
+/* Formulir - Akumulasi Penilaian Suiseki Tahap 3 */
+Controller.cj7 = async (req, res) => {
+  try {
+    let count_processed = 0;
+    const updateFormulirValues = [];
+
+    // Ambil hanya formulir SUISEKI yang sudah memiliki penilaian tahap 3
+    const formulirList = await helper.runSQL({
+      sql: `SELECT DISTINCT f.id_formulir, f.keterangan, f.kriteria
+            FROM tbl_formulir f
+            WHERE f.id_suiseki IS NOT NULL AND f.sync = 2
+            AND EXISTS (SELECT 1 FROM tbl_penilaian p WHERE p.id_formulir = f.id_formulir AND p.tahapan = 3)`,
+      param: [],
+    });
+
+    if (formulirList.length === 0) {
+      return response.sc200(
+        'No suiseki formulir with stage 3 assessments found.',
+        { processed: 0 },
+        res
+      );
+    }
+
+    // Proses setiap formulir suiseki untuk tahap 3
+    for (const formulir of formulirList) {
+      const suisekiAssessments = await helper.runSQL({
+        sql: `SELECT penampilan, keselarasan
+              FROM view_penilaian_suiseki
+              WHERE id_formulir = ? AND tahapan = 3`,
+        param: [formulir.id_formulir],
+      });
+
+      if (suisekiAssessments.length >= 3) {
+        // Ekstrak nilai untuk setiap kriteria
+        const penampilanScores = suisekiAssessments.map(a => parseFloat(a.penampilan));
+        const keselarasanScores = suisekiAssessments.map(a => parseFloat(a.keselarasan));
+
+        // Hitung rata-rata langsung tanpa menghilangkan nilai ekstrem
+        const totalPenampilan = calculateAverage(penampilanScores);
+        const totalKeselarasan = calculateAverage(keselarasanScores);
+
+        // Pembobotan: Penampilan 80%, Keselarasan 20%
+        const finalScore = totalPenampilan * 0.8 + totalKeselarasan * 0.2;
+        const finalScoreKiteria = (4 / 5) * totalPenampilan * 2 + (1 / 5) * totalKeselarasan * 2;
+
+        // Tentukan kriteria tahap 1 berdasarkan skor final
+        let kriteriaTahap3 = 'D';
+        if (finalScoreKiteria >= 161 && finalScoreKiteria <= 200) {
+          kriteriaTahap3 = 'A';
+        } else if (finalScoreKiteria >= 141 && finalScoreKiteria <= 160) {
+          kriteriaTahap3 = 'B';
+        } else if (finalScoreKiteria >= 121 && finalScoreKiteria <= 140) {
+          kriteriaTahap3 = 'C';
+        }
+
+        // Update keterangan untuk tahap 3 (tambahkan ke keterangan yang sudah ada)
+        let keteranganBaru = formulir.keterangan || '';
+        if (keteranganBaru) {
+          keteranganBaru += `, Kriteria Tahapan 3 : ${kriteriaTahap3}`;
+        } else {
+          keteranganBaru = `Kriteria Tahapan 3 : ${kriteriaTahap3}`;
+        }
+
+        updateFormulirValues.push({
+          id_formulir: formulir.id_formulir,
+          kematangan: finalScore, // Tahap 3 disimpan di kematangan
+          keterangan: keteranganBaru,
+          kriteria: kriteriaTahap3, // Kriteria akhir untuk tahap 3
+        });
+        count_processed++;
+      }
+    }
+
+    // Update database dengan hasil akumulasi suiseki tahap 3
+    for (const updateData of updateFormulirValues) {
+      await helper
+        .runSQL({
+          sql: `UPDATE tbl_formulir SET kematangan = ?, keterangan = ?, kriteria = ?, sync = 3 WHERE id_formulir = ?`,
+          param: [
+            updateData.kematangan,
+            updateData.keterangan,
+            updateData.kriteria,
+            updateData.id_formulir,
+          ],
+        })
+        .catch(error => {
+          console.error('Error updating suiseki formulir tahap 3:', error);
+          throw error;
+        });
+    }
+
+    return response.sc200(
+      'Auto accumulation of suiseki stage 3 assessments completed successfully.',
+      {
+        processed: count_processed,
+      },
+      res
+    );
+  } catch (error) {
+    console.log(error);
+    return handleError(error, res);
+  }
+};
 
 module.exports = Controller;

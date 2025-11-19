@@ -115,6 +115,7 @@ Controller.read = async (req, res) => {
       ids_jenis_bonsai,
       jenis_bonsai,
       nama_latin,
+      spesies,
       ids_kelas,
       nama_kelas,
       ukuran,
@@ -183,6 +184,7 @@ Controller.read = async (req, res) => {
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
     addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
     addCondition('nama_latin', nama_latin, 'LIKE');
+    addCondition('spesies', spesies);
     addCondition('ids_kelas', ids_kelas, 'IN');
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('ukuran', ukuran, '>=');
@@ -363,6 +365,7 @@ Controller.single = async (req, res) => {
       ids_jenis_bonsai,
       jenis_bonsai,
       nama_latin,
+      spesies,
       ids_kelas,
       nama_kelas,
       ukuran,
@@ -419,6 +422,7 @@ Controller.single = async (req, res) => {
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai);
     addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
     addCondition('nama_latin', nama_latin, 'LIKE');
+    addCondition('spesies', spesies);
     addCondition('ids_kelas', ids_kelas);
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('ukuran', ukuran, '>=');

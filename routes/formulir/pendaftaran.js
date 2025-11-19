@@ -14,5 +14,6 @@ router.put('/:id', isAuth, paramsid, validation, Controller.update);
 router.delete('/:id', isAuth, paramsid, Controller.delete);
 router.get('/bonsai/single/', isAuth, Controller.single_bonsai);
 router.get('/suiseki/single/', isAuth, Controller.single_suiseki);
+router.post('/send-notif/', isAuth, Controller.send_notification);
 
 module.exports = router;

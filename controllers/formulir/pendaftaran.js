@@ -69,7 +69,8 @@ Controller.create = async (req, res) => {
     const id_suiseki = isEmpty(req.body.id_suiseki) ? null : req.body.id_suiseki;
     const id_pengantar = isEmpty(req.body.id_pengantar) ? null : req.body.id_pengantar;
     const keterangan = isEmpty(req.body.keterangan) ? null : req.body.keterangan;
-    const { id_event, id_kategori, ukuran, foto } = req.body;
+    const diskon = isEmpty(req.body.diskon) ? 0 : req.body.diskon;
+    const { id_event, id_kategori, ukuran, meja, foto } = req.body;
 
     /* Get Data Kelas */
     const getKelas = await helper.runSQL({
@@ -84,7 +85,7 @@ Controller.create = async (req, res) => {
       );
     }
 
-    const no_registrasi = await Controller.getNoRegistrasi(id_event, getKelas[0].ids_kelas);
+    const no_registrasi = await Controller.getNoRegistrasiByEvent(id_event);
     if (!no_registrasi) {
       return response.sc400(
         'Failed to generate registration number. Please check event and class data.',
@@ -94,7 +95,7 @@ Controller.create = async (req, res) => {
     }
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `foto`, `id_pengantar`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_formulir`(`id_event`, `no_registrasi`, `id_pohon`, `id_suiseki`, `id_kategori`, `ukuran`, `diskon`, `meja`, `foto`, `id_pengantar`, `keterangan`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         id_event,
         no_registrasi,
@@ -102,6 +103,8 @@ Controller.create = async (req, res) => {
         id_suiseki,
         id_kategori,
         ukuran,
+        diskon,
+        meja,
         foto,
         id_pengantar,
         keterangan,
@@ -118,55 +121,6 @@ Controller.create = async (req, res) => {
       await helper.deleteKeysByPattern(redisPrefix + '*');
     } catch (redisError) {
       logger.error('Failed to delete Redis cache in create:', redisError);
-    }
-
-    // Template
-    const template = `Halo *[Nama Peserta]*\n\nSelamat [Jenis] anda :\nNomor Registrasi: *[Nomor Registrasi]*\nJenis [Jenis]: *[Jenis Bonsai]*\ntelah terdaftar pada *[Nama Event]* \n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPanitia Pameran *[Nama Event]*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
-    /* Get Event */
-    const event = await helper.runSQL({
-      sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
-      param: [id_event],
-    });
-    /* Get Profile */
-    const profile = await helper.runSQL({
-      sql: 'SELECT * FROM view_profile WHERE created_by = ? LIMIT 1',
-      param: [created_by],
-    });
-    let message;
-    if (!isEmpty(id_pohon)) {
-      const pohon = await helper.runSQL({
-        sql: 'SELECT * FROM view_pohon WHERE id_pohon = ? LIMIT 1',
-        param: [id_pohon],
-      });
-      const data = {
-        jenis: 'Bonsai',
-        nama_lengkap: profile[0].nama_lengkap,
-        no_registrasi: no_registrasi,
-        jenis_bonsai: pohon[0].jenis_bonsai,
-        nama_acara: event[0].nama_acara,
-      };
-      message = replaceMessage(template, data);
-    } else {
-      const suiseki = await helper.runSQL({
-        sql: 'SELECT * FROM view_suiseki WHERE id_suiseki = ? LIMIT 1',
-        param: [id_suiseki],
-      });
-      const data = {
-        jenis: 'Suiseki',
-        nama_lengkap: profile[0].nama_lengkap,
-        no_registrasi: no_registrasi,
-        jenis_bonsai: suiseki[0].jenis_suiseki,
-        nama_acara: event[0].nama_acara,
-      };
-      message = replaceMessage(template, data);
-    }
-
-    const target = profile[0].nmr_tlpn;
-    /* Send Notification Whatsapp */
-    const fb = await whatsapp.sendMessage(id_event, { target, message, delay });
-    if (!fb.success) {
-      const statusCode = fb.errorType === 'TOKEN_ERROR' ? 401 : 500;
-      console.log(`Error Whatsapp : ${statusCode} : ${fb.message}`);
     }
 
     return response.sc200('Data added successfully.', json, res);
@@ -193,7 +147,6 @@ Controller.read_bonsai = async (req, res) => {
       nama_acara,
       ids_cabang,
       cabang,
-      nomor_sertifikat,
       no_registrasi,
       no_juri,
       id_bonsai,
@@ -202,7 +155,9 @@ Controller.read_bonsai = async (req, res) => {
       nama_lengkap,
       ids_jenis_bonsai,
       jenis_bonsai,
+      spesies,
       ids_kelas,
+      ids_kelas_not_in,
       nama_kelas,
       id_kategori,
       nama_kategori,
@@ -276,7 +231,6 @@ Controller.read_bonsai = async (req, res) => {
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang, 'IN');
     addCondition('cabang', cabang, 'LIKE');
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('no_registrasi', no_registrasi, 'LIKE');
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_bonsai', id_bonsai, 'IN');
@@ -285,7 +239,9 @@ Controller.read_bonsai = async (req, res) => {
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
     addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
+    addCondition('spesies', spesies);
     addCondition('ids_kelas', ids_kelas, 'IN');
+    addCondition('ids_kelas', ids_kelas_not_in, 'NOT IN');
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('id_kategori', id_kategori, 'IN');
     addCondition('nama_kategori', nama_kategori, 'LIKE');
@@ -360,7 +316,6 @@ Controller.read_suiseki = async (req, res) => {
       nama_acara,
       ids_cabang,
       cabang,
-      nomor_sertifikat,
       no_registrasi,
       no_juri,
       id_suiseki,
@@ -370,6 +325,7 @@ Controller.read_suiseki = async (req, res) => {
       ids_jenis_suiseki,
       jenis_suiseki,
       ids_kelas,
+      ids_kelas_not_in,
       nama_kelas,
       id_kategori,
       nama_kategori,
@@ -441,7 +397,6 @@ Controller.read_suiseki = async (req, res) => {
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang, 'IN');
     addCondition('cabang', cabang, 'LIKE');
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('no_registrasi', no_registrasi, 'LIKE');
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_suiseki', id_suiseki, 'IN');
@@ -451,6 +406,7 @@ Controller.read_suiseki = async (req, res) => {
     addCondition('ids_jenis_suiseki', ids_jenis_suiseki, 'IN');
     addCondition('jenis_suiseki', jenis_suiseki, 'LIKE');
     addCondition('ids_kelas', ids_kelas, 'IN');
+    addCondition('ids_kelas', ids_kelas_not_in, 'NOT IN');
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('id_kategori', id_kategori, 'IN');
     addCondition('nama_kategori', nama_kategori, 'LIKE');
@@ -516,13 +472,14 @@ Controller.update = async (req, res) => {
     const id = req.params.id;
     const {
       id_event,
-      nomor_sertifikat,
+      sertifikat,
       no_registrasi,
       no_juri,
       id_pohon,
       id_suiseki,
       id_kategori,
       ukuran,
+      diskon,
       bukti_bayar,
       bayar,
       cetak,
@@ -530,7 +487,10 @@ Controller.update = async (req, res) => {
       meja,
       foto,
       id_pengantar,
-      total,
+      penampilan,
+      gerak_dasar,
+      keserasian,
+      kematangan,
       kriteria,
       keterangan,
       id_profile_juri,
@@ -563,17 +523,57 @@ Controller.update = async (req, res) => {
       }
     };
 
+    if (!isEmpty(no_juri)) {
+      /* Check unique no_juri */
+      const checkNoJuri = await helper.runSQL({
+        sql: 'SELECT id_formulir FROM `tbl_formulir` WHERE no_juri = ? AND id_event = ?',
+        param: [no_juri, checkData[0].id_event],
+      });
+      if (checkNoJuri.length) {
+        return response.sc400('No juri already exists.', {}, res);
+      }
+    }
+
+    // Logika untuk menghitung kriteria otomatis jika id_pohon tidak null (Bonsai)
+    let calculatedKriteria = kriteria;
+    const update_nilai =
+      !isEmpty(penampilan) || !isEmpty(gerak_dasar) || !isEmpty(keserasian) || !isEmpty(kematangan);
+    if (
+      isEmpty(kriteria) &&
+      (!isEmpty(id_pohon) || !isEmpty(checkData[0].id_pohon)) &&
+      update_nilai
+    ) {
+      // Gunakan nilai dari body jika ada, jika tidak gunakan nilai dari database
+      const finalScore =
+        parseFloat(isEmpty(penampilan) ? checkData[0].penampilan : penampilan || 0) +
+        parseFloat(isEmpty(gerak_dasar) ? checkData[0].gerak_dasar : gerak_dasar || 0) +
+        parseFloat(isEmpty(keserasian) ? checkData[0].keserasian : keserasian || 0) +
+        parseFloat(isEmpty(kematangan) ? checkData[0].kematangan : kematangan || 0);
+
+      if (finalScore >= 321 && finalScore <= 400) {
+        calculatedKriteria = 'A';
+      } else if (finalScore >= 281 && finalScore <= 320) {
+        calculatedKriteria = 'B';
+      } else if (finalScore >= 241 && finalScore <= 280) {
+        calculatedKriteria = 'C';
+      }
+    }
+
     if (req.authTingkat <= 5) {
       addUpdate('id_event', id_event);
-      addUpdate('nomor_sertifikat', nomor_sertifikat);
+      addUpdate('sertifikat', sertifikat);
       addUpdate('no_registrasi', no_registrasi);
       addUpdate('no_juri', no_juri);
+      addUpdate('diskon', diskon);
       addUpdate('bayar', bayar);
       addUpdate('arena', arena);
       addUpdate('meja', meja);
       addUpdate('id_pengantar', id_pengantar);
-      addUpdate('total', total);
-      addUpdate('kriteria', kriteria);
+      addUpdate('penampilan', penampilan);
+      addUpdate('gerak_dasar', gerak_dasar);
+      addUpdate('keserasian', keserasian);
+      addUpdate('kematangan', kematangan);
+      addUpdate('kriteria', calculatedKriteria);
       addUpdate('keterangan', keterangan);
       addUpdate('id_profile_juri', id_profile_juri);
     }
@@ -705,6 +705,24 @@ Controller.delete = async (req, res) => {
       return response.sc400('Data tidak dapat dihapus karena sudah dibayar.', {}, res);
     }
 
+    /* Check existing penghargaan */
+    const checkPenghargaan = await helper.runSQL({
+      sql: 'SELECT id_penghargaan FROM tbl_penghargaan WHERE id_formulir = ? LIMIT 1',
+      param: [id],
+    });
+    if (checkPenghargaan.length) {
+      return response.sc400('Data tidak dapat dihapus karena sudah ada penghargaan.', {}, res);
+    }
+
+    /* Check existing penialain */
+    const checkPenilaian = await helper.runSQL({
+      sql: 'SELECT id_penilaian FROM tbl_penilaian WHERE id_formulir = ? LIMIT 1',
+      param: [id],
+    });
+    if (checkPenilaian.length) {
+      return response.sc400('Data tidak dapat dihapus karena sudah ada penilaian.', {}, res);
+    }
+
     // SQL Delete Data
     const sqlDelete = {
       sql: 'DELETE FROM `tbl_formulir` WHERE id_formulir = ?',
@@ -743,7 +761,6 @@ Controller.single_bonsai = async (req, res) => {
       nama_acara,
       ids_cabang,
       cabang,
-      nomor_sertifikat,
       no_registrasi,
       no_juri,
       id_bonsai,
@@ -752,6 +769,7 @@ Controller.single_bonsai = async (req, res) => {
       nama_lengkap,
       ids_jenis_bonsai,
       jenis_bonsai,
+      spesies,
       ids_kelas,
       nama_kelas,
       id_kategori,
@@ -814,7 +832,6 @@ Controller.single_bonsai = async (req, res) => {
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang);
     addCondition('cabang', cabang, 'LIKE');
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('no_registrasi', no_registrasi, 'LIKE');
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_bonsai', id_bonsai);
@@ -823,6 +840,7 @@ Controller.single_bonsai = async (req, res) => {
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai);
     addCondition('jenis_bonsai', jenis_bonsai, 'LIKE');
+    addCondition('spesies', spesies);
     addCondition('ids_kelas', ids_kelas);
     addCondition('nama_kelas', nama_kelas, 'LIKE');
     addCondition('id_kategori', id_kategori);
@@ -887,7 +905,6 @@ Controller.single_suiseki = async (req, res) => {
       nama_acara,
       ids_cabang,
       cabang,
-      nomor_sertifikat,
       no_registrasi,
       no_juri,
       id_suiseki,
@@ -956,7 +973,6 @@ Controller.single_suiseki = async (req, res) => {
     addCondition('nama_acara', nama_acara, 'LIKE');
     addCondition('ids_cabang', ids_cabang);
     addCondition('cabang', cabang, 'LIKE');
-    addCondition('nomor_sertifikat', nomor_sertifikat, 'LIKE');
     addCondition('no_registrasi', no_registrasi, 'LIKE');
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_suiseki', id_suiseki);
@@ -1011,6 +1027,108 @@ Controller.single_suiseki = async (req, res) => {
   }
 };
 
+/* Send Notification Bulk Formulir to WhatsApp */
+Controller.send_notification = async (req, res) => {
+  try {
+    const hasAccess = await checkAccess(req, 'read');
+    if (!hasAccess) {
+      return response.sc401('Akses ditolak.', {}, res);
+    }
+
+    const { id_event, created_by } = req.body;
+
+    /* Cek data event */
+    const event = await helper.runSQL({
+      sql: 'SELECT * FROM view_event WHERE id_event = ? LIMIT 1',
+      param: [id_event],
+    });
+    if (!event.length) {
+      return response.sc404('Event tidak ditemukan.', {}, res);
+    }
+
+    /* Ambil data formulir yang belum bayar untuk user */
+    let formulirData;
+    if (event[0].jenis === 'Bonsai') {
+      formulirData = await helper.runSQL({
+        sql: 'SELECT * FROM view_formulir_pohon WHERE id_event = ? AND bayar = ? AND created_by = ?',
+        param: [id_event, 'BELUM', created_by],
+      });
+    } else {
+      formulirData = await helper.runSQL({
+        sql: 'SELECT * FROM view_formulir_suiseki WHERE id_event = ? AND bayar = ? AND created_by = ?',
+        param: [id_event, 'BELUM', created_by],
+      });
+    }
+
+    if (!formulirData.length) {
+      return response.sc404('Tidak ada peserta yang ditemukan untuk notifikasi.', {}, res);
+    }
+
+    /* Ambil data profile peserta */
+    const profile = await helper.runSQL({
+      sql: 'SELECT * FROM view_profile WHERE created_by = ? LIMIT 1',
+      param: [created_by],
+    });
+    if (!profile.length) {
+      return response.sc404('Profil tidak ditemukan.', {}, res);
+    }
+
+    // Format template pesan multiple formulir
+    const templateMultiple = (namaPeserta, jenis, namaEvent, formulirList, total) => {
+      let daftarFormulir = formulirList
+        .map(
+          (form, index) =>
+            `${index + 1}. ${form.nama_kelas} - ${
+              form.jenis_bonsai || form.jenis_suiseki
+            } : *${formatRupiah(form.total_harga)}*`
+        )
+        .join('\n');
+
+      return `Halo *${namaPeserta}*\n\nSelamat ${jenis} anda:\n${daftarFormulir}\n\nTotal: *${formatRupiah(
+        total
+      )}*\n\nTelah terdaftar pada *${namaEvent}*\n\nSilahkan melakukan pembayaran pada stand meja Pembayaran\n\nHormat Kami,\nPanitia Pameran *${namaEvent}*\n\nPesan ini dikirimkan secara otomatis melalui sistem`;
+    };
+
+    // Hitung total harga dari field total_harga yang sudah ada di view
+    let totalHarga = 0;
+    const listFormulir = [];
+
+    for (const form of formulirData) {
+      totalHarga += form.total_harga;
+
+      listFormulir.push({
+        nama_kelas: form.nama_kelas,
+        jenis_bonsai: form.jenis_bonsai,
+        jenis_suiseki: form.jenis_suiseki,
+        total_harga: form.total_harga, // Gunakan field total_harga yang sudah ada
+      });
+    }
+
+    // Compose pesan dengan multiple formulir
+    const message = templateMultiple(
+      profile[0].nama_lengkap,
+      event[0].jenis,
+      event[0].nama_acara,
+      listFormulir,
+      totalHarga
+    );
+
+    const target = profile[0].nmr_tlpn;
+
+    // Kirim pesan WhatsApp dengan delay
+    const fb = await whatsapp.sendMessage(id_event, { target, message, delay });
+    if (!fb.success) {
+      console.log(`Error Whatsapp: ${fb.message}`);
+      return response.sc500('Gagal mengirim notifikasi WhatsApp.', {}, res);
+    }
+
+    return response.sc200('Notifikasi berhasil dikirim.', {}, res);
+  } catch (error) {
+    console.log(error);
+    return handleError(error, res);
+  }
+};
+
 /* Get Kode Nomor Registrasi */
 Controller.getNoRegistrasi = async (id_event, ids_kelas) => {
   try {
@@ -1040,6 +1158,37 @@ Controller.getNoRegistrasi = async (id_event, ids_kelas) => {
   } catch (error) {
     console.log(error);
     logger.error('Error getting registration number:', error);
+    return null;
+  }
+};
+
+/* Get Nomor Urut Registrasi Berdasarkan Event Saja */
+Controller.getNoRegistrasiByEvent = async id_event => {
+  try {
+    // Cari nomor registrasi terakhir untuk event ini
+    const result = await helper.runSQL({
+      sql: 'SELECT no_registrasi FROM tbl_formulir WHERE id_event = ? ORDER BY CAST(no_registrasi AS UNSIGNED) DESC LIMIT 1',
+      param: [id_event],
+    });
+
+    if (!result.length) {
+      return '1'; // Mulai dari 1 jika belum ada data
+    }
+
+    const lastNo = result[0].no_registrasi;
+
+    // Pastikan nomor adalah angka valid
+    const lastNumber = parseInt(lastNo);
+
+    if (isNaN(lastNumber)) {
+      return '1'; // Kembali ke 1 jika format tidak valid
+    }
+
+    const newNumber = lastNumber + 1;
+    return newNumber.toString();
+  } catch (error) {
+    console.log(error);
+    logger.error('Error getting registration number by event:', error);
     return null;
   }
 };

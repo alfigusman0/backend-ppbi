@@ -7,7 +7,7 @@ module.exports = function validateInput(method, path, data) {
 
   // Normalisasi data - konversi ke string kosong jika undefined/null
   data.id_event = !isEmpty(data.id_event) ? data.id_event : '';
-  data.nomor_sertifikat = !isEmpty(data.nomor_sertifikat) ? data.nomor_sertifikat : '';
+  data.sertifikat = !isEmpty(data.sertifikat) ? data.sertifikat : '';
   data.no_registrasi = !isEmpty(data.no_registrasi) ? data.no_registrasi : '';
   data.no_juri = !isEmpty(data.no_juri) ? data.no_juri : '';
   data.id_pohon = !isEmpty(data.id_pohon) ? data.id_pohon : '';
@@ -159,6 +159,20 @@ module.exports = function validateInput(method, path, data) {
         errors.kriteria = 'kriteria tidak valid. harus A, B, C, atau D.';
       }
     }
+
+    // Validasi sertifikat jika diisi (harus URL atau #)
+    if (!Validator.isEmpty(data.sertifikat)) {
+      if (data.sertifikat !== '#') {
+        if (
+          !Validator.isURL(data.sertifikat, {
+            protocols: ['http', 'https'],
+            require_protocol: true,
+          })
+        ) {
+          errors.sertifikat = 'sertifikat harus berupa URL (http/https) atau #.';
+        }
+      }
+    }
   } else {
     // Validasi untuk method lain (PUT/PATCH untuk Update)
     // Field bersifat opsional, tapi jika diisi harus valid
@@ -167,18 +181,6 @@ module.exports = function validateInput(method, path, data) {
     if (!Validator.isEmpty(data.id_event)) {
       if (!Validator.isInt(data.id_event)) {
         errors.id_event = 'id event tidak valid.';
-      }
-    }
-
-    // Validasi nomor_sertifikat jika diisi (max 100 karakter, harus unik di DB)
-    if (!Validator.isEmpty(data.nomor_sertifikat)) {
-      if (
-        !Validator.isLength(data.nomor_sertifikat, {
-          min: 1,
-          max: 100,
-        })
-      ) {
-        errors.nomor_sertifikat = 'nomor sertifikat maksimal 100 karakter.';
       }
     }
 
@@ -308,6 +310,20 @@ module.exports = function validateInput(method, path, data) {
     if (!Validator.isEmpty(data.kriteria)) {
       if (!Validator.isIn(data.kriteria, ['A', 'B', 'C', 'D'])) {
         errors.kriteria = 'kriteria tidak valid. harus A, B, C, atau D.';
+      }
+    }
+
+    // Validasi sertifikat jika diisi (harus URL atau #)
+    if (!Validator.isEmpty(data.sertifikat)) {
+      if (data.sertifikat !== '#') {
+        if (
+          !Validator.isURL(data.sertifikat, {
+            protocols: ['http', 'https'],
+            require_protocol: true,
+          })
+        ) {
+          errors.sertifikat = 'sertifikat harus berupa URL (http/https) atau #.';
+        }
       }
     }
   }
