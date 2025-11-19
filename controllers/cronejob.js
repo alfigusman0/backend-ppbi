@@ -413,18 +413,18 @@ Controller.cj4 = async (req, res) => {
 
         let totalPenampilan, totalGerakDasar, totalKeserasian, totalKematangan;
 
-        if (bonsaiAssessments.length === 5) {
-          // Untuk 5 juri: buang nilai tertinggi dan terendah, lalu rata-rata 3 nilai tengah
-          totalPenampilan = calculateAverageRemoveExtremes(penampilanScores);
-          totalGerakDasar = calculateAverageRemoveExtremes(gerakDasarScores);
-          totalKeserasian = calculateAverageRemoveExtremes(keserasianScores);
-          totalKematangan = calculateAverageRemoveExtremes(kematanganScores);
-        } else {
+        if (bonsaiAssessments.length === 3) {
           // Untuk 3 juri atau lainnya: langsung rata-ratakan
           totalPenampilan = calculateAverage(penampilanScores);
           totalGerakDasar = calculateAverage(gerakDasarScores);
           totalKeserasian = calculateAverage(keserasianScores);
           totalKematangan = calculateAverage(kematanganScores);
+        } else {
+          // Untuk lebih dari 3 juri: buang nilai tertinggi dan terendah, lalu rata-rata sisanya
+          totalPenampilan = calculateAverageRemoveExtremes(penampilanScores);
+          totalGerakDasar = calculateAverageRemoveExtremes(gerakDasarScores);
+          totalKeserasian = calculateAverageRemoveExtremes(keserasianScores);
+          totalKematangan = calculateAverageRemoveExtremes(kematanganScores);
         }
 
         // Total akhir = jumlah semua rata-rata kriteria
