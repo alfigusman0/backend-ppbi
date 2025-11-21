@@ -62,10 +62,11 @@ Controller.create = async (req, res) => {
     const panjang = req.body.panjang || null;
     const lebar = req.body.lebar || null;
     const tinggi = req.body.tinggi || null;
+    const sertifikat = req.body.sertifikat || null;
     const { id_profile, ids_jenis_suiseki, ids_kelas, asal_batu, judul_batu, foto } = req.body;
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_suiseki`(`id_profile`, `ids_jenis_suiseki`, `ids_kelas`, `asal_batu`, `judul_batu`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_suiseki`(`id_profile`, `ids_jenis_suiseki`, `ids_kelas`, `asal_batu`, `judul_batu`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `sertifikat`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         id_profile,
         ids_jenis_suiseki,
@@ -77,6 +78,7 @@ Controller.create = async (req, res) => {
         lebar,
         tinggi,
         foto,
+        sertifikat,
         created_by,
       ],
     };
@@ -265,6 +267,7 @@ Controller.update = async (req, res) => {
       lebar,
       tinggi,
       foto,
+      sertifikat,
     } = req.body;
 
     // Check existing data
@@ -298,6 +301,7 @@ Controller.update = async (req, res) => {
     addUpdate('lebar', lebar);
     addUpdate('tinggi', tinggi);
     addUpdate('foto', foto);
+    addUpdate('sertifikat', sertifikat);
 
     // Check Data Update
     if (isEmpty(params)) {

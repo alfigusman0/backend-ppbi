@@ -284,7 +284,6 @@ const fPenghargaanRoutes = require('./routes/formulir/penghargaan');
 const fPenilaianRoutes = require('./routes/formulir/penilaian');
 
 /* Notification */
-const notificationRoutes = require('./routes/notification/index');
 const whatsappRoutes = require('./routes/notification/whatsapp');
 
 /* Settings */
@@ -330,7 +329,6 @@ router.use('/formulir/penghargaan', fPenghargaanRoutes);
 router.use('/formulir/penilaian', fPenilaianRoutes);
 
 /* Notification Routes */
-router.use('/notification', notificationRoutes);
 router.use('/notification/whatsapp', whatsappRoutes);
 
 /* Settings */

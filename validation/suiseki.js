@@ -14,6 +14,7 @@ module.exports = function validateInput(method, path, data) {
   data.lebar = !isEmpty(data.lebar) ? data.lebar : '';
   data.tinggi = !isEmpty(data.tinggi) ? data.tinggi : '';
   data.foto = !isEmpty(data.foto) ? data.foto : '';
+  data.sertifikat = !isEmpty(data.sertifikat) ? data.sertifikat : '';
 
   // Helper function untuk validasi bilangan positif (>= 0)
   const validatePositiveDecimal = (value, fieldName) => {
@@ -101,6 +102,20 @@ module.exports = function validateInput(method, path, data) {
         }
       }
     }
+
+    // Validasi field sertifikat (opsional dan harus URL atau #)
+    if (!Validator.isEmpty(data.sertifikat)) {
+      if (data.sertifikat !== '#') {
+        if (
+          !Validator.isURL(data.sertifikat, {
+            protocols: ['http', 'https'],
+            require_protocol: true,
+          })
+        ) {
+          errors.sertifikat = 'sertifikat harus berupa URL (http/https) atau #.';
+        }
+      }
+    }
   } else {
     // Validasi untuk method lain (PUT/PATCH untuk Update)
     // Field bersifat opsional, tapi jika diisi harus valid
@@ -160,6 +175,20 @@ module.exports = function validateInput(method, path, data) {
           })
         ) {
           errors.foto = 'foto harus berupa URL (http/https) atau #.';
+        }
+      }
+    }
+
+    // Validasi field sertifikat (opsional dan harus URL atau #)
+    if (!Validator.isEmpty(data.sertifikat)) {
+      if (data.sertifikat !== '#') {
+        if (
+          !Validator.isURL(data.sertifikat, {
+            protocols: ['http', 'https'],
+            require_protocol: true,
+          })
+        ) {
+          errors.sertifikat = 'sertifikat harus berupa URL (http/https) atau #.';
         }
       }
     }

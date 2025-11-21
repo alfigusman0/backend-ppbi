@@ -62,10 +62,11 @@ Controller.create = async (req, res) => {
     const panjang = req.body.panjang || null;
     const lebar = req.body.lebar || null;
     const tinggi = req.body.tinggi || null;
+    const sertifikat = req.body.sertifikat || null;
     const { id_profile, ids_jenis_bonsai, ids_kelas, foto } = req.body;
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_pohon`(`id_profile`, `ids_jenis_bonsai`, `ids_kelas`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_pohon`(`id_profile`, `ids_jenis_bonsai`, `ids_kelas`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `sertifikat`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         id_profile,
         ids_jenis_bonsai,
@@ -75,6 +76,7 @@ Controller.create = async (req, res) => {
         lebar,
         tinggi,
         foto,
+        sertifikat,
         created_by,
       ],
     };
@@ -244,8 +246,17 @@ Controller.update = async (req, res) => {
     }
 
     const id = req.params.id;
-    const { id_profile, ids_jenis_bonsai, ids_kelas, ukuran, panjang, lebar, tinggi, foto } =
-      req.body;
+    const {
+      id_profile,
+      ids_jenis_bonsai,
+      ids_kelas,
+      ukuran,
+      panjang,
+      lebar,
+      tinggi,
+      foto,
+      sertifikat,
+    } = req.body;
 
     // Check existing data
     const checkData = await helper.runSQL({
@@ -276,6 +287,7 @@ Controller.update = async (req, res) => {
     addUpdate('lebar', lebar);
     addUpdate('tinggi', tinggi);
     addUpdate('foto', foto);
+    addUpdate('sertifikat', sertifikat);
 
     // Check Data Update
     if (isEmpty(params)) {
