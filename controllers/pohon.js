@@ -66,7 +66,7 @@ Controller.create = async (req, res) => {
     const { id_profile, ids_jenis_bonsai, ids_kelas, foto } = req.body;
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_pohon`(`id_profile`, `ids_jenis_bonsai`, `ids_kelas`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `sertifikat`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_pohon`(`id_profile`, `ids_jenis_bonsai`, `ids_kelas`, `ukuran`, `panjang`, `lebar`, `tinggi`,  `foto`, `sertifikat`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         id_profile,
         ids_jenis_bonsai,
