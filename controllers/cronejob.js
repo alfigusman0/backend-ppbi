@@ -541,13 +541,9 @@ Controller.cj5 = async (req, res) => {
           kriteriaTahap1 = 'C';
         }
 
-        // Update keterangan untuk tahap 1
-        const keteranganBaru = `Kriteria Tahapan 1 : ${kriteriaTahap1}`;
-
         updateFormulirValues.push({
           id_formulir: formulir.id_formulir,
           gerak_dasar: finalScore, // Tahap 1 disimpan di gerak_dasar
-          keterangan: keteranganBaru,
           kriteria: kriteriaTahap1, // Kriteria sementara untuk tahap 1
         });
         count_processed++;
@@ -558,13 +554,8 @@ Controller.cj5 = async (req, res) => {
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET gerak_dasar = ?, keterangan = ?, kriteria = ?, sync = 1 WHERE id_formulir = ?`,
-          param: [
-            updateData.gerak_dasar,
-            updateData.keterangan,
-            updateData.kriteria,
-            updateData.id_formulir,
-          ],
+          sql: `UPDATE tbl_formulir SET gerak_dasar = ?, kriteria = ?, sync = 1 WHERE id_formulir = ?`,
+          param: [updateData.gerak_dasar, updateData.kriteria, updateData.id_formulir],
         })
         .catch(error => {
           console.error('Error updating suiseki formulir tahap 1:', error);
@@ -640,19 +631,13 @@ Controller.cj6 = async (req, res) => {
           kriteriaTahap2 = 'C';
         }
 
-        // Update keterangan untuk tahap 2 (tambahkan ke keterangan yang sudah ada)
-        let keteranganBaru = formulir.keterangan || '';
-        if (keteranganBaru) {
-          keteranganBaru += `, Kriteria Tahapan 2 : ${kriteriaTahap2}`;
-        } else {
-          keteranganBaru = `Kriteria Tahapan 2 : ${kriteriaTahap2}`;
-        }
+        // Gabungkan kriteria tahap 1 dengan tahap 2
+        const kriteriaBaru = `${formulir.kriteria},${kriteriaTahap2}`;
 
         updateFormulirValues.push({
           id_formulir: formulir.id_formulir,
           keserasian: finalScore, // Tahap 2 disimpan di keserasian
-          keterangan: keteranganBaru,
-          kriteria: kriteriaTahap2, // Kriteria sementara untuk tahap 2
+          kriteria: kriteriaBaru, // Kriteria sementara untuk tahap 2
         });
         count_processed++;
       }
@@ -662,13 +647,8 @@ Controller.cj6 = async (req, res) => {
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET keserasian = ?, keterangan = ?, kriteria = ?, sync = 2 WHERE id_formulir = ?`,
-          param: [
-            updateData.keserasian,
-            updateData.keterangan,
-            updateData.kriteria,
-            updateData.id_formulir,
-          ],
+          sql: `UPDATE tbl_formulir SET keserasian = ?, kriteria = ?, sync = 2 WHERE id_formulir = ?`,
+          param: [updateData.keserasian, updateData.kriteria, updateData.id_formulir],
         })
         .catch(error => {
           console.error('Error updating suiseki formulir tahap 2:', error);
@@ -744,19 +724,13 @@ Controller.cj7 = async (req, res) => {
           kriteriaTahap3 = 'C';
         }
 
-        // Update keterangan untuk tahap 3 (tambahkan ke keterangan yang sudah ada)
-        let keteranganBaru = formulir.keterangan || '';
-        if (keteranganBaru) {
-          keteranganBaru += `, Kriteria Tahapan 3 : ${kriteriaTahap3}`;
-        } else {
-          keteranganBaru = `Kriteria Tahapan 3 : ${kriteriaTahap3}`;
-        }
+        // Gabungkan kriteria sebelumnya dengan tahap 3
+        const kriteriaBaru = `${formulir.kriteria},${kriteriaTahap3}`;
 
         updateFormulirValues.push({
           id_formulir: formulir.id_formulir,
           kematangan: finalScore, // Tahap 3 disimpan di kematangan
-          keterangan: keteranganBaru,
-          kriteria: kriteriaTahap3, // Kriteria akhir untuk tahap 3
+          kriteria: kriteriaBaru, // Kriteria akhir untuk tahap 3
         });
         count_processed++;
       }
@@ -766,13 +740,8 @@ Controller.cj7 = async (req, res) => {
     for (const updateData of updateFormulirValues) {
       await helper
         .runSQL({
-          sql: `UPDATE tbl_formulir SET kematangan = ?, keterangan = ?, kriteria = ?, sync = 3 WHERE id_formulir = ?`,
-          param: [
-            updateData.kematangan,
-            updateData.keterangan,
-            updateData.kriteria,
-            updateData.id_formulir,
-          ],
+          sql: `UPDATE tbl_formulir SET kematangan = ?, kriteria = ?, sync = 3 WHERE id_formulir = ?`,
+          param: [updateData.kematangan, updateData.kriteria, updateData.id_formulir],
         })
         .catch(error => {
           console.error('Error updating suiseki formulir tahap 3:', error);
