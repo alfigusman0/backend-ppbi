@@ -472,7 +472,6 @@ Controller.update = async (req, res) => {
     const id = req.params.id;
     const {
       id_event,
-      sertifikat,
       no_registrasi,
       no_juri,
       id_pohon,
@@ -493,7 +492,9 @@ Controller.update = async (req, res) => {
       kematangan,
       kriteria,
       keterangan,
-      id_profile_juri,
+      id_juri,
+      kwitansi,
+      sertifikat,
     } = req.body;
 
     /* Check existing data */
@@ -561,7 +562,6 @@ Controller.update = async (req, res) => {
 
     if (req.authTingkat <= 5) {
       addUpdate('id_event', id_event);
-      addUpdate('sertifikat', sertifikat);
       addUpdate('no_registrasi', no_registrasi);
       addUpdate('no_juri', no_juri);
       addUpdate('diskon', diskon);
@@ -575,7 +575,9 @@ Controller.update = async (req, res) => {
       addUpdate('kematangan', kematangan);
       addUpdate('kriteria', calculatedKriteria);
       addUpdate('keterangan', keterangan);
-      addUpdate('id_profile_juri', id_profile_juri);
+      addUpdate('id_juri', id_juri);
+      addUpdate('kwitansi', kwitansi);
+      addUpdate('sertifikat', sertifikat);
     }
 
     addUpdate('id_pohon', id_pohon);
