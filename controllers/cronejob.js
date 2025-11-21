@@ -5,6 +5,7 @@ const DailyRotateFile = require('winston-daily-rotate-file');
 /* Helpers */
 const helper = require('../helpers/helper');
 const response = require('../helpers/response');
+const whatsapp = require('../helpers/whatsapp');
 /* Logger */
 const logger = winston.createLogger({
   level: 'info',
@@ -27,6 +28,12 @@ const logger = winston.createLogger({
 });
 
 const Controller = {};
+
+const delay = () => {
+  const min = 90;
+  const max = 120;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
 
 const handleError = (error, res) => {
   logger.error(error);
@@ -758,6 +765,175 @@ Controller.cj7 = async (req, res) => {
     );
   } catch (error) {
     console.log(error);
+    return handleError(error, res);
+  }
+};
+
+/* WhatsApp - Kirim Pesan Otomatis */
+Controller.cj8 = async (req, res) => {
+  try {
+    let count_success = 0;
+    let count_error = 0;
+    const processed_notif = [];
+
+    // Ambil data notifikasi yang status WhatsApp = 'TIDAK'
+    const notifList = await helper.runSQL({
+      sql: "SELECT * FROM view_notif WHERE whatsapp = 'TIDAK' ORDER BY created_at ASC",
+      param: [],
+    });
+
+    if (notifList.length === 0) {
+      return response.sc200(
+        'Tidak ada notifikasi yang perlu dikirim via WhatsApp.',
+        {
+          success: 0,
+          error: 0,
+          total: 0,
+        },
+        res
+      );
+    }
+
+    logger.info('Memulai pengiriman WhatsApp otomatis', {
+      total_notif: notifList.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Proses setiap notifikasi
+    for (const notif of notifList) {
+      try {
+        logger.info('Menunggu delay untuk pengiriman WhatsApp', {
+          id_notif: notif.id_notif,
+          delay_seconds: delay,
+          target: notif.nmr_tlpn,
+        });
+
+        // Tunggu delay sebelum mengirim
+        await new Promise(resolve => setTimeout(resolve, delay));
+
+        // Replace placeholder dengan data aktual
+        let processedMessage = notif.isi;
+
+        // Daftar field yang akan direplace
+        const fieldsToReplace = [
+          'nama_lengkap',
+          'username',
+          'nmr_tlpn',
+          'nama_acara',
+          'slug_event',
+          'status_event',
+          'judul',
+          'created_by_nama',
+          'created_by_nama_lengkap',
+        ];
+
+        fieldsToReplace.forEach(field => {
+          const placeholder = `{{${field}}}`;
+          const value = notif[field] || '';
+          processedMessage = processedMessage.replace(new RegExp(placeholder, 'g'), value);
+        });
+
+        // Siapkan parameter untuk WhatsApp
+        const whatsappParams = {
+          target: notif.nmr_tlpn,
+          message: processedMessage,
+          delay: delay, // Delay tambahan di Fonnte API
+        };
+
+        let sendResult;
+
+        // Tentukan apakah menggunakan id_event atau tidak
+        if (notif.id_event && notif.id_event > 0) {
+          logger.info('Mengirim WhatsApp dengan id_event', {
+            id_notif: notif.id_notif,
+            id_event: notif.id_event,
+            target: notif.nmr_tlpn,
+          });
+
+          sendResult = await whatsapp.sendMessage(notif.id_event, whatsappParams);
+        } else {
+          logger.info('Mengirim WhatsApp tanpa id_event', {
+            id_notif: notif.id_notif,
+            target: notif.nmr_tlpn,
+          });
+
+          sendResult = await whatsapp.sendMessage(null, whatsappParams);
+        }
+
+        // Update status berdasarkan hasil pengiriman
+        let updateStatus = 'ERROR';
+        if (sendResult.success) {
+          updateStatus = 'YA';
+          count_success++;
+
+          logger.info('Berhasil mengirim WhatsApp', {
+            id_notif: notif.id_notif,
+            target: notif.nmr_tlpn,
+            response: sendResult.data,
+          });
+        } else {
+          count_error++;
+
+          logger.error('Gagal mengirim WhatsApp', {
+            id_notif: notif.id_notif,
+            target: notif.nmr_tlpn,
+            error: sendResult.message,
+            errorType: sendResult.errorType,
+          });
+        }
+
+        // Update status di database
+        await helper.runSQL({
+          sql: 'UPDATE tbl_notif SET whatsapp = ?, updated_by = 1 WHERE id_notif = ?',
+          param: [updateStatus, notif.id_notif],
+        });
+
+        processed_notif.push({
+          id_notif: notif.id_notif,
+          status: updateStatus,
+          target: notif.nmr_tlpn,
+          message: processedMessage.substring(0, 100) + '...', // Potong pesan untuk log
+        });
+      } catch (error) {
+        count_error++;
+
+        logger.error('Error processing WhatsApp notification', {
+          id_notif: notif.id_notif,
+          error: error.message,
+          stack: error.stack,
+        });
+
+        // Update status menjadi ERROR jika terjadi exception
+        await helper.runSQL({
+          sql: 'UPDATE tbl_notif SET whatsapp = ?, updated_by = 1 WHERE id_notif = ?',
+          param: ['ERROR', notif.id_notif],
+        });
+
+        processed_notif.push({
+          id_notif: notif.id_notif,
+          status: 'ERROR',
+          target: notif.nmr_tlpn,
+          error: error.message,
+        });
+      }
+    }
+
+    const result = {
+      success: count_success,
+      error: count_error,
+      total: notifList.length,
+      processed_notifications: processed_notif,
+    };
+
+    logger.info('Selesai pengiriman WhatsApp otomatis', result);
+
+    return response.sc200('Pengiriman WhatsApp otomatis selesai.', result, res);
+  } catch (error) {
+    console.log(error);
+    logger.error('Error dalam cronjob cj8 - WhatsApp', {
+      error: error.message,
+      stack: error.stack,
+    });
     return handleError(error, res);
   }
 };
