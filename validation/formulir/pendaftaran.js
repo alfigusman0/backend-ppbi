@@ -32,23 +32,6 @@ module.exports = function validateInput(method, path, data) {
   data.kwitansi = !isEmpty(data.kwitansi) ? data.kwitansi : '';
   data.sertifikat = !isEmpty(data.sertifikat) ? data.sertifikat : '';
 
-  const validateScore = (value, fieldName) => {
-    if (Validator.isEmpty(value)) {
-      return `${fieldName} tidak boleh kosong.`;
-    }
-
-    if (!Validator.isFloat(value)) {
-      return `${fieldName} harus berupa angka desimal.`;
-    }
-
-    const floatValue = parseFloat(value);
-    if (floatValue < 0 || floatValue > 100) {
-      return `${fieldName} harus antara 0 hingga 100.`;
-    }
-
-    return null; // Valid
-  };
-
   // Validasi untuk method POST (Create)
   if (method === 'POST') {
     // Validasi field id_event (wajib diisi dan harus integer)
