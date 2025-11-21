@@ -116,8 +116,21 @@ whatsapp.getTokenByEvent = async idEvent => {
 };
 
 /**
+ * Ambil Fonnte Token dari environment variable
+ * @returns {string} Token Fonnte dari environment
+ * @throws {Error} Jika token tidak ditemukan di environment
+ */
+whatsapp.getTokenFromEnv = () => {
+  const token = process.env.FONNTE_API_TOKEN;
+  if (!token || token.trim() === '') {
+    throw new Error('Token WhatsApp tidak ditemukan di environment variable FONNTE_API_TOKEN');
+  }
+  return token;
+};
+
+/**
  * Fungsi utama untuk mengirim pesan WhatsApp melalui Fonnte API
- * @param {number} idEvent - ID Event (untuk mengambil token dari database)
+ * @param {number|null} idEvent - ID Event (untuk mengambil token dari database). Bisa null jika menggunakan token dari env
  * @param {Object} params - Parameter pengiriman
  * @param {string} params.target - Nomor tujuan (wajib). Format: '08123456789' atau '08123456789|Nama|Role'
  * @param {string} params.message - Pesan yang akan dikirim (opsional jika ada url/file)
@@ -140,10 +153,6 @@ whatsapp.getTokenByEvent = async idEvent => {
  */
 whatsapp.sendMessage = async (idEvent, params) => {
   try {
-    if (!idEvent) {
-      throw new Error('Parameter idEvent wajib diisi');
-    }
-
     if (!params || !params.target) {
       throw new Error('Parameter target wajib diisi');
     }
@@ -151,11 +160,22 @@ whatsapp.sendMessage = async (idEvent, params) => {
     const fontteConfig = validateEnvVariables();
 
     let token;
+    let tokenSource = '';
+
     try {
-      token = await whatsapp.getTokenByEvent(idEvent);
+      if (idEvent) {
+        // Gunakan token dari database berdasarkan id_event
+        token = await whatsapp.getTokenByEvent(idEvent);
+        tokenSource = `database (id_event: ${idEvent})`;
+      } else {
+        // Gunakan token dari environment variable
+        token = whatsapp.getTokenFromEnv();
+        tokenSource = 'environment variable';
+      }
     } catch (tokenError) {
       logger.error('Gagal mengambil token WhatsApp', {
         idEvent,
+        tokenSource,
         error: tokenError.message,
       });
       return {
@@ -195,6 +215,7 @@ whatsapp.sendMessage = async (idEvent, params) => {
       target: params.target,
       hasMessage: !!params.message,
       hasUrl: !!params.url,
+      tokenSource,
       apiHost: fontteConfig.apiHost,
       timestamp: new Date().toISOString(),
     });
@@ -217,6 +238,7 @@ whatsapp.sendMessage = async (idEvent, params) => {
     if (response.data.status === false) {
       logger.error('Gagal mengirim pesan WhatsApp', {
         idEvent,
+        tokenSource,
         reason: response.data.reason,
         requestid: response.data.requestid,
         target: params.target,
@@ -234,6 +256,7 @@ whatsapp.sendMessage = async (idEvent, params) => {
 
     logger.info('Berhasil mengirim pesan WhatsApp', {
       idEvent,
+      tokenSource,
       detail: response.data.detail,
       id: response.data.id,
       requestid: response.data.requestid,
@@ -277,7 +300,7 @@ whatsapp.sendMessage = async (idEvent, params) => {
     }
 
     logger.error('Error mengirim WhatsApp', {
-      idEvent: params?.idEvent,
+      idEvent,
       error: errorMessage,
       detail: errorDetail,
       errorType,
@@ -295,8 +318,17 @@ whatsapp.sendMessage = async (idEvent, params) => {
 };
 
 /**
+ * Fungsi untuk mengirim pesan menggunakan token dari environment variable
+ * @param {Object} params - Parameter pengiriman (sama seperti sendMessage)
+ * @returns {Promise<Object>} Response dengan format {success, message, data, error, errorType}
+ */
+whatsapp.sendMessageWithEnvToken = async params => {
+  return await whatsapp.sendMessage(null, params);
+};
+
+/**
  * Fungsi untuk mengirim pesan ke multiple target dengan custom message per target
- * @param {number} idEvent - ID Event
+ * @param {number|null} idEvent - ID Event (bisa null untuk token dari env)
  * @param {Array} messages - Array of message objects
  * @param {string} messages[].target - Nomor target
  * @param {string} messages[].message - Pesan untuk target ini
@@ -319,6 +351,7 @@ whatsapp.sendBulkMessages = async (idEvent, messages) => {
     logger.info('Mengirim bulk messages', {
       idEvent,
       messagesCount: messages.length,
+      tokenSource: idEvent ? `database (id_event: ${idEvent})` : 'environment variable',
     });
 
     const dataString = JSON.stringify(messages);
@@ -347,6 +380,15 @@ whatsapp.sendBulkMessages = async (idEvent, messages) => {
       errorType: 'BULK_MESSAGE_ERROR',
     };
   }
+};
+
+/**
+ * Fungsi untuk mengirim bulk messages menggunakan token dari environment variable
+ * @param {Array} messages - Array of message objects
+ * @returns {Promise<Object>} Response dari API
+ */
+whatsapp.sendBulkMessagesWithEnvToken = async messages => {
+  return await whatsapp.sendBulkMessages(null, messages);
 };
 
 /**
