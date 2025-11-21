@@ -63,10 +63,11 @@ Controller.create = async (req, res) => {
     const masa_berlaku = req.body.masa_berlaku || null;
     const bukti_bayar = req.body.bukti_bayar || null;
     const status = req.body.status || 'MENUNGGU';
+    const kartu = req.body.kartu || null;
     const { id_profile, ids_cabang } = req.body;
 
     const sqlInsert = {
-      sql: 'INSERT INTO `tbl_kta`(`no_kta`, `kta_lama`, `id_profile`, `masa_berlaku`, `ids_cabang`, `bukti_bayar`, `status`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO `tbl_kta`(`no_kta`, `kta_lama`, `id_profile`, `masa_berlaku`, `ids_cabang`, `bukti_bayar`, `status`, `kartu`, `created_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       param: [
         no_kta,
         kta_lama,
@@ -75,6 +76,7 @@ Controller.create = async (req, res) => {
         ids_cabang,
         bukti_bayar,
         status,
+        kartu,
         created_by,
       ],
     };
@@ -240,7 +242,7 @@ Controller.update = async (req, res) => {
     }
 
     const id = req.params.id;
-    const { no_kta, kta_lama, id_profile, masa_berlaku, ids_cabang, bukti_bayar, status } =
+    const { no_kta, kta_lama, id_profile, masa_berlaku, ids_cabang, bukti_bayar, status, kartu } =
       req.body;
 
     // Check existing data
@@ -267,10 +269,11 @@ Controller.update = async (req, res) => {
     addUpdate('no_kta', no_kta);
     addUpdate('kta_lama', kta_lama);
     addUpdate('id_profile', id_profile);
-    addUpdate('status', status);
     addUpdate('masa_berlaku', masa_berlaku);
     addUpdate('ids_cabang', ids_cabang);
     addUpdate('bukti_bayar', bukti_bayar);
+    addUpdate('status', status);
+    addUpdate('kartu', kartu);
 
     // Check Data Update
     if (isEmpty(params)) {

@@ -13,6 +13,7 @@ module.exports = function validateInput(method, path, data) {
   data.ids_cabang = !isEmpty(data.ids_cabang) ? data.ids_cabang : '';
   data.bukti_bayar = !isEmpty(data.bukti_bayar) ? data.bukti_bayar : '';
   data.status = !isEmpty(data.status) ? data.status : '';
+  data.kartu = !isEmpty(data.kartu) ? data.kartu : '';
 
   // Validasi untuk method POST (Create)
   if (method === 'POST') {
@@ -25,6 +26,15 @@ module.exports = function validateInput(method, path, data) {
         })
       ) {
         errors.no_kta = 'nomor kta maksimal 50 karakter.';
+      }
+    }
+
+    // Validasi field ids_cabang (wajib diisi dan harus integer)
+    if (Validator.isEmpty(data.ids_cabang)) {
+      errors.ids_cabang = 'ids cabang tidak boleh kosong.';
+    } else {
+      if (!Validator.isInt(data.ids_cabang)) {
+        errors.ids_cabang = 'ids cabang tidak valid.';
       }
     }
 
@@ -56,15 +66,6 @@ module.exports = function validateInput(method, path, data) {
       }
     }
 
-    // Validasi field ids_cabang (wajib diisi dan harus integer)
-    if (Validator.isEmpty(data.ids_cabang)) {
-      errors.ids_cabang = 'ids cabang tidak boleh kosong.';
-    } else {
-      if (!Validator.isInt(data.ids_cabang)) {
-        errors.ids_cabang = 'ids cabang tidak valid.';
-      }
-    }
-
     // Validasi field bukti_bayar (opsional, tapi jika diisi harus URL atau #)
     if (!Validator.isEmpty(data.bukti_bayar)) {
       if (data.bukti_bayar !== '#') {
@@ -88,6 +89,22 @@ module.exports = function validateInput(method, path, data) {
         errors.status = `status tidak valid. harus salah satu dari: ${validStatus.join(', ')}.`;
       }
     }
+
+    // Validasi field kartu (wajib diisi dan harus URL atau #)
+    if (Validator.isEmpty(data.kartu)) {
+      errors.kartu = 'kartu tidak boleh kosong.';
+    } else {
+      if (data.kartu !== '#') {
+        if (
+          !Validator.isURL(data.kartu, {
+            protocols: ['http', 'https'],
+            require_protocol: true,
+          })
+        ) {
+          errors.kartu = 'kartu harus berupa URL (http/https) atau #.';
+        }
+      }
+    }
   } else {
     // Validasi untuk method lain (PUT/PATCH untuk Update)
     // Field bersifat opsional, tapi jika diisi harus valid
@@ -101,6 +118,13 @@ module.exports = function validateInput(method, path, data) {
         })
       ) {
         errors.no_kta = 'nomor kta maksimal 50 karakter.';
+      }
+    }
+
+    // Validasi ids_cabang jika diisi
+    if (!Validator.isEmpty(data.ids_cabang)) {
+      if (!Validator.isInt(data.ids_cabang)) {
+        errors.ids_cabang = 'ids cabang tidak valid.';
       }
     }
 
@@ -130,13 +154,6 @@ module.exports = function validateInput(method, path, data) {
       }
     }
 
-    // Validasi ids_cabang jika diisi
-    if (!Validator.isEmpty(data.ids_cabang)) {
-      if (!Validator.isInt(data.ids_cabang)) {
-        errors.ids_cabang = 'ids cabang tidak valid.';
-      }
-    }
-
     // Validasi bukti_bayar jika diisi (harus URL atau #)
     if (!Validator.isEmpty(data.bukti_bayar)) {
       if (data.bukti_bayar !== '#') {
@@ -156,6 +173,20 @@ module.exports = function validateInput(method, path, data) {
       const validStatus = ['MENUNGGU', 'DIAJUKAN', 'TIDAK DISETUJUI', 'DISETUJUI', 'KEDALUARSA'];
       if (!Validator.isIn(data.status, validStatus)) {
         errors.status = `status tidak valid. harus salah satu dari: ${validStatus.join(', ')}.`;
+      }
+    }
+
+    // Validasi kartu jika diisi
+    if (!Validator.isEmpty(data.kartu)) {
+      if (data.kartu !== '#') {
+        if (
+          !Validator.isURL(data.kartu, {
+            protocols: ['http', 'https'],
+            require_protocol: true,
+          })
+        ) {
+          errors.kartu = 'kartu harus berupa URL (http/https) atau #.';
+        }
       }
     }
   }
