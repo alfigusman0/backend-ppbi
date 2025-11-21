@@ -292,9 +292,54 @@ module.exports = function validateInput(method, path, data) {
     }
 
     // Validasi kriteria jika diisi
+    // Validasi kriteria jika diisi
     if (!Validator.isEmpty(data.kriteria)) {
-      if (!Validator.isIn(data.kriteria, ['A', 'B', 'C', 'D'])) {
-        errors.kriteria = 'kriteria tidak valid. harus A, B, C, atau D.';
+      const validKriteria = [
+        'A',
+        'B',
+        'C',
+        'D',
+        'A,A',
+        'A,B',
+        'A,C',
+        'B,A',
+        'B,B',
+        'B,C',
+        'C,A',
+        'C,B',
+        'C,C',
+        'A,A,A',
+        'A,A,B',
+        'A,A,C',
+        'A,B,A',
+        'A,B,B',
+        'A,B,C',
+        'A,C,A',
+        'A,C,B',
+        'A,C,C',
+        'B,A,A',
+        'B,A,B',
+        'B,A,C',
+        'B,B,A',
+        'B,B,B',
+        'B,B,C',
+        'B,C,A',
+        'B,C,B',
+        'B,C,C',
+        'C,A,A',
+        'C,A,B',
+        'C,A,C',
+        'C,B,A',
+        'C,B,B',
+        'C,B,C',
+        'C,C,A',
+        'C,C,B',
+        'C,C,C',
+      ];
+
+      if (!Validator.isIn(data.kriteria, validKriteria)) {
+        errors.kriteria =
+          'Kriteria tidak valid. Harus sesuai dengan daftar nilai yang diperbolehkan.';
       }
     }
 
