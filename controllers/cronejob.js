@@ -938,4 +938,123 @@ Controller.cj8 = async (req, res) => {
   }
 };
 
+/* Generate Nomor KTA dan Update Level Grup Users */
+Controller.cj9 = async (req, res) => {
+  try {
+    let count_updated = 0;
+    let count_users_updated = 0;
+    const currentYear = new Date().getFullYear();
+    const masa_berlaku = moment().add(5, 'years').format('YYYY-MM-DD');
+
+    // Ambil data KTA yang memenuhi kriteria
+    const ktaList = await helper.runSQL({
+      sql: "SELECT k.*, p.created_by as id_user FROM tbl_kta k INNER JOIN tbl_profile p ON k.id_profile = p.id_profile WHERE k.no_kta IS NULL AND k.status = 'DISETUJUI' ORDER BY k.created_at ASC",
+      param: [],
+    });
+
+    if (ktaList.length === 0) {
+      return response.sc200(
+        'Tidak ada KTA yang perlu digenerate nomor.',
+        {
+          kta_updated: 0,
+          users_updated: 0,
+        },
+        res
+      );
+    }
+
+    // Ambil nomor KTA terakhir dengan query yang tepat
+    const lastKTA = await helper.runSQL({
+      sql: 'SELECT SUBSTR(no_kta, 11, 8) as kta FROM tbl_kta WHERE no_kta IS NOT NULL ORDER BY CAST(SUBSTR(no_kta, 11, 8) AS UNSIGNED) DESC LIMIT 1',
+      param: [],
+    });
+
+    let nextNumber = 1;
+
+    if (lastKTA.length > 0 && lastKTA[0].kta) {
+      const lastNumberStr = lastKTA[0].kta;
+      const lastNumber = parseInt(lastNumberStr, 10);
+      nextNumber = lastNumber + 1;
+    }
+
+    logger.info('Starting KTA generation', {
+      last_kta_number: lastKTA.length > 0 ? lastKTA[0].kta : 'none',
+      starting_number: nextNumber,
+      total_to_process: ktaList.length,
+    });
+
+    // Untuk setiap KTA yang memenuhi syarat
+    for (const kta of ktaList) {
+      try {
+        // Format nomor urut menjadi 8 digit
+        const nomorUrut = nextNumber.toString().padStart(8, '0');
+        const no_kta = `0${kta.ids_cabang}.${currentYear}.${nomorUrut}`;
+
+        // 2. UPDATE NOMOR KTA DAN MASA BERLAKU
+        await helper.runSQL({
+          sql: 'UPDATE tbl_kta SET no_kta = ?, masa_berlaku = ?, updated_by = 1, updated_at = NOW() WHERE id_kta = ?',
+          param: [no_kta, masa_berlaku, kta.id_kta],
+        });
+
+        // 3. UPDATE LEVEL GRUP USERS
+        // Cari grup anggota cabang (ids_level = 8 AND keterangan LIKE %ids_cabang%)
+        const grupAnggota = await helper.runSQL({
+          sql: 'SELECT ids_grup FROM tbs_grup WHERE ids_level = 8 AND keterangan LIKE ? LIMIT 1',
+          param: [`%${kta.ids_cabang}%`],
+        });
+
+        if (grupAnggota.length > 0) {
+          const ids_grup = grupAnggota[0].ids_grup;
+
+          // Update grup user
+          await helper.runSQL({
+            sql: 'UPDATE tbl_users SET ids_grup = ?, updated_by = 1, updated_at = NOW() WHERE id_user = ?',
+            param: [ids_grup, kta.id_user],
+          });
+
+          count_users_updated++;
+        }
+
+        count_updated++;
+
+        logger.info('Berhasil generate KTA dan update user', {
+          id_kta: kta.id_kta,
+          no_kta: no_kta,
+          masa_berlaku: masa_berlaku,
+          id_user: kta.id_user,
+          ids_grup: grupAnggota.length > 0 ? grupAnggota[0].ids_grup : 'tidak ditemukan',
+        });
+
+        // INCREMENT UNTUK KTA BERIKUTNYA
+        nextNumber++;
+      } catch (error) {
+        logger.error('Error processing KTA', {
+          id_kta: kta.id_kta,
+          error: error.message,
+        });
+        // Continue dengan KTA berikutnya meskipun ada error
+        continue;
+      }
+    }
+
+    const result = {
+      kta_updated: count_updated,
+      users_updated: count_users_updated,
+      total_processed: ktaList.length,
+      current_year: currentYear,
+      masa_berlaku_default: masa_berlaku,
+      last_generated_number: nextNumber - 1,
+    };
+
+    return response.sc200('Generate nomor KTA dan update level grup users selesai.', result, res);
+  } catch (error) {
+    console.log(error);
+    logger.error('Error dalam cronjob cj9 - Generate KTA', {
+      error: error.message,
+      stack: error.stack,
+    });
+    return handleError(error, res);
+  }
+};
+
 module.exports = Controller;
