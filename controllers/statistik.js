@@ -441,14 +441,16 @@ Controller.s2 = async (req, res) => {
       // Filter khusus Suiseki
       ids_jenis_suiseki,
       // Special filters
-      sudah_bayar, // true/false
-      sudah_cetak, // true/false
-      sudah_arena, // true/false
+      sudah_bayar,
+      sudah_cetak,
+      sudah_arena,
       // Grouping parameters
-      group_by, // jenis_event, bayar, cetak, arena, meja, id_kategori, ids_kelas, kode_kelas, kriteria, spesies, ids_jenis_bonsai, ids_jenis_suiseki, bulan, tahun
+      group_by,
       // Date range
       tgl_awal,
       tgl_akhir,
+      // Include total harga
+      with_total_harga = 'true', // Default true untuk backward compatibility
     } = req.query;
 
     const key = redisPrefix + 's2:' + md5(req.originalUrl);
@@ -491,9 +493,11 @@ Controller.s2 = async (req, res) => {
         vfp.spesies,
         NULL as ids_jenis_suiseki,
         NULL as jenis_suiseki,
+        vfp.total_harga,
         vfp.created_at,
         vfp.tgl_awal_acara
       FROM view_formulir_pohon vfp
+      WHERE 1=1
       UNION ALL
       SELECT
         'Suiseki' as jenis_formulir,
@@ -517,9 +521,11 @@ Controller.s2 = async (req, res) => {
         NULL as spesies,
         vfs.ids_jenis_suiseki,
         vfs.jenis_suiseki,
+        vfs.total_harga,
         vfs.created_at,
         vfs.tgl_awal_acara
       FROM view_formulir_suiseki vfs
+      WHERE 1=1
     ) as formulir_gabungan`;
 
     const params = [];
@@ -593,15 +599,22 @@ Controller.s2 = async (req, res) => {
         }
       });
 
-      // Add count field
+      // Add count and total harga fields
       selectFields.push('COUNT(*) as total');
+      if (with_total_harga === 'true') {
+        selectFields.push('SUM(total_harga) as total_harga');
+      }
       sqlSelect += selectFields.join(', ');
     } else {
-      // No grouping - just total count
-      sqlSelect += 'COUNT(*) as total';
+      // No grouping - just total count and total harga
+      if (with_total_harga === 'true') {
+        sqlSelect += 'COUNT(*) as total, SUM(total_harga) as total_harga';
+      } else {
+        sqlSelect += 'COUNT(*) as total';
+      }
     }
 
-    // Process multiple values for fields that support IN operator
+    // Process multiple values for filters
     const processedIdEvent = processMultipleValues(id_event);
     const processedJenisEvent = processMultipleValues(jenis_event);
     const processedIdsCabang = processMultipleValues(ids_cabang);
@@ -617,7 +630,6 @@ Controller.s2 = async (req, res) => {
     const processedSpesies = processMultipleValues(spesies);
     const processedIdsJenisSuiseki = processMultipleValues(ids_jenis_suiseki);
 
-    // Process multiple values for fields that support NOT IN operator
     const processedIdEventNot = processMultipleValues(id_event_not);
     const processedJenisEventNot = processMultipleValues(jenis_event_not);
     const processedIdsCabangNot = processMultipleValues(ids_cabang_not);
@@ -630,7 +642,7 @@ Controller.s2 = async (req, res) => {
     const processedKodeKelasNot = processMultipleValues(kode_kelas_not);
     const processedKriteriaNot = processMultipleValues(kriteria_not);
 
-    // Build conditions for fields that support IN operator
+    // Build conditions for IN operator
     const conditionsIN = [
       buildCondition('id_event', processedIdEvent, 'IN'),
       buildCondition('jenis_event', processedJenisEvent, 'IN'),
@@ -648,7 +660,7 @@ Controller.s2 = async (req, res) => {
       buildCondition('ids_jenis_suiseki', processedIdsJenisSuiseki, 'IN'),
     ];
 
-    // Build conditions for fields that support NOT IN operator
+    // Build conditions for NOT IN operator
     const conditionsNOTIN = [
       buildCondition('id_event', processedIdEventNot, 'NOT IN'),
       buildCondition('jenis_event', processedJenisEventNot, 'NOT IN'),
@@ -745,6 +757,9 @@ Controller.s2 = async (req, res) => {
       json = {
         total: getData[0]?.total || 0,
       };
+      if (with_total_harga === 'true') {
+        json.total_harga = getData[0]?.total_harga || 0;
+      }
     } else {
       // Grouped results
       json = {
@@ -754,6 +769,14 @@ Controller.s2 = async (req, res) => {
           total_formulir: getData.reduce((sum, item) => sum + parseInt(item.total), 0),
         },
       };
+
+      // Add total harga to summary if requested
+      if (with_total_harga === 'true') {
+        json.summary.total_harga = getData.reduce(
+          (sum, item) => sum + parseFloat(item.total_harga || 0),
+          0
+        );
+      }
 
       // Add additional summary by group type if single grouping
       if (groupFields.length === 1) {
@@ -804,17 +827,13 @@ Controller.s2 = async (req, res) => {
       tgl_akhir,
       // Grouping
       group_by: groupFields,
+      with_total_harga,
     };
 
     // Set Redis cache
     if (process.env.REDIS_ACTIVE === 'ON') {
       try {
-        await redis.set(
-          key,
-          JSON.stringify(json),
-          'EX',
-          60 * 60 * (process.env.REDIS_HOUR || 1) // Default 1 jam
-        );
+        await redis.set(key, JSON.stringify(json), 'EX', 60 * 60 * (process.env.REDIS_HOUR || 1));
       } catch (redisError) {
         logger.error('Redis error:', redisError);
       }
@@ -828,11 +847,18 @@ Controller.s2 = async (req, res) => {
 };
 
 /**
- * Statistik Dashboard
+ * Statistik Dashboard - Diperbaiki dengan query terpisah untuk Bonsai dan Suiseki
  */
 Controller.dashboard = async (req, res) => {
   try {
-    const { tahun, ids_cabang, ids_cabang_not, id_event, id_event_not } = req.query;
+    const {
+      tahun,
+      ids_cabang,
+      ids_cabang_not,
+      id_event,
+      id_event_not,
+      with_total_harga = 'true',
+    } = req.query;
 
     const key = redisPrefix + 'dashboard:' + md5(req.originalUrl);
 
@@ -902,6 +928,53 @@ Controller.dashboard = async (req, res) => {
       whereClause = ' WHERE ' + conditions.join(' AND ');
     }
 
+    // Build WHERE clause untuk formulir (tanpa ve. prefix)
+    let formulirWhereClause = '';
+    const formulirParams = [];
+    const formulirConditions = [];
+
+    // Replicate conditions for formulir queries
+    if (processedIdsCabang) {
+      const cabangCondition = buildCondition('ids_cabang', processedIdsCabang, 'IN');
+      if (cabangCondition.condition) {
+        formulirConditions.push(cabangCondition.condition);
+        formulirParams.push(...cabangCondition.params);
+      }
+    }
+
+    if (processedIdEvent) {
+      const eventCondition = buildCondition('id_event', processedIdEvent, 'IN');
+      if (eventCondition.condition) {
+        formulirConditions.push(eventCondition.condition);
+        formulirParams.push(...eventCondition.params);
+      }
+    }
+
+    if (processedIdsCabangNot) {
+      const cabangNotCondition = buildCondition('ids_cabang', processedIdsCabangNot, 'NOT IN');
+      if (cabangNotCondition.condition) {
+        formulirConditions.push(cabangNotCondition.condition);
+        formulirParams.push(...cabangNotCondition.params);
+      }
+    }
+
+    if (processedIdEventNot) {
+      const eventNotCondition = buildCondition('id_event', processedIdEventNot, 'NOT IN');
+      if (eventNotCondition.condition) {
+        formulirConditions.push(eventNotCondition.condition);
+        formulirParams.push(...eventNotCondition.params);
+      }
+    }
+
+    if (!isEmpty(tahun)) {
+      formulirConditions.push('YEAR(tgl_awal_acara) = ?');
+      formulirParams.push(tahun);
+    }
+
+    if (formulirConditions.length > 0) {
+      formulirWhereClause = ' WHERE ' + formulirConditions.join(' AND ');
+    }
+
     // Query untuk event (existing)
     const eventQueries = {
       total_events: {
@@ -928,72 +1001,99 @@ Controller.dashboard = async (req, res) => {
       },
     };
 
-    // Query untuk formulir (new)
-    const formulirWhereClause = whereClause.replace(/ve\./g, 'fg.');
+    // Query untuk formulir - DIPISAH antara Bonsai dan Suiseki
     const formulirQueries = {
-      total_formulir: {
-        sql: `SELECT COUNT(*) as total FROM (
-          SELECT 'Bonsai' as jenis_formulir, vfp.* FROM view_formulir_pohon vfp
-          UNION ALL
-          SELECT 'Suiseki' as jenis_formulir, vfs.* FROM view_formulir_suiseki vfs
-        ) as fg ${formulirWhereClause}`,
-        param: params,
+      // Total formulir - hitung terpisah lalu jumlahkan
+      total_bonsai: {
+        sql: `SELECT COUNT(*) as total FROM view_formulir_pohon vfp ${formulirWhereClause}`,
+        param: formulirParams,
       },
-      formulir_by_jenis: {
-        sql: `SELECT jenis_formulir, COUNT(*) as total FROM (
-          SELECT 'Bonsai' as jenis_formulir, vfp.* FROM view_formulir_pohon vfp
-          UNION ALL
-          SELECT 'Suiseki' as jenis_formulir, vfs.* FROM view_formulir_suiseki vfs
-        ) as fg ${formulirWhereClause} GROUP BY jenis_formulir ORDER BY total DESC`,
-        param: params,
+      total_suiseki: {
+        sql: `SELECT COUNT(*) as total FROM view_formulir_suiseki vfs ${formulirWhereClause}`,
+        param: formulirParams,
       },
-      formulir_by_bayar: {
-        sql: `SELECT bayar, COUNT(*) as total FROM (
-          SELECT 'Bonsai' as jenis_formulir, vfp.* FROM view_formulir_pohon vfp
-          UNION ALL
-          SELECT 'Suiseki' as jenis_formulir, vfs.* FROM view_formulir_suiseki vfs
-        ) as fg ${formulirWhereClause} GROUP BY bayar ORDER BY total DESC`,
-        param: params,
+
+      // Formulir by jenis - query terpisah
+      formulir_bonsai_by_jenis: {
+        sql: `SELECT 'Bonsai' as jenis_formulir, COUNT(*) as total FROM view_formulir_pohon vfp ${formulirWhereClause}`,
+        param: formulirParams,
       },
-      formulir_by_cetak: {
-        sql: `SELECT cetak, COUNT(*) as total FROM (
-          SELECT 'Bonsai' as jenis_formulir, vfp.* FROM view_formulir_pohon vfp
-          UNION ALL
-          SELECT 'Suiseki' as jenis_formulir, vfs.* FROM view_formulir_suiseki vfs
-        ) as fg ${formulirWhereClause} GROUP BY cetak ORDER BY total DESC`,
-        param: params,
+      formulir_suiseki_by_jenis: {
+        sql: `SELECT 'Suiseki' as jenis_formulir, COUNT(*) as total FROM view_formulir_suiseki vfs ${formulirWhereClause}`,
+        param: formulirParams,
       },
-      formulir_by_arena: {
-        sql: `SELECT arena, COUNT(*) as total FROM (
-          SELECT 'Bonsai' as jenis_formulir, vfp.* FROM view_formulir_pohon vfp
-          UNION ALL
-          SELECT 'Suiseki' as jenis_formulir, vfs.* FROM view_formulir_suiseki vfs
-        ) as fg ${formulirWhereClause} GROUP BY arena ORDER BY total DESC`,
-        param: params,
+
+      // Formulir by bayar - query terpisah lalu gabungkan
+      formulir_bonsai_by_bayar: {
+        sql: `SELECT bayar, COUNT(*) as total FROM view_formulir_pohon vfp ${formulirWhereClause} GROUP BY bayar ORDER BY total DESC`,
+        param: formulirParams,
       },
-      formulir_by_event: {
-        sql: `SELECT fg.id_event, ve.nama_acara, COUNT(*) as total FROM (
-          SELECT 'Bonsai' as jenis_formulir, vfp.* FROM view_formulir_pohon vfp
-          UNION ALL
-          SELECT 'Suiseki' as jenis_formulir, vfs.* FROM view_formulir_suiseki vfs
-        ) as fg
-        JOIN view_event ve ON fg.id_event = ve.id_event
-        ${formulirWhereClause}
-        GROUP BY fg.id_event, ve.nama_acara
-        ORDER BY total DESC
-        LIMIT 10`,
-        param: params,
+      formulir_suiseki_by_bayar: {
+        sql: `SELECT bayar, COUNT(*) as total FROM view_formulir_suiseki vfs ${formulirWhereClause} GROUP BY bayar ORDER BY total DESC`,
+        param: formulirParams,
+      },
+
+      // Formulir by cetak
+      formulir_bonsai_by_cetak: {
+        sql: `SELECT cetak, COUNT(*) as total FROM view_formulir_pohon vfp ${formulirWhereClause} GROUP BY cetak ORDER BY total DESC`,
+        param: formulirParams,
+      },
+      formulir_suiseki_by_cetak: {
+        sql: `SELECT cetak, COUNT(*) as total FROM view_formulir_suiseki vfs ${formulirWhereClause} GROUP BY cetak ORDER BY total DESC`,
+        param: formulirParams,
+      },
+
+      // Formulir by arena
+      formulir_bonsai_by_arena: {
+        sql: `SELECT arena, COUNT(*) as total FROM view_formulir_pohon vfp ${formulirWhereClause} GROUP BY arena ORDER BY total DESC`,
+        param: formulirParams,
+      },
+      formulir_suiseki_by_arena: {
+        sql: `SELECT arena, COUNT(*) as total FROM view_formulir_suiseki vfs ${formulirWhereClause} GROUP BY arena ORDER BY total DESC`,
+        param: formulirParams,
+      },
+
+      // Formulir by event - gabungkan manual
+      formulir_bonsai_by_event: {
+        sql: `SELECT vfp.id_event, ve.nama_acara, COUNT(*) as total FROM view_formulir_pohon vfp
+              JOIN view_event ve ON vfp.id_event = ve.id_event
+              ${formulirWhereClause}
+              GROUP BY vfp.id_event, ve.nama_acara
+              ORDER BY total DESC
+              LIMIT 10`,
+        param: formulirParams,
+      },
+      formulir_suiseki_by_event: {
+        sql: `SELECT vfs.id_event, ve.nama_acara, COUNT(*) as total FROM view_formulir_suiseki vfs
+              JOIN view_event ve ON vfs.id_event = ve.id_event
+              ${formulirWhereClause}
+              GROUP BY vfs.id_event, ve.nama_acara
+              ORDER BY total DESC
+              LIMIT 10`,
+        param: formulirParams,
       },
     };
 
-    // Fix the jenis query - ensure proper WHERE clause construction
+    // Tambahkan query total harga jika diminta
+    if (with_total_harga === 'true') {
+      formulirQueries.total_harga_bonsai = {
+        sql: `SELECT SUM(total_harga) as total_harga FROM view_formulir_pohon vfp ${formulirWhereClause}`,
+        param: formulirParams,
+      };
+      formulirQueries.total_harga_suiseki = {
+        sql: `SELECT SUM(total_harga) as total_harga FROM view_formulir_suiseki vfs ${formulirWhereClause}`,
+        param: formulirParams,
+      };
+    }
+
+    // Fix the jenis query untuk event
     if (whereClause) {
       eventQueries.by_jenis.sql = `SELECT jenis, COUNT(*) as total FROM view_event ve ${whereClause} AND jenis IS NOT NULL GROUP BY jenis ORDER BY total DESC`;
     } else {
       eventQueries.by_jenis.sql = `SELECT jenis, COUNT(*) as total FROM view_event ve WHERE jenis IS NOT NULL GROUP BY jenis ORDER BY total DESC`;
     }
 
-    // Execute all queries in parallel
+    // Execute event queries
     const eventResults = await Promise.all(
       Object.values(eventQueries).map(queryConfig =>
         helper
@@ -1007,11 +1107,12 @@ Controller.dashboard = async (req, res) => {
               params: queryConfig.param,
               error: error.message,
             });
-            return []; // Return empty array on error to prevent complete failure
+            return [];
           })
       )
     );
 
+    // Execute formulir queries
     const formulirResults = await Promise.all(
       Object.values(formulirQueries).map(queryConfig =>
         helper
@@ -1025,28 +1126,148 @@ Controller.dashboard = async (req, res) => {
               params: queryConfig.param,
               error: error.message,
             });
-            return []; // Return empty array on error to prevent complete failure
+            return [];
           })
       )
     );
+
+    // Process formulir results - gabungkan hasil Bonsai dan Suiseki
+    const totalBonsai = formulirResults[0][0]?.total || 0;
+    const totalSuiseki = formulirResults[1][0]?.total || 0;
+    const totalFormulir = totalBonsai + totalSuiseki;
+
+    // Gabungkan by jenis
+    const formulirByJenis = [
+      { jenis_formulir: 'Bonsai', total: totalBonsai },
+      { jenis_formulir: 'Suiseki', total: totalSuiseki },
+    ];
+
+    // Gabungkan by bayar
+    const formulirByBayar = [];
+    const bayarMap = new Map();
+
+    // Process Bonsai bayar results
+    if (formulirResults[4] && Array.isArray(formulirResults[4])) {
+      formulirResults[4].forEach(item => {
+        bayarMap.set(item.bayar, (bayarMap.get(item.bayar) || 0) + parseInt(item.total));
+      });
+    }
+
+    // Process Suiseki bayar results
+    if (formulirResults[5] && Array.isArray(formulirResults[5])) {
+      formulirResults[5].forEach(item => {
+        bayarMap.set(item.bayar, (bayarMap.get(item.bayar) || 0) + parseInt(item.total));
+      });
+    }
+
+    bayarMap.forEach((total, bayar) => {
+      formulirByBayar.push({ bayar, total });
+    });
+    formulirByBayar.sort((a, b) => b.total - a.total);
+
+    // Gabungkan by cetak
+    const formulirByCetak = [];
+    const cetakMap = new Map();
+
+    if (formulirResults[6] && Array.isArray(formulirResults[6])) {
+      formulirResults[6].forEach(item => {
+        cetakMap.set(item.cetak, (cetakMap.get(item.cetak) || 0) + parseInt(item.total));
+      });
+    }
+
+    if (formulirResults[7] && Array.isArray(formulirResults[7])) {
+      formulirResults[7].forEach(item => {
+        cetakMap.set(item.cetak, (cetakMap.get(item.cetak) || 0) + parseInt(item.total));
+      });
+    }
+
+    cetakMap.forEach((total, cetak) => {
+      formulirByCetak.push({ cetak, total });
+    });
+    formulirByCetak.sort((a, b) => b.total - a.total);
+
+    // Gabungkan by arena
+    const formulirByArena = [];
+    const arenaMap = new Map();
+
+    if (formulirResults[8] && Array.isArray(formulirResults[8])) {
+      formulirResults[8].forEach(item => {
+        arenaMap.set(item.arena, (arenaMap.get(item.arena) || 0) + parseInt(item.total));
+      });
+    }
+
+    if (formulirResults[9] && Array.isArray(formulirResults[9])) {
+      formulirResults[9].forEach(item => {
+        arenaMap.set(item.arena, (arenaMap.get(item.arena) || 0) + parseInt(item.total));
+      });
+    }
+
+    arenaMap.forEach((total, arena) => {
+      formulirByArena.push({ arena, total });
+    });
+    formulirByArena.sort((a, b) => b.total - a.total);
+
+    // Gabungkan by event
+    const formulirByEvent = [];
+    const eventMap = new Map();
+
+    if (formulirResults[10] && Array.isArray(formulirResults[10])) {
+      formulirResults[10].forEach(item => {
+        const key = `${item.id_event}-${item.nama_acara}`;
+        eventMap.set(key, {
+          id_event: item.id_event,
+          nama_acara: item.nama_acara,
+          total: parseInt(item.total),
+        });
+      });
+    }
+
+    if (formulirResults[11] && Array.isArray(formulirResults[11])) {
+      formulirResults[11].forEach(item => {
+        const key = `${item.id_event}-${item.nama_acara}`;
+        const existing = eventMap.get(key);
+        if (existing) {
+          existing.total += parseInt(item.total);
+        } else {
+          eventMap.set(key, {
+            id_event: item.id_event,
+            nama_acara: item.nama_acara,
+            total: parseInt(item.total),
+          });
+        }
+      });
+    }
+
+    eventMap.forEach(value => {
+      formulirByEvent.push(value);
+    });
+    formulirByEvent.sort((a, b) => b.total - a.total).splice(10); // Limit to 10
+
+    // Calculate total harga jika diminta
+    let totalHargaFormulir = 0;
+    if (with_total_harga === 'true') {
+      const totalHargaBonsai = parseFloat(formulirResults[12]?.[0]?.total_harga || 0);
+      const totalHargaSuiseki = parseFloat(formulirResults[13]?.[0]?.total_harga || 0);
+      totalHargaFormulir = totalHargaBonsai + totalHargaSuiseki;
+    }
 
     const json = {
       // Event statistics (existing)
       summary: {
         total_events: eventResults[0][0]?.total || 0,
         sedang_berlangsung: eventResults[4][0]?.total || 0,
-        total_formulir: formulirResults[0][0]?.total || 0,
+        total_formulir: totalFormulir,
       },
-      by_status: eventResults[1],
-      by_jenis: eventResults[2],
-      by_cabang: eventResults[3],
+      by_status: eventResults[1] || [],
+      by_jenis: eventResults[2] || [],
+      by_cabang: eventResults[3] || [],
 
-      // Formulir statistics (new)
-      formulir_by_jenis: formulirResults[1],
-      formulir_by_bayar: formulirResults[2],
-      formulir_by_cetak: formulirResults[3],
-      formulir_by_arena: formulirResults[4],
-      formulir_by_event: formulirResults[5],
+      // Formulir statistics (gabungan)
+      formulir_by_jenis: formulirByJenis,
+      formulir_by_bayar: formulirByBayar,
+      formulir_by_cetak: formulirByCetak,
+      formulir_by_arena: formulirByArena,
+      formulir_by_event: formulirByEvent,
 
       filters: {
         tahun,
@@ -1054,18 +1275,19 @@ Controller.dashboard = async (req, res) => {
         ids_cabang_not: processedIdsCabangNot,
         id_event: processedIdEvent,
         id_event_not: processedIdEventNot,
+        with_total_harga,
       },
     };
+
+    // Tambahkan total harga ke summary jika diminta
+    if (with_total_harga === 'true') {
+      json.summary.total_harga_formulir = totalHargaFormulir;
+    }
 
     // Set Redis cache
     if (process.env.REDIS_ACTIVE === 'ON') {
       try {
-        await redis.set(
-          key,
-          JSON.stringify(json),
-          'EX',
-          60 * 30 // 30 menit untuk dashboard
-        );
+        await redis.set(key, JSON.stringify(json), 'EX', 60 * 30);
       } catch (redisError) {
         logger.error('Redis error:', redisError);
       }
