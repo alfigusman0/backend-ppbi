@@ -944,7 +944,7 @@ Controller.cj9 = async (req, res) => {
     let count_updated = 0;
     let count_users_updated = 0;
     const currentYear = new Date().getFullYear();
-    const masa_berlaku = moment().add(5, 'years').format('YYYY-MM-DD');
+    const masa_berlaku = moment().add(4, 'years').format('YYYY-MM-DD');
 
     // Ambil data KTA yang memenuhi kriteria
     const ktaList = await helper.runSQL({
