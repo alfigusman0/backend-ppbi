@@ -268,6 +268,7 @@ const notifRoutes = require('./routes/notif');
 const pengantarRoutes = require('./routes/pengantar');
 const pohonRoutes = require('./routes/pohon');
 const profileRoutes = require('./routes/profile');
+const statistikRoutes = require('./routes/statistik');
 const suisekiRoutes = require('./routes/suiseki');
 const usersRoutes = require('./routes/users');
 
@@ -313,6 +314,7 @@ router.use('/notif', notifRoutes);
 router.use('/pengantar', pengantarRoutes);
 router.use('/pohon', pohonRoutes);
 router.use('/profile', profileRoutes);
+router.use('/statistik', statistikRoutes);
 router.use('/suiseki', suisekiRoutes);
 router.use('/users', usersRoutes);
 

@@ -9,7 +9,7 @@ const response = require('../helpers/response');
 /* Validation */
 const isEmpty = require('../validation/is-empty');
 
-const redisPrefix = process.env.REDIS_PREFIX + "session:";
+const redisPrefix = process.env.REDIS_PREFIX + 'session:';
 
 module.exports = async (req, res, next) => {
   let token = req.header('authorization') || req.header('token');
@@ -21,7 +21,7 @@ module.exports = async (req, res, next) => {
     return response.sc401('token cannot be empty.', json, res);
   }
 
-  token = token.split(" ");
+  token = token.split(' ');
   if (token.length < 2 || isEmpty(token[1])) {
     return response.sc401('invalid token format.', json, res);
   }
@@ -40,7 +40,7 @@ module.exports = async (req, res, next) => {
       }
     } else if (process.env.SESSIONS === 'DATABASE') {
       let checkData = await helper.runSQL({
-        sql: "SELECT token FROM `tbl_jwt` WHERE `token` LIKE ? AND `expired` = ? LIMIT 1",
+        sql: 'SELECT token FROM `tbl_jwt` WHERE `token` LIKE ? AND `expired` = ? LIMIT 1',
         param: [token[1], 'TIDAK'],
       });
       if (checkData.length == 0) {
@@ -52,11 +52,26 @@ module.exports = async (req, res, next) => {
     decodedToken = jwt.verify(token[1], process.env.JWT_SECRET);
   } catch (err) {
     console.error('JWT Error:', err);
-    return response.sc401("invalid tokens!", json, res);
+    return response.sc401('invalid tokens!', json, res);
   }
 
   if (!decodedToken) {
-    return response.sc401("invalid decode tokens!", json, res);
+    return response.sc401('invalid decode tokens!', json, res);
+  }
+
+  // IMPROVEMENT: Better error handling for keterangan parsing
+  let authKeterangan = {};
+  if (decodedToken.keterangan != null) {
+    try {
+      authKeterangan =
+        typeof decodedToken.keterangan === 'string'
+          ? JSON.parse(decodedToken.keterangan)
+          : decodedToken.keterangan;
+    } catch (parseError) {
+      console.error('Error parsing authKeterangan:', parseError);
+      // Tetap lanjut dengan object kosong daripada return error
+      authKeterangan = {};
+    }
   }
 
   req.authToken = token[1];
@@ -72,7 +87,7 @@ module.exports = async (req, res, next) => {
   req.authIdsGrup = decodedToken.ids_grup;
   req.authGrup = decodedToken.grup;
   req.authImport = decodedToken.import;
-  req.authKeterangan = decodedToken.keterangan;
+  req.authKeterangan = authKeterangan;
   req.authFoto = decodedToken.foto;
   req.authLoginAs = decodedToken.login_as;
   req.authIdAdmin = decodedToken.id_admin;

@@ -108,18 +108,11 @@ Controller.read = async (req, res) => {
 
     const key = redisPrefix + 'read:' + md5(req.originalUrl);
     const created_by = req.authTingkat <= 5 ? req.query.created_by : req.authIdUser;
+    const ids_cabang =
+      req.authTingkat <= 3 ? req.query.ids_cabang : req.authKeterangan.ids_cabang.join(',');
     const order_by = req.query.order_by || 'created_at DESC';
-    const {
-      id_kta,
-      id_profile,
-      nama_lengkap,
-      no_kta,
-      kta_lama,
-      ids_cabang,
-      cabang,
-      masa_berlaku,
-      status,
-    } = req.query;
+    const { id_kta, id_profile, nama_lengkap, no_kta, kta_lama, cabang, masa_berlaku, status } =
+      req.query;
 
     // Check Redis cache
     let cache = null;
@@ -355,17 +348,9 @@ Controller.single = async (req, res) => {
 
     const key = redisPrefix + 'single:' + md5(req.originalUrl);
     const created_by = req.authTingkat <= 5 ? req.query.created_by : req.authIdUser;
-    const {
-      id_kta,
-      id_profile,
-      nama_lengkap,
-      no_kta,
-      kta_lama,
-      ids_cabang,
-      cabang,
-      masa_berlaku,
-      status,
-    } = req.query;
+    const ids_cabang = req.authTingkat <= 3 ? req.query.ids_cabang : req.authKeterangan.join(',');
+    const { id_kta, id_profile, nama_lengkap, no_kta, kta_lama, cabang, masa_berlaku, status } =
+      req.query;
 
     // Check Redis cache
     let cache = null;
@@ -416,7 +401,7 @@ Controller.single = async (req, res) => {
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('no_kta', no_kta);
     addCondition('kta_lama', kta_lama);
-    addCondition('ids_cabang', ids_cabang);
+    addCondition('ids_cabang', ids_cabang, 'IN');
     addCondition('cabang', cabang, 'LIKE');
     addCondition('masa_berlaku', masa_berlaku, '<=');
     addCondition('status', status);

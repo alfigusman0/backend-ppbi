@@ -218,7 +218,7 @@ UsersImportService.importDataToDatabase = async (dataToImport, createdBy, helper
           row.ids_cabang || null,
           row.bukti_bayar || null,
           row.status_kta || 'MENUNGGU',
-          createdBy,
+          userId,
         ],
       });
 
