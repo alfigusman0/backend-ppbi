@@ -1087,85 +1087,71 @@ Controller.cj10 = async (req, res) => {
       );
     }
 
-    // Kelompokkan data berdasarkan tahun pendaftaran
-    const groupedByYear = {};
+    // Cari nomor urut terakhir untuk BONSAI (jenis 01) dari semua tahun
+    const lastNumber = await helper.runSQL({
+      sql: `
+        SELECT
+          SUBSTRING_INDEX(nomor_seri, '.', -1) as last_seq
+        FROM tbl_pohon
+        WHERE nomor_seri LIKE '%.01.%'
+          AND nomor_seri IS NOT NULL
+        ORDER BY CAST(SUBSTRING_INDEX(nomor_seri, '.', -1) AS UNSIGNED) DESC
+        LIMIT 1
+      `,
+      param: [],
+    });
 
-    // Inisialisasi nextNumber untuk setiap tahun
-    for (const bonsai of bonsaiList) {
-      const tahun = bonsai.tahun_pendaftaran;
-      if (!groupedByYear[tahun]) {
-        // Cari nomor terakhir untuk tahun dan jenis ini (01 = bonsai)
-        const lastNumber = await helper.runSQL({
-          sql: `
-            SELECT
-              SUBSTRING_INDEX(nomor_seri, '.', -1) as last_seq
-            FROM tbl_pohon
-            WHERE nomor_seri LIKE ?
-            ORDER BY CAST(SUBSTRING_INDEX(nomor_seri, '.', -1) AS UNSIGNED) DESC
-            LIMIT 1
-          `,
-          param: [`${tahun}.01.%`],
-        });
-
-        let nextNumber = 1;
-        if (lastNumber.length > 0 && lastNumber[0].last_seq) {
-          const lastSeq = parseInt(lastNumber[0].last_seq, 10);
-          nextNumber = lastSeq + 1;
-        }
-
-        groupedByYear[tahun] = {
-          nextNumber: nextNumber,
-          items: [],
-        };
-      }
-      groupedByYear[tahun].items.push(bonsai);
+    let nextNumber = 1;
+    if (lastNumber.length > 0 && lastNumber[0].last_seq) {
+      const lastSeq = parseInt(lastNumber[0].last_seq, 10);
+      nextNumber = lastSeq + 1;
     }
 
     logger.info('Starting bonsai serial number generation', {
       total_to_process: bonsaiList.length,
-      years: Object.keys(groupedByYear),
+      starting_number: nextNumber,
+      last_found_number: lastNumber.length > 0 ? lastNumber[0].last_seq : 'none',
     });
 
     // Proses setiap bonsai
-    for (const [tahun, data] of Object.entries(groupedByYear)) {
-      let currentNumber = data.nextNumber;
+    for (const bonsai of bonsaiList) {
+      try {
+        const tahun = bonsai.tahun_pendaftaran;
 
-      for (const bonsai of data.items) {
-        try {
-          // Format: tahun.jenis.nomor_urut (6 digit)
-          const nomorUrut = currentNumber.toString().padStart(6, '0');
-          const nomor_seri = `${tahun}.01.${nomorUrut}`;
+        // Format: tahun.jenis.nomor_urut (6 digit)
+        const nomorUrut = nextNumber.toString().padStart(6, '0');
+        const nomor_seri = `${tahun}.01.${nomorUrut}`;
 
-          // Update nomor_seri di tabel pohon
-          await helper.runSQL({
-            sql: 'UPDATE tbl_pohon SET nomor_seri = ?, updated_by = 1, updated_at = NOW() WHERE id_pohon = ?',
-            param: [nomor_seri, bonsai.id_pohon],
-          });
+        // Update nomor_seri di tabel pohon
+        await helper.runSQL({
+          sql: 'UPDATE tbl_pohon SET nomor_seri = ?, updated_by = 1, updated_at = NOW() WHERE id_pohon = ?',
+          param: [nomor_seri, bonsai.id_pohon],
+        });
 
-          count_updated++;
-          currentNumber++;
+        count_updated++;
+        nextNumber++;
 
-          logger.info('Berhasil generate nomor seri bonsai', {
-            id_pohon: bonsai.id_pohon,
-            nomor_seri: nomor_seri,
-            tahun: tahun,
-            jenis: '01',
-            nomor_urut: nomorUrut,
-          });
-        } catch (error) {
-          logger.error('Error processing bonsai', {
-            id_pohon: bonsai.id_pohon,
-            error: error.message,
-          });
-          continue;
-        }
+        logger.info('Berhasil generate nomor seri bonsai', {
+          id_pohon: bonsai.id_pohon,
+          nomor_seri: nomor_seri,
+          tahun: tahun,
+          jenis: '01',
+          nomor_urut: nomorUrut,
+        });
+      } catch (error) {
+        logger.error('Error processing bonsai', {
+          id_pohon: bonsai.id_pohon,
+          error: error.message,
+        });
+        continue;
       }
     }
 
     const result = {
       bonsai_updated: count_updated,
       total_processed: bonsaiList.length,
-      years_processed: Object.keys(groupedByYear),
+      starting_number: nextNumber - count_updated, // Nomor awal yang digunakan
+      ending_number: nextNumber - 1, // Nomor akhir yang digunakan
     };
 
     return response.sc200('Generate nomor seri bonsai selesai.', result, res);
@@ -1207,85 +1193,71 @@ Controller.cj11 = async (req, res) => {
       );
     }
 
-    // Kelompokkan data berdasarkan tahun pendaftaran
-    const groupedByYear = {};
+    // Cari nomor urut terakhir untuk SUISEKI (jenis 02) dari semua tahun
+    const lastNumber = await helper.runSQL({
+      sql: `
+        SELECT
+          SUBSTRING_INDEX(nomor_seri, '.', -1) as last_seq
+        FROM tbl_suiseki
+        WHERE nomor_seri LIKE '%.02.%'
+          AND nomor_seri IS NOT NULL
+        ORDER BY CAST(SUBSTRING_INDEX(nomor_seri, '.', -1) AS UNSIGNED) DESC
+        LIMIT 1
+      `,
+      param: [],
+    });
 
-    // Inisialisasi nextNumber untuk setiap tahun
-    for (const suiseki of suisekiList) {
-      const tahun = suiseki.tahun_pendaftaran;
-      if (!groupedByYear[tahun]) {
-        // Cari nomor terakhir untuk tahun dan jenis ini (02 = suiseki)
-        const lastNumber = await helper.runSQL({
-          sql: `
-            SELECT
-              SUBSTRING_INDEX(nomor_seri, '.', -1) as last_seq
-            FROM tbl_suiseki
-            WHERE nomor_seri LIKE ?
-            ORDER BY CAST(SUBSTRING_INDEX(nomor_seri, '.', -1) AS UNSIGNED) DESC
-            LIMIT 1
-          `,
-          param: [`${tahun}.02.%`],
-        });
-
-        let nextNumber = 1;
-        if (lastNumber.length > 0 && lastNumber[0].last_seq) {
-          const lastSeq = parseInt(lastNumber[0].last_seq, 10);
-          nextNumber = lastSeq + 1;
-        }
-
-        groupedByYear[tahun] = {
-          nextNumber: nextNumber,
-          items: [],
-        };
-      }
-      groupedByYear[tahun].items.push(suiseki);
+    let nextNumber = 1;
+    if (lastNumber.length > 0 && lastNumber[0].last_seq) {
+      const lastSeq = parseInt(lastNumber[0].last_seq, 10);
+      nextNumber = lastSeq + 1;
     }
 
     logger.info('Starting suiseki serial number generation', {
       total_to_process: suisekiList.length,
-      years: Object.keys(groupedByYear),
+      starting_number: nextNumber,
+      last_found_number: lastNumber.length > 0 ? lastNumber[0].last_seq : 'none',
     });
 
     // Proses setiap suiseki
-    for (const [tahun, data] of Object.entries(groupedByYear)) {
-      let currentNumber = data.nextNumber;
+    for (const suiseki of suisekiList) {
+      try {
+        const tahun = suiseki.tahun_pendaftaran;
 
-      for (const suiseki of data.items) {
-        try {
-          // Format: tahun.jenis.nomor_urut (6 digit)
-          const nomorUrut = currentNumber.toString().padStart(6, '0');
-          const nomor_seri = `${tahun}.02.${nomorUrut}`;
+        // Format: tahun.jenis.nomor_urut (6 digit)
+        const nomorUrut = nextNumber.toString().padStart(6, '0');
+        const nomor_seri = `${tahun}.02.${nomorUrut}`;
 
-          // Update nomor_seri di tabel suiseki
-          await helper.runSQL({
-            sql: 'UPDATE tbl_suiseki SET nomor_seri = ?, updated_by = 1, updated_at = NOW() WHERE id_suiseki = ?',
-            param: [nomor_seri, suiseki.id_suiseki],
-          });
+        // Update nomor_seri di tabel suiseki
+        await helper.runSQL({
+          sql: 'UPDATE tbl_suiseki SET nomor_seri = ?, updated_by = 1, updated_at = NOW() WHERE id_suiseki = ?',
+          param: [nomor_seri, suiseki.id_suiseki],
+        });
 
-          count_updated++;
-          currentNumber++;
+        count_updated++;
+        nextNumber++;
 
-          logger.info('Berhasil generate nomor seri suiseki', {
-            id_suiseki: suiseki.id_suiseki,
-            nomor_seri: nomor_seri,
-            tahun: tahun,
-            jenis: '02',
-            nomor_urut: nomorUrut,
-          });
-        } catch (error) {
-          logger.error('Error processing suiseki', {
-            id_suiseki: suiseki.id_suiseki,
-            error: error.message,
-          });
-          continue;
-        }
+        logger.info('Berhasil generate nomor seri suiseki', {
+          id_suiseki: suiseki.id_suiseki,
+          nomor_seri: nomor_seri,
+          tahun: tahun,
+          jenis: '02',
+          nomor_urut: nomorUrut,
+        });
+      } catch (error) {
+        logger.error('Error processing suiseki', {
+          id_suiseki: suiseki.id_suiseki,
+          error: error.message,
+        });
+        continue;
       }
     }
 
     const result = {
       suiseki_updated: count_updated,
       total_processed: suisekiList.length,
-      years_processed: Object.keys(groupedByYear),
+      starting_number: nextNumber - count_updated, // Nomor awal yang digunakan
+      ending_number: nextNumber - 1, // Nomor akhir yang digunakan
     };
 
     return response.sc200('Generate nomor seri suiseki selesai.', result, res);
