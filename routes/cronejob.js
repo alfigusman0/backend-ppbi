@@ -12,5 +12,7 @@ router.get('/cj6', Controller.cj6);
 router.get('/cj7', Controller.cj7);
 router.get('/cj8', Controller.cj8);
 router.get('/cj9', Controller.cj9);
+router.get('/cj10', Controller.cj10);
+router.get('/cj11', Controller.cj11);
 
 module.exports = router;
