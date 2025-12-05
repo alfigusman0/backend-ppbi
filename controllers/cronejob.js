@@ -944,7 +944,7 @@ Controller.cj9 = async (req, res) => {
     let count_updated = 0;
     let count_users_updated = 0;
     const currentYear = new Date().getFullYear();
-    const masa_berlaku = moment().add(5, 'years').format('YYYY-MM-DD');
+    const masa_berlaku = moment().add(4, 'years').format('YYYY-MM-DD');
 
     // Ambil data KTA yang memenuhi kriteria
     const ktaList = await helper.runSQL({
@@ -1050,6 +1050,244 @@ Controller.cj9 = async (req, res) => {
   } catch (error) {
     console.log(error);
     logger.error('Error dalam cronjob cj9 - Generate KTA', {
+      error: error.message,
+      stack: error.stack,
+    });
+    return handleError(error, res);
+  }
+};
+
+/* Generate Nomor Seri untuk Bonsai (kecuali kelas bahan) */
+Controller.cj10 = async (req, res) => {
+  try {
+    let count_updated = 0;
+
+    // Ambil data bonsai yang memenuhi kriteria:
+    // 1. Belum memiliki nomor_seri
+    // 2. Bukan kelas bahan (ids_kelas != 1)
+    // 3. Sudah terdaftar di formulir (minimal 1x mengikuti event)
+    const bonsaiList = await helper.runSQL({
+      sql: `
+        SELECT DISTINCT p.*, YEAR(p.created_at) as tahun_pendaftaran
+        FROM tbl_pohon p
+        INNER JOIN tbl_formulir f ON p.id_pohon = f.id_pohon
+        WHERE p.nomor_seri IS NULL
+          AND p.ids_kelas != 1
+          AND f.id_event IS NOT NULL
+        ORDER BY p.created_at ASC
+      `,
+      param: [],
+    });
+
+    if (bonsaiList.length === 0) {
+      return response.sc200(
+        'Tidak ada bonsai yang perlu digenerate nomor seri.',
+        { bonsai_updated: 0 },
+        res
+      );
+    }
+
+    // Cari nomor urut terakhir untuk BONSAI (jenis 01) dari semua tahun
+    const lastNumber = await helper.runSQL({
+      sql: `
+        SELECT
+          SUBSTRING_INDEX(nomor_seri, '.', -1) as last_seq
+        FROM tbl_pohon
+        WHERE nomor_seri LIKE '%.01.%'
+          AND nomor_seri IS NOT NULL
+        ORDER BY CAST(SUBSTRING_INDEX(nomor_seri, '.', -1) AS UNSIGNED) DESC
+        LIMIT 1
+      `,
+      param: [],
+    });
+
+    let nextNumber = 1;
+    if (lastNumber.length > 0 && lastNumber[0].last_seq) {
+      const lastSeq = parseInt(lastNumber[0].last_seq, 10);
+      nextNumber = lastSeq + 1;
+    }
+
+    logger.info('Starting bonsai serial number generation', {
+      total_to_process: bonsaiList.length,
+      starting_number: nextNumber,
+      last_found_number: lastNumber.length > 0 ? lastNumber[0].last_seq : 'none',
+    });
+
+    // Proses setiap bonsai
+    for (const bonsai of bonsaiList) {
+      try {
+        const tahun = bonsai.tahun_pendaftaran;
+
+        // Format: tahun.jenis.nomor_urut (6 digit)
+        const nomorUrut = nextNumber.toString().padStart(6, '0');
+        const nomor_seri = `${tahun}.01.${nomorUrut}`;
+
+        // Update nomor_seri di tabel pohon
+        await helper.runSQL({
+          sql: 'UPDATE tbl_pohon SET nomor_seri = ?, updated_by = 1, updated_at = NOW() WHERE id_pohon = ?',
+          param: [nomor_seri, bonsai.id_pohon],
+        });
+
+        count_updated++;
+        nextNumber++;
+
+        logger.info('Berhasil generate nomor seri bonsai', {
+          id_pohon: bonsai.id_pohon,
+          nomor_seri: nomor_seri,
+          tahun: tahun,
+          jenis: '01',
+          nomor_urut: nomorUrut,
+        });
+      } catch (error) {
+        logger.error('Error processing bonsai', {
+          id_pohon: bonsai.id_pohon,
+          error: error.message,
+        });
+        continue;
+      }
+    }
+
+    const result = {
+      bonsai_updated: count_updated,
+      total_processed: bonsaiList.length,
+      starting_number: nextNumber - count_updated, // Nomor awal yang digunakan
+      ending_number: nextNumber - 1, // Nomor akhir yang digunakan
+    };
+
+    return response.sc200('Generate nomor seri bonsai selesai.', result, res);
+  } catch (error) {
+    console.log(error);
+    logger.error('Error dalam cronjob cj10 - Generate Nomor Seri Bonsai', {
+      error: error.message,
+      stack: error.stack,
+    });
+    return handleError(error, res);
+  }
+};
+
+/* Generate Nomor Seri untuk Suiseki */
+Controller.cj11 = async (req, res) => {
+  try {
+    let count_updated = 0;
+
+    // Ambil data suiseki yang memenuhi kriteria:
+    // 1. Belum memiliki nomor_seri
+    // 2. Sudah terdaftar di formulir (minimal 1x mengikuti event)
+    const suisekiList = await helper.runSQL({
+      sql: `
+        SELECT DISTINCT s.*, YEAR(s.created_at) as tahun_pendaftaran
+        FROM tbl_suiseki s
+        INNER JOIN tbl_formulir f ON s.id_suiseki = f.id_suiseki
+        WHERE s.nomor_seri IS NULL
+          AND f.id_event IS NOT NULL
+        ORDER BY s.created_at ASC
+      `,
+      param: [],
+    });
+
+    if (suisekiList.length === 0) {
+      return response.sc200(
+        'Tidak ada suiseki yang perlu digenerate nomor seri.',
+        { suiseki_updated: 0 },
+        res
+      );
+    }
+
+    // Cari nomor urut terakhir untuk SUISEKI (jenis 02) dari semua tahun
+    const lastNumber = await helper.runSQL({
+      sql: `
+        SELECT
+          SUBSTRING_INDEX(nomor_seri, '.', -1) as last_seq
+        FROM tbl_suiseki
+        WHERE nomor_seri LIKE '%.02.%'
+          AND nomor_seri IS NOT NULL
+        ORDER BY CAST(SUBSTRING_INDEX(nomor_seri, '.', -1) AS UNSIGNED) DESC
+        LIMIT 1
+      `,
+      param: [],
+    });
+
+    let nextNumber = 1;
+    if (lastNumber.length > 0 && lastNumber[0].last_seq) {
+      const lastSeq = parseInt(lastNumber[0].last_seq, 10);
+      nextNumber = lastSeq + 1;
+    }
+
+    logger.info('Starting suiseki serial number generation', {
+      total_to_process: suisekiList.length,
+      starting_number: nextNumber,
+      last_found_number: lastNumber.length > 0 ? lastNumber[0].last_seq : 'none',
+    });
+
+    // Proses setiap suiseki
+    for (const suiseki of suisekiList) {
+      try {
+        const tahun = suiseki.tahun_pendaftaran;
+
+        // Format: tahun.jenis.nomor_urut (6 digit)
+        const nomorUrut = nextNumber.toString().padStart(6, '0');
+        const nomor_seri = `${tahun}.02.${nomorUrut}`;
+
+        // Update nomor_seri di tabel suiseki
+        await helper.runSQL({
+          sql: 'UPDATE tbl_suiseki SET nomor_seri = ?, updated_by = 1, updated_at = NOW() WHERE id_suiseki = ?',
+          param: [nomor_seri, suiseki.id_suiseki],
+        });
+
+        count_updated++;
+        nextNumber++;
+
+        logger.info('Berhasil generate nomor seri suiseki', {
+          id_suiseki: suiseki.id_suiseki,
+          nomor_seri: nomor_seri,
+          tahun: tahun,
+          jenis: '02',
+          nomor_urut: nomorUrut,
+        });
+      } catch (error) {
+        logger.error('Error processing suiseki', {
+          id_suiseki: suiseki.id_suiseki,
+          error: error.message,
+        });
+        continue;
+      }
+    }
+
+    const result = {
+      suiseki_updated: count_updated,
+      total_processed: suisekiList.length,
+      starting_number: nextNumber - count_updated, // Nomor awal yang digunakan
+      ending_number: nextNumber - 1, // Nomor akhir yang digunakan
+    };
+
+    return response.sc200('Generate nomor seri suiseki selesai.', result, res);
+  } catch (error) {
+    console.log(error);
+    logger.error('Error dalam cronjob cj11 - Generate Nomor Seri Suiseki', {
+      error: error.message,
+      stack: error.stack,
+    });
+    return handleError(error, res);
+  }
+};
+
+/* Generate Nomor Seri untuk Bonsai dan Suiseki (All-in-One) */
+Controller.generateAllSerialNumbers = async (req, res) => {
+  try {
+    // Eksekusi kedua fungsi
+    const resultBonsai = await Controller.cj10(req, res, true);
+    const resultSuiseki = await Controller.cj11(req, res, true);
+
+    const result = {
+      bonsai: resultBonsai,
+      suiseki: resultSuiseki,
+      timestamp: new Date().toISOString(),
+    };
+
+    return response.sc200('Generate semua nomor seri selesai.', result, res);
+  } catch (error) {
+    console.log(error);
+    logger.error('Error dalam generateAllSerialNumbers', {
       error: error.message,
       stack: error.stack,
     });
