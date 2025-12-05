@@ -100,6 +100,20 @@ module.exports = function validateInput(method, path, data) {
       }
     }
 
+    // Validasi bukti_bayar jika diisi (harus URL atau #)
+    if (!Validator.isEmpty(data.bukti_bayar)) {
+      if (data.bukti_bayar !== '#') {
+        if (
+          !Validator.isURL(data.bukti_bayar, {
+            protocols: ['http', 'https'],
+            require_protocol: true,
+          })
+        ) {
+          errors.bukti_bayar = 'bukti bayar harus berupa URL (http/https) atau #.';
+        }
+      }
+    }
+
     // Validasi field meja (wajib diisi dan harus enum)
     if (Validator.isEmpty(data.meja)) {
       errors.meja = 'meja tidak boleh kosong.';
