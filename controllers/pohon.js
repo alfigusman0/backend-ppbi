@@ -112,6 +112,7 @@ Controller.read = async (req, res) => {
     const {
       id_pohon,
       uuid,
+      nomor_seri,
       id_profile,
       nama_lengkap,
       ids_jenis_bonsai,
@@ -181,6 +182,7 @@ Controller.read = async (req, res) => {
 
     addCondition('id_pohon', id_pohon, 'IN');
     addCondition('uuid', uuid);
+    addCondition('nomor_seri', nomor_seri, 'LIKE');
     addCondition('id_profile', id_profile, 'IN');
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
@@ -372,6 +374,7 @@ Controller.single = async (req, res) => {
     const {
       id_pohon,
       uuid,
+      nomor_seri,
       id_profile,
       nama_lengkap,
       ids_jenis_bonsai,
@@ -429,6 +432,7 @@ Controller.single = async (req, res) => {
 
     addCondition('id_pohon', id_pohon);
     addCondition('uuid', uuid);
+    addCondition('nomor_seri', nomor_seri, 'LIKE');
     addCondition('id_profile', id_profile);
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai);
