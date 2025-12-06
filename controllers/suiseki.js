@@ -114,6 +114,7 @@ Controller.read = async (req, res) => {
     const {
       id_suiseki,
       uuid,
+      nomor_seri,
       id_profile,
       nama_lengkap,
       ids_jenis_suiseki,
@@ -187,6 +188,7 @@ Controller.read = async (req, res) => {
 
     addCondition('id_suiseki', id_suiseki, 'IN');
     addCondition('uuid', uuid);
+    addCondition('nomor_seri', nomor_seri, 'LIKE');
     addCondition('id_profile', id_profile, 'IN');
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_suiseki', ids_jenis_suiseki, 'IN');
@@ -386,6 +388,7 @@ Controller.single = async (req, res) => {
     const {
       id_suiseki,
       uuid,
+      nomor_seri,
       id_profile,
       nama_lengkap,
       ids_jenis_suiseki,
@@ -447,6 +450,7 @@ Controller.single = async (req, res) => {
 
     addCondition('id_suiseki', id_suiseki);
     addCondition('uuid', uuid);
+    addCondition('nomor_seri', nomor_seri, 'LIKE');
     addCondition('id_profile', id_profile);
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_suiseki', ids_jenis_suiseki);

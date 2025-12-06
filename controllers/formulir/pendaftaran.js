@@ -153,6 +153,7 @@ Controller.read_bonsai = async (req, res) => {
       no_juri,
       id_bonsai,
       uuid_bonsai,
+      nomor_seri_bonsai,
       id_profile,
       nama_lengkap,
       ids_jenis_bonsai,
@@ -237,6 +238,7 @@ Controller.read_bonsai = async (req, res) => {
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_bonsai', id_bonsai, 'IN');
     addCondition('uuid_bonsai', uuid_bonsai);
+    addCondition('nomor_seri_bonsai', nomor_seri_bonsai, 'LIKE');
     addCondition('id_profile', id_profile, 'IN');
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai, 'IN');
@@ -322,6 +324,7 @@ Controller.read_suiseki = async (req, res) => {
       no_juri,
       id_suiseki,
       uuid_suiseki,
+      nomor_seri_suiseki,
       id_profile,
       nama_lengkap,
       ids_jenis_suiseki,
@@ -403,6 +406,7 @@ Controller.read_suiseki = async (req, res) => {
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_suiseki', id_suiseki, 'IN');
     addCondition('uuid_suiseki', uuid_suiseki);
+    addCondition('nomor_seri_suiseki', nomor_seri_suiseki, 'LIKE');
     addCondition('id_profile', id_profile, 'IN');
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_suiseki', ids_jenis_suiseki, 'IN');
@@ -769,6 +773,7 @@ Controller.single_bonsai = async (req, res) => {
       no_juri,
       id_bonsai,
       uuid_bonsai,
+      nomor_seri_bonsai,
       id_profile,
       nama_lengkap,
       ids_jenis_bonsai,
@@ -840,6 +845,7 @@ Controller.single_bonsai = async (req, res) => {
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_bonsai', id_bonsai);
     addCondition('uuid_bonsai', uuid_bonsai);
+    addCondition('nomor_seri_bonsai', nomor_seri_bonsai, 'LIKE');
     addCondition('id_profile', id_profile);
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_bonsai', ids_jenis_bonsai);
@@ -913,6 +919,7 @@ Controller.single_suiseki = async (req, res) => {
       no_juri,
       id_suiseki,
       uuid_suiseki,
+      nomor_seri_suiseki,
       id_profile,
       nama_lengkap,
       ids_jenis_suiseki,
@@ -981,6 +988,7 @@ Controller.single_suiseki = async (req, res) => {
     addCondition('no_juri', no_juri, 'LIKE');
     addCondition('id_suiseki', id_suiseki);
     addCondition('uuid_suiseki', uuid_suiseki);
+    addCondition('nomor_seri_suiseki', nomor_seri_suiseki, 'LIKE');
     addCondition('id_profile', id_profile);
     addCondition('nama_lengkap', nama_lengkap, 'LIKE');
     addCondition('ids_jenis_suiseki', ids_jenis_suiseki);
